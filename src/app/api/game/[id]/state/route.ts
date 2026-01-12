@@ -2,70 +2,12 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
-import { assignFastingPov } from "@/lib/fastingPov";
-import { resolveFastingNominations } from "@/lib/fastingNoms";
-import { resolveFastingEviction } from "@/lib/fastingVotes";
-
-async function maybeAdvanceGame(gameId: string) {
-  const g = await prisma.game.findUnique({
-    where: { id: gameId },
-    select: { id: true, gameType: true, state: true, stateEndsAt: true, povUserId: true },
-  });
-  if (!g) return;
-
-  if (g.gameType !== "FASTING") return;
-
-  // Ensure POV exists during nomination phase
-  if (g.state === "ROUND_NOMINATE" && !g.povUserId) {
-    try {
-      await assignFastingPov(gameId, false);
-    } catch {}
-  }
-
-  if (!g.stateEndsAt) return;
-  if (g.state !== "ROUND_NOMINATE" && g.state !== "ROUND_VOTE") return;
-
-  const due = g.stateEndsAt.getTime() <= Date.now();
-  if (!due) return;
-
-  // Per-game lock (hashtext is deterministic)
-  const lockRows = await prisma.$queryRaw<{ locked: boolean }[]>`
-    SELECT pg_try_advisory_lock(hashtext(${gameId})) as locked
-  `;
-  if (!lockRows?.[0]?.locked) return;
-
-  try {
-    // Re-check after lock
-    const g2 = await prisma.game.findUnique({
-      where: { id: gameId },
-      select: { state: true, stateEndsAt: true, povUserId: true },
-    });
-    if (!g2?.stateEndsAt) return;
-    if (g2.stateEndsAt.getTime() > Date.now()) return;
-
-    if (g2.state === "ROUND_NOMINATE") {
-      if (!g2.povUserId) {
-        try {
-          await assignFastingPov(gameId, false);
-        } catch {}
-      }
-      await resolveFastingNominations(gameId);
-    } else if (g2.state === "ROUND_VOTE") {
-      await resolveFastingEviction(gameId);
-    }
-  } finally {
-    await prisma.$queryRaw`SELECT pg_advisory_unlock(hashtext(${gameId}))`;
-  }
-}
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   const gameId = params.id;
 
   const session = await getServerSession(authOptions);
   const meUserId = (session?.user as any)?.id as string | undefined;
-
-  // ✅ Fix stuck-at-0 by advancing on read
-  await maybeAdvanceGame(gameId);
 
   const url = new URL(req.url);
   const page = Math.max(1, Number(url.searchParams.get("page") ?? "1") || 1);
@@ -84,48 +26,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     orderBy: { joinedAt: "asc" },
   });
 
-  const roundResult = await prisma.roundResult.findUnique({
-    where: { gameId_roundNumber: { gameId, roundNumber: game.roundNumber } },
-    select: { nomineeAUserId: true, nomineeBUserId: true, evictedUserId: true },
-  });
-
-  let myNomLocked: boolean | null = null;
-  if (meUserId && game.state === "ROUND_NOMINATE") {
-    const myNoms = await prisma.nomination.count({
-      where: { gameId, roundNumber: game.roundNumber, voterUserId: meUserId },
-    });
-    myNomLocked = myNoms >= 2;
-  }
-
-  let voteInfo: null | {
-    nomineeAUserId: string;
-    nomineeBUserId: string;
-    votesA: number;
-    votesB: number;
-    myVoteTargetUserId: string | null;
-  } = null;
-
-  if (game.state === "ROUND_VOTE" && roundResult) {
-    const votes = await prisma.evictionVote.findMany({
-      where: { gameId, roundNumber: game.roundNumber },
-      select: { voterUserId: true, targetUserId: true },
-    });
-
-    const a = roundResult.nomineeAUserId;
-    const b = roundResult.nomineeBUserId;
-
-    const votesA = votes.filter((v) => v.targetUserId === a).length;
-    const votesB = votes.filter((v) => v.targetUserId === b).length;
-
-    const myVoteTargetUserId =
-      meUserId ? votes.find((v) => v.voterUserId === meUserId)?.targetUserId ?? null : null;
-
-    voteInfo = { nomineeAUserId: a, nomineeBUserId: b, votesA, votesB, myVoteTargetUserId };
-  }
-
-  const totalCount = await prisma.gameMessage.count({
-    where: { gameId, channel: "PUBLIC" },
-  });
+  const totalCount = await prisma.gameMessage.count({ where: { gameId, channel: "PUBLIC" } });
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   const messagesRaw = await prisma.gameMessage.findMany({
@@ -133,21 +34,26 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     orderBy: { createdAt: "desc" },
     skip,
     take: pageSize,
-    include: {
-      user: { select: { username: true } },
-      reactions: true,
-    },
+    include: { user: { select: { username: true } }, reactions: true },
   });
+
+  // Lobby info (filling)
+  const lobby =
+    game.state === "ENROLLING"
+      ? {
+          current: playersRaw.filter((p) => p.status === "ACTIVE").length,
+          needed: Math.max(0, 15 - playersRaw.filter((p) => p.status === "ACTIVE").length),
+        }
+      : null;
 
   return NextResponse.json({
     ok: true,
     meUserId: meUserId ?? null,
-    myNomLocked,
+    myNomLocked: null,
     game,
-    nominees: roundResult
-      ? { a: roundResult.nomineeAUserId, b: roundResult.nomineeBUserId, evictedUserId: roundResult.evictedUserId ?? null }
-      : null,
-    voteInfo,
+    nominees: null,
+    voteInfo: null,
+    lobby,
     pagination: { page, pageSize, totalPages, totalCount },
     players: playersRaw.map((p) => ({
       userId: p.userId,
