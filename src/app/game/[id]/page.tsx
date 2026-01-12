@@ -5,6 +5,7 @@ import PlayerStrip from "./components/PlayerStrip";
 import ChatPanel from "./components/ChatPanel";
 import Sidebar from "./components/Sidebar";
 import Tabs from "./components/Tabs";
+import type { AvatarConfig } from "@/components/Avatar";
 
 type Player = {
   userId: string;
@@ -13,6 +14,9 @@ type Player = {
   lastActiveAt: string;
   eliminatedPlace: number | null;
   isNominee: boolean;
+
+  // ✅ new
+  avatar: AvatarConfig;
 };
 
 type Message = {
