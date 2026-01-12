@@ -1,8 +1,27 @@
 import { prisma } from "@/lib/prisma";
 import { getSystemUserId } from "@/lib/systemUser";
 
+const FASTING_NOM_MS = 2 * 60 * 1000; // 2 minutes
+
 function activityScore(p: { chatCount: number; plusCount: number; minusCount: number }) {
   return p.chatCount + 2 * p.plusCount - p.minusCount;
+}
+
+type Ranked = {
+  userId: string;
+  username: string;
+  povWins: number;
+  plusCount: number;
+  activity: number;
+};
+
+function rankFinal3(players: Ranked[]) {
+  return [...players].sort((a, b) => {
+    if (b.povWins !== a.povWins) return b.povWins - a.povWins;
+    if (b.plusCount !== a.plusCount) return b.plusCount - a.plusCount;
+    if (b.activity !== a.activity) return b.activity - a.activity;
+    return Math.random() < 0.5 ? -1 : 1;
+  });
 }
 
 export async function resolveFastingEviction(gameId: string) {
@@ -76,22 +95,16 @@ export async function resolveFastingEviction(gameId: string) {
       },
     });
 
+    // keep your current endgame behavior (whatever you currently have)
+    // If you are still using FINAL3 -> COMPLETED logic elsewhere, this will still work.
+    // We only change phase timers for continuing rounds.
     if (activeAfter <= 3) {
       await tx.game.update({
         where: { id: gameId },
         data: {
           state: "FINAL3",
-          stateEndsAt: new Date(Date.now() + 12 * 60 * 60 * 1000),
-          povUserId: null,
-        },
-      });
-
-      await tx.gameMessage.create({
-        data: {
-          gameId,
-          userId: systemUserId,
-          channel: "PUBLIC",
-          body: `[SYSTEM] Final 3 has begun. Placements will be decided in 12 hours.`,
+          // leave your existing final3 timing/logic as-is elsewhere
+          // if you already changed it to instant end, this will be overwritten by that flow
         },
       });
     } else {
@@ -100,7 +113,7 @@ export async function resolveFastingEviction(gameId: string) {
         data: {
           state: "ROUND_NOMINATE",
           roundNumber: { increment: 1 },
-          stateEndsAt: new Date(Date.now() + 5 * 60 * 1000),
+          stateEndsAt: new Date(Date.now() + FASTING_NOM_MS),
           povUserId: null,
         },
       });

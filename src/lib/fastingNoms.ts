@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { getSystemUserId } from "@/lib/systemUser";
 
+const FASTING_VOTE_MS = 2 * 60 * 1000; // 2 minutes
+
 function activityScore(p: { chatCount: number; plusCount: number; minusCount: number }) {
   return p.chatCount + 2 * p.plusCount - p.minusCount;
 }
@@ -90,7 +92,7 @@ export async function resolveFastingNominations(gameId: string) {
       where: { id: gameId },
       data: {
         state: "ROUND_VOTE",
-        stateEndsAt: new Date(Date.now() + 3 * 60 * 1000),
+        stateEndsAt: new Date(Date.now() + FASTING_VOTE_MS),
       },
     });
   });

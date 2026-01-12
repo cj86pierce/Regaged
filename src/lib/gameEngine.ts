@@ -1,4 +1,6 @@
-import { prisma } from "./prisma";
+import { prisma } from "@/lib/prisma";
+
+const FASTING_NOM_MS = 2 * 60 * 1000; // 2 minutes
 
 export async function tryStartFastingGame() {
   const enrollments = await prisma.enrollment.findMany({
@@ -15,22 +17,16 @@ export async function tryStartFastingGame() {
       state: "ROUND_NOMINATE",
       roundNumber: 1,
       startsAt: new Date(),
-      stateEndsAt: new Date(Date.now() + 5 * 60 * 1000), // noms = 5 min
+      stateEndsAt: new Date(Date.now() + FASTING_NOM_MS),
     },
+    select: { id: true },
   });
 
-  for (const e of enrollments) {
-    await prisma.gamePlayer.create({
-      data: {
-        gameId: game.id,
-        userId: e.userId,
-      },
-    });
-  }
+  await prisma.gamePlayer.createMany({
+    data: enrollments.map((e) => ({ gameId: game.id, userId: e.userId })),
+  });
 
   await prisma.enrollment.deleteMany({
-    where: { id: { in: enrollments.map(e => e.id) } },
+    where: { id: { in: enrollments.map((e) => e.id) } },
   });
-
-  console.log("🎮 Fasting game started:", game.id);
 }
