@@ -10,7 +10,7 @@ export type ProfileGameBubble = {
   state: string; // ENROLLING/ROUND_NOMINATE/ROUND_VOTE/FINAL3/COMPLETED
   joinedAt: string; // ISO
   yourStatus: "ACTIVE" | "ELIMINATED";
-  eliminatedPlace: number | null; // 1,2,3,15...
+  eliminatedPlace: number | null; // 1/2/3/15...
 };
 
 export type ProfileTabsData = {
@@ -83,16 +83,16 @@ function suffix(n: number) {
 function onlineLabel(lastSeenAtIso: string) {
   const ms = Date.now() - new Date(lastSeenAtIso).getTime();
   const mins = Math.floor(ms / 60000);
-  if (mins <= 2) return { text: "online", style: { background: "#d1e7dd", borderColor: "rgba(0,0,0,0.08)" } };
-  if (mins <= 60) return { text: `${mins} min`, style: { background: "#fff3cd", borderColor: "rgba(0,0,0,0.08)" } };
-  return { text: "offline", style: { background: "#f8d7da", borderColor: "rgba(0,0,0,0.08)" } };
+  if (mins <= 2) return { text: "online", style: { background: "#d1e7dd" } };
+  if (mins <= 60) return { text: `${mins} min`, style: { background: "#fff3cd" } };
+  return { text: "offline", style: { background: "#f8d7da" } };
 }
 
 function Bubble({ g }: { g: ProfileGameBubble }) {
   const isActiveGame = g.state !== "COMPLETED" && g.yourStatus === "ACTIVE";
   const isFilling = g.state === "ENROLLING" && g.yourStatus === "ACTIVE";
 
-  const labelTop = g.gameType.toLowerCase(); // "fasting"
+  const labelTop = g.gameType.toLowerCase();
   const labelBottom = isActiveGame ? (isFilling ? "filling" : "enter") : g.eliminatedPlace ? suffix(g.eliminatedPlace) : "—";
 
   return (
@@ -173,6 +173,7 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
   return (
     <main style={{ padding: 8 }}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 14 }}>
+        {/* LEFT */}
         <Card title="Profile">
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
             <div
@@ -288,7 +289,29 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
           </div>
         </Card>
 
+        {/* RIGHT: Actions FIRST, then Stats */}
         <div style={{ display: "grid", gap: 14 }}>
+          {/* ✅ Enroll is the TOP thing */}
+          <Card title="Participate!">
+            <Link
+              href="/enroll"
+              style={{
+                display: "block",
+                textAlign: "center",
+                textDecoration: "none",
+                fontWeight: 1000,
+                padding: "10px 12px",
+                borderRadius: 10,
+                background: "linear-gradient(#ffd85a, #ffb703)",
+                color: "#3a2b00",
+                border: "1px solid rgba(0,0,0,0.12)",
+                boxShadow: "0 8px 18px rgba(255, 183, 3, 0.25)",
+              }}
+            >
+              Enroll now ▶
+            </Link>
+          </Card>
+
           <Card title="Stats">
             <div style={{ display: "grid", gap: 10 }}>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
