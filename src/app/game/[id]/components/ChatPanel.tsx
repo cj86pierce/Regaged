@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 
 type Player = {
   userId: string;
@@ -43,7 +44,6 @@ export default function ChatPanel(props: {
   toggleNom: (userId: string) => void;
   submitNoms: () => Promise<void>;
 
-  // vote still exists in props (used by right sidebar), we ignore it here
   nominees: any;
   nomineePlayers: any;
   voteInfo: any;
@@ -63,7 +63,6 @@ export default function ChatPanel(props: {
     setChatText,
     onSend,
     onReact,
-
     gameState,
     povUserId,
     players,
@@ -71,13 +70,46 @@ export default function ChatPanel(props: {
     nomPicks,
     toggleNom,
     submitNoms,
-
     page,
     totalPages,
     setPage,
   } = props;
 
   const isNominate = gameState === "ROUND_NOMINATE";
+
+  // NEW MESSAGE FLASH: keep a short-lived set of highlighted message IDs
+  const [flashIds, setFlashIds] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    // Only flash when viewing newest page
+    if (page !== 1) return;
+
+    const now = Date.now();
+    const next: Record<string, number> = { ...flashIds };
+
+    for (const m of messages) {
+      // If message is new to our flash map, mark it for flashing for ~2.5s
+      if (!next[m.id]) {
+        next[m.id] = now + 2500;
+      }
+    }
+
+    setFlashIds(next);
+
+    const t = setTimeout(() => {
+      setFlashIds((cur) => {
+        const cleaned: Record<string, number> = {};
+        const now2 = Date.now();
+        for (const [id, until] of Object.entries(cur)) {
+          if (until > now2) cleaned[id] = until;
+        }
+        return cleaned;
+      });
+    }, 600);
+
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages, page]);
 
   const invertBoxStyle = {
     border: "1px solid rgba(0,0,0,0.10)",
@@ -86,6 +118,11 @@ export default function ChatPanel(props: {
     background: "linear-gradient(#111, #1d1d1d)",
     color: "#fff",
   } as const;
+
+  const isFlashing = (id: string) => {
+    const until = flashIds[id];
+    return typeof until === "number" && until > Date.now();
+  };
 
   return (
     <div style={{ display: "grid", gap: 12 }}>
@@ -199,9 +236,11 @@ export default function ChatPanel(props: {
 
           const points = m.plus - m.minus;
 
-          // If message is nomination-vote summary, invert bracketed items: [Name(3)]
           const isNomSummary = m.isSystem && /^(\[SYSTEM\]\s*)?Nomination votes:/i.test(m.body);
           const bodyText = m.body.replace(/^\[SYSTEM\]\s*/i, "");
+
+          const bg =
+            m.isSystem ? "#fff3cd" : isFlashing(m.id) ? "#fff3cd" : "#fff";
 
           return (
             <div
@@ -212,7 +251,8 @@ export default function ChatPanel(props: {
                 gap: 10,
                 padding: 10,
                 borderBottom: "1px solid #eef2f5",
-                background: m.isSystem ? "#fff3cd" : "#fff",
+                background: bg,
+                transition: "background 0.4s ease",
               }}
             >
               <div style={{ fontSize: 12 }}>
@@ -287,8 +327,6 @@ export default function ChatPanel(props: {
 }
 
 function NominationVoteLine({ text }: { text: string }) {
-  // text example: "Nomination votes: a(0) · [b(3)] · c(1)"
-  // Bracketed entries are nominees and should be inverted.
   const parts = text.split("·").map((p) => p.trim());
 
   return (

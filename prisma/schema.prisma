@@ -88,6 +88,10 @@ model Enrollment {
 
 model Game {
   id            String    @id @default(cuid())
+
+  // ✅ NEW: nice human-readable game number (1,2,3...)
+  number        Int       @unique @default(autoincrement())
+
   gameType      GameType
   state         GameState @default(ENROLLING)
   roundNumber   Int       @default(0)
@@ -117,10 +121,7 @@ model GamePlayer {
   joinedAt        DateTime     @default(now())
   eliminatedAt    DateTime?
 
-  // ✅ NEW: last activity timestamp (chat/vote/react/nominate)
   lastActiveAt    DateTime     @default(now())
-
-  // ✅ NEW: placement number (15=first out, 1=winner)
   eliminatedPlace Int?
 
   povWins         Int          @default(0)
