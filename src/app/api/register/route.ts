@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(req: Request) {
@@ -22,13 +22,12 @@ export async function POST(req: Request) {
 
   const passwordHash = await bcrypt.hash(password, 10);
 
-  // Starter balances: tweak anytime
   const user = await prisma.user.create({
     data: {
       username: usernameRaw,
       passwordHash,
       karma: 0,
-      tMoney: 50, // give some T$ so buying Yellow is possible soon
+      tMoney: 0,
     },
     select: { id: true, username: true },
   });
