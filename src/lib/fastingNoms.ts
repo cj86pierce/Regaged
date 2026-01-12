@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getSystemUserId } from "@/lib/systemUser";
+import { assignFastingPov } from "@/lib/fastingPov";
 
 const FASTING_VOTE_MS = 2 * 60 * 1000; // 2 minutes
 
@@ -21,6 +22,18 @@ export async function resolveFastingNominations(gameId: string) {
   if (!game) throw new Error("Game not found");
   if (game.gameType !== "FASTING") throw new Error("Not a FASTING game");
   if (game.state !== "ROUND_NOMINATE") throw new Error("Not in nomination phase");
+
+  // ✅ Ensure POV exists BEFORE selecting nominees
+  if (!game.povUserId) {
+    await assignFastingPov(gameId, false);
+  }
+
+  // re-read POV after assign (in case it was just created)
+  const gameAfter = await prisma.game.findUnique({
+    where: { id: gameId },
+    select: { roundNumber: true, povUserId: true },
+  });
+  const povUserId = gameAfter?.povUserId ?? null;
 
   const existing = await prisma.roundResult.findUnique({
     where: { gameId_roundNumber: { gameId, roundNumber: game.roundNumber } },
@@ -49,12 +62,12 @@ export async function resolveFastingNominations(gameId: string) {
   const counts = new Map<string, number>();
   for (const n of noms) {
     if (!activeIds.has(n.targetUserId)) continue;
-    if (game.povUserId && n.targetUserId === game.povUserId) continue;
+    if (povUserId && n.targetUserId === povUserId) continue;
     counts.set(n.targetUserId, (counts.get(n.targetUserId) ?? 0) + 1);
   }
 
   const candidates = players
-    .filter((p) => !game.povUserId || p.userId !== game.povUserId)
+    .filter((p) => !povUserId || p.userId !== povUserId)
     .map((p) => ({
       userId: p.userId,
       username: p.user.username,

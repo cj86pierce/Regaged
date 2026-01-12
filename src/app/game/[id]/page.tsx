@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import PlayerStrip from "./components/PlayerStrip";
 import ChatPanel from "./components/ChatPanel";
 import Sidebar from "./components/Sidebar";
@@ -25,6 +25,7 @@ type Message = {
   plus: number;
   minus: number;
   myReaction: "PLUS" | "MINUS" | null;
+  isSystem: boolean;
 };
 
 type GameState = {
@@ -48,6 +49,7 @@ type GameState = {
   } | null;
   players: Player[];
   messages: Message[];
+  pagination: { page: number; pageSize: number; totalPages: number; totalCount: number };
 };
 
 export default function GamePage({ params }: { params: { id: string } }) {
@@ -61,46 +63,27 @@ export default function GamePage({ params }: { params: { id: string } }) {
   const [votePick, setVotePick] = useState<string | null>(null);
   const [chatText, setChatText] = useState("");
 
-  // Throttle: don’t nudge more than once per minute per client
-  const lastNudgeAtRef = useRef<number>(0);
+  const [page, setPage] = useState(1);
 
   async function load() {
-    const res = await fetch(`/api/game/${gameId}/state`, { cache: "no-store" });
+    const res = await fetch(`/api/game/${gameId}/state?page=${page}&pageSize=25`, { cache: "no-store" });
     const json = await res.json();
     if (!res.ok) throw new Error(json?.error ?? "Failed to load game");
     setData(json);
   }
 
-  async function nudgeTick() {
-    // GET works (cron route supports GET)
-    await fetch(`/api/cron/tick`, { method: "GET" }).catch(() => null);
-  }
-
   useEffect(() => {
     load().catch((e) => setError(e.message));
-
-    // modest polling
-    const poll = setInterval(() => load().catch(() => {}), 3000);
+    const poll = setInterval(() => load().catch(() => {}), 3500);
     return () => clearInterval(poll);
-  }, [gameId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameId, page]);
 
   const timeLeft = useMemo(() => {
     if (!data?.game.stateEndsAt) return null;
     const ms = new Date(data.game.stateEndsAt).getTime() - Date.now();
     return Math.max(0, Math.ceil(ms / 1000));
   }, [data]);
-
-  // If timer hits 0, ask server to advance (safe + throttled)
-  useEffect(() => {
-    if (timeLeft === null) return;
-    if (timeLeft > 0) return;
-
-    const now = Date.now();
-    if (now - lastNudgeAtRef.current < 60_000) return; // 60s throttle
-    lastNudgeAtRef.current = now;
-
-    nudgeTick().catch(() => {});
-  }, [timeLeft]);
 
   async function sendChat() {
     setError(null);
@@ -115,6 +98,8 @@ export default function GamePage({ params }: { params: { id: string } }) {
       return;
     }
     setChatText("");
+    // sending new message -> go to newest page
+    setPage(1);
     await load();
   }
 
@@ -183,24 +168,16 @@ export default function GamePage({ params }: { params: { id: string } }) {
 
   return (
     <div style={{ padding: 12 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-        <div>
-          <div style={{ fontSize: 22, fontWeight: 800, lineHeight: 1.1 }}>Fasting</div>
-          <div style={{ fontSize: 12, opacity: 0.75 }}>
-            Round <b>{data.game.roundNumber}</b> · State <b>{data.game.state}</b>
-            {timeLeft !== null && (
-              <>
-                {" "}
-                · Ends in <b>{timeLeft}s</b>
-              </>
-            )}
-            {timeLeft === 0 && (
-              <>
-                {" "}
-                · <b>Advancing…</b>
-              </>
-            )}
-          </div>
+      <div style={{ marginBottom: 8 }}>
+        <div style={{ fontSize: 22, fontWeight: 800 }}>Fasting</div>
+        <div style={{ fontSize: 12, opacity: 0.75 }}>
+          Round <b>{data.game.roundNumber}</b> · State <b>{data.game.state}</b>
+          {timeLeft !== null && (
+            <>
+              {" "}
+              · Ends in <b>{timeLeft}s</b>
+            </>
+          )}
         </div>
       </div>
 
@@ -208,7 +185,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 14, marginTop: 10 }}>
         <div>
-          <Tabs tab={tab} setTab={setTab} publicCount={data.messages.length} />
+          <Tabs tab={tab} setTab={setTab} publicCount={data.pagination.totalCount} />
 
           {tab === "public" && (
             <ChatPanel
@@ -233,11 +210,14 @@ export default function GamePage({ params }: { params: { id: string } }) {
               votePick={votePick}
               setVotePick={setVotePick}
               submitVote={submitVote}
+              page={data.pagination.page}
+              totalPages={data.pagination.totalPages}
+              setPage={setPage}
             />
           )}
 
           {tab === "private" && (
-            <div style={{ border: "1px solid #d7d7d7", borderRadius: 8, padding: 12, background: "#fff" }}>
+            <div style={{ border: "1px solid #d7d7d7", borderRadius: 10, padding: 12, background: "#fff" }}>
               <b>Private messages</b>
               <div style={{ marginTop: 8, opacity: 0.75 }}>Not implemented yet (public-only first).</div>
             </div>

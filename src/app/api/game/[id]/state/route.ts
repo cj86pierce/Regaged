@@ -9,11 +9,15 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   const session = await getServerSession(authOptions);
   const meUserId = (session?.user as any)?.id as string | undefined;
 
+  const url = new URL(req.url);
+  const page = Math.max(1, Number(url.searchParams.get("page") ?? "1") || 1);
+  const pageSize = Math.min(50, Math.max(10, Number(url.searchParams.get("pageSize") ?? "25") || 25));
+  const skip = (page - 1) * pageSize;
+
   const game = await prisma.game.findUnique({
     where: { id: gameId },
     select: { id: true, state: true, roundNumber: true, stateEndsAt: true, povUserId: true },
   });
-
   if (!game) return NextResponse.json({ error: "Game not found" }, { status: 404 });
 
   const playersRaw = await prisma.gamePlayer.findMany({
@@ -27,7 +31,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     select: { nomineeAUserId: true, nomineeBUserId: true, evictedUserId: true },
   });
 
-  // Did I already submit my nominations this round?
+  // nomination lock status (for UI)
   let myNomLocked: boolean | null = null;
   if (meUserId && game.state === "ROUND_NOMINATE") {
     const myNoms = await prisma.nomination.count({
@@ -36,7 +40,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     myNomLocked = myNoms >= 2;
   }
 
-  // Vote tally (ROUND_VOTE)
+  // vote info (for UI)
   let voteInfo: null | {
     nomineeAUserId: string;
     nomineeBUserId: string;
@@ -63,10 +67,18 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     voteInfo = { nomineeAUserId: a, nomineeBUserId: b, votesA, votesB, myVoteTargetUserId };
   }
 
+  // total count for pagination
+  const totalCount = await prisma.gameMessage.count({
+    where: { gameId, channel: "PUBLIC" },
+  });
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+
+  // newest first
   const messagesRaw = await prisma.gameMessage.findMany({
     where: { gameId, channel: "PUBLIC" },
-    orderBy: { createdAt: "asc" },
-    take: 200,
+    orderBy: { createdAt: "desc" },
+    skip,
+    take: pageSize,
     include: {
       user: { select: { username: true } },
       reactions: true,
@@ -82,6 +94,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       ? { a: roundResult.nomineeAUserId, b: roundResult.nomineeBUserId, evictedUserId: roundResult.evictedUserId ?? null }
       : null,
     voteInfo,
+    pagination: { page, pageSize, totalPages, totalCount },
     players: playersRaw.map((p) => ({
       userId: p.userId,
       username: p.user.username,
@@ -95,6 +108,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       const plus = m.reactions.filter((r) => r.type === "PLUS").length;
       const minus = m.reactions.filter((r) => r.type === "MINUS").length;
       const myReaction = meUserId ? (m.reactions.find((r) => r.reactorUserId === meUserId)?.type ?? null) : null;
+      const isSystem = m.user.username === "__system__" || /^\[SYSTEM\]/i.test(m.body);
 
       return {
         id: m.id,
@@ -105,6 +119,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         plus,
         minus,
         myReaction,
+        isSystem,
       };
     }),
   });
