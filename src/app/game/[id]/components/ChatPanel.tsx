@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Player = {
   userId: string;
@@ -77,27 +77,33 @@ export default function ChatPanel(props: {
 
   const isNominate = gameState === "ROUND_NOMINATE";
 
-  // NEW MESSAGE FLASH: keep a short-lived set of highlighted message IDs
-  const [flashIds, setFlashIds] = useState<Record<string, number>>({});
+  // ✅ Seen IDs so we only flash ONCE per message
+  const seenIdsRef = useRef<Set<string>>(new Set());
+  const [flashUntil, setFlashUntil] = useState<Record<string, number>>({});
 
   useEffect(() => {
-    // Only flash when viewing newest page
     if (page !== 1) return;
 
     const now = Date.now();
-    const next: Record<string, number> = { ...flashIds };
+    const newlySeen: string[] = [];
 
     for (const m of messages) {
-      // If message is new to our flash map, mark it for flashing for ~2.5s
-      if (!next[m.id]) {
-        next[m.id] = now + 2500;
+      if (!seenIdsRef.current.has(m.id)) {
+        seenIdsRef.current.add(m.id);
+        newlySeen.push(m.id);
       }
     }
 
-    setFlashIds(next);
+    if (newlySeen.length === 0) return;
+
+    setFlashUntil((cur) => {
+      const next = { ...cur };
+      for (const id of newlySeen) next[id] = now + 1500; // 1.5s glow
+      return next;
+    });
 
     const t = setTimeout(() => {
-      setFlashIds((cur) => {
+      setFlashUntil((cur) => {
         const cleaned: Record<string, number> = {};
         const now2 = Date.now();
         for (const [id, until] of Object.entries(cur)) {
@@ -108,8 +114,12 @@ export default function ChatPanel(props: {
     }, 600);
 
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, page]);
+
+  const isFlashing = (id: string) => {
+    const until = flashUntil[id];
+    return typeof until === "number" && until > Date.now();
+  };
 
   const invertBoxStyle = {
     border: "1px solid rgba(0,0,0,0.10)",
@@ -118,11 +128,6 @@ export default function ChatPanel(props: {
     background: "linear-gradient(#111, #1d1d1d)",
     color: "#fff",
   } as const;
-
-  const isFlashing = (id: string) => {
-    const until = flashIds[id];
-    return typeof until === "number" && until > Date.now();
-  };
 
   return (
     <div style={{ display: "grid", gap: 12 }}>
@@ -154,7 +159,7 @@ export default function ChatPanel(props: {
         </div>
       </div>
 
-      {/* NOMINATIONS ONLY (black/inverted) */}
+      {/* NOMINATIONS ONLY */}
       {isNominate && (
         <div style={invertBoxStyle}>
           <div style={{ fontWeight: 1000, marginBottom: 6 }}>Nominate 2 players</div>
@@ -213,7 +218,7 @@ export default function ChatPanel(props: {
         </div>
       )}
 
-      {/* Pagination controls */}
+      {/* Pagination */}
       <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ fontSize: 12, opacity: 0.75 }}>
           Page <b>{page}</b> / {totalPages} (Page 1 = newest)
@@ -227,20 +232,17 @@ export default function ChatPanel(props: {
         </div>
       </div>
 
-      {/* Message feed */}
-      <div style={{ border: "1px solid #d7d7d7", borderRadius: 10, background: "#fff" }}>
+      {/* Feed */}
+      <div style={{ border: "1px solid #d7d7d7", borderRadius: 10, background: "#fff", padding: 6 }}>
         {messages.map((m) => {
           const isMine = meUserId && m.userId === meUserId;
           const alreadyReacted = m.myReaction !== null;
           const disableReact = isMine || m.isSystem || alreadyReacted;
 
           const points = m.plus - m.minus;
-
-          const isNomSummary = m.isSystem && /^(\[SYSTEM\]\s*)?Nomination votes:/i.test(m.body);
           const bodyText = m.body.replace(/^\[SYSTEM\]\s*/i, "");
 
-          const bg =
-            m.isSystem ? "#fff3cd" : isFlashing(m.id) ? "#fff3cd" : "#fff";
+          const bg = m.isSystem ? "#fff3cd" : isFlashing(m.id) ? "#fff3cd" : "#fff";
 
           return (
             <div
@@ -250,9 +252,11 @@ export default function ChatPanel(props: {
                 gridTemplateColumns: "160px 1fr 120px",
                 gap: 10,
                 padding: 10,
-                borderBottom: "1px solid #eef2f5",
+                marginBottom: 6,
+                border: "1px solid rgba(0,0,0,0.18)", // ✅ darker outline
+                borderRadius: 10,
                 background: bg,
-                transition: "background 0.4s ease",
+                transition: "background 0.35s ease",
               }}
             >
               <div style={{ fontSize: 12 }}>
@@ -271,12 +275,8 @@ export default function ChatPanel(props: {
                 <div style={{ opacity: 0.6 }}>{new Date(m.createdAt).toLocaleString()}</div>
               </div>
 
-              <div style={{ fontSize: 14 }}>
-                {isNomSummary ? (
-                  <NominationVoteLine text={bodyText} />
-                ) : (
-                  <div style={{ color: m.isSystem ? "#6c757d" : "#111" }}>{bodyText}</div>
-                )}
+              <div style={{ fontSize: 14, color: m.isSystem ? "#6c757d" : "#111" }}>
+                {bodyText}
               </div>
 
               <div style={{ textAlign: "right" }}>
@@ -289,8 +289,8 @@ export default function ChatPanel(props: {
                     style={{
                       width: 26,
                       height: 22,
-                      borderRadius: 4,
-                      border: "1px solid #cfd7df",
+                      borderRadius: 6,
+                      border: "1px solid rgba(0,0,0,0.18)",
                       background: disableReact ? "#f3f6f9" : "#ffffff",
                       cursor: disableReact ? "not-allowed" : "pointer",
                     }}
@@ -304,8 +304,8 @@ export default function ChatPanel(props: {
                     style={{
                       width: 26,
                       height: 22,
-                      borderRadius: 4,
-                      border: "1px solid #cfd7df",
+                      borderRadius: 6,
+                      border: "1px solid rgba(0,0,0,0.18)",
                       background: disableReact ? "#f3f6f9" : "#ffffff",
                       cursor: disableReact ? "not-allowed" : "pointer",
                     }}
@@ -322,41 +322,6 @@ export default function ChatPanel(props: {
           );
         })}
       </div>
-    </div>
-  );
-}
-
-function NominationVoteLine({ text }: { text: string }) {
-  const parts = text.split("·").map((p) => p.trim());
-
-  return (
-    <div style={{ lineHeight: 1.4 }}>
-      {parts.map((p, idx) => {
-        const isBracket = p.startsWith("[") && p.endsWith("]");
-        const clean = isBracket ? p.slice(1, -1) : p;
-
-        return (
-          <span key={idx} style={{ marginRight: 8 }}>
-            {isBracket ? (
-              <span
-                style={{
-                  display: "inline-block",
-                  padding: "2px 6px",
-                  borderRadius: 8,
-                  background: "#111",
-                  color: "#fff",
-                  fontWeight: 900,
-                }}
-              >
-                {clean}
-              </span>
-            ) : (
-              <span style={{ fontWeight: 700 }}>{clean}</span>
-            )}
-            {idx < parts.length - 1 ? <span style={{ opacity: 0.5 }}> · </span> : null}
-          </span>
-        );
-      })}
     </div>
   );
 }
