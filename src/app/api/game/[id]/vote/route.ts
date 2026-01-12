@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
+import { touchUser } from "@/lib/touchUser";
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -26,7 +27,6 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     select: { nomineeAUserId: true, nomineeBUserId: true },
   });
   if (!rr) return NextResponse.json({ error: "Nominees not set yet" }, { status: 400 });
-
   if (userId === rr.nomineeAUserId || userId === rr.nomineeBUserId) return NextResponse.json({ error: "Nominees cannot vote" }, { status: 403 });
 
   const body = await req.json().catch(() => null);
@@ -40,12 +40,13 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       update: { targetUserId },
       create: { gameId, roundNumber: game.roundNumber, voterUserId: userId, targetUserId },
     });
-
     await tx.gamePlayer.update({
       where: { gameId_userId: { gameId, userId } },
       data: { lastActiveAt: new Date() },
     });
   });
+
+  await touchUser(userId);
 
   return NextResponse.json({ ok: true });
 }

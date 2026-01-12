@@ -24,6 +24,12 @@ export const authOptions: NextAuthOptions = {
         const ok = await bcrypt.compare(password, user.passwordHash);
         if (!ok) return null;
 
+        // ✅ mark site-wide activity on login
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { lastSeenAt: new Date() },
+        });
+
         return { id: user.id, name: user.username };
       },
     }),

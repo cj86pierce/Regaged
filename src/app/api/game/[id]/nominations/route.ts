@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
+import { touchUser } from "@/lib/touchUser";
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -41,12 +42,13 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     await tx.nomination.createMany({
       data: uniq.map((t) => ({ gameId, roundNumber: game.roundNumber, voterUserId: userId, targetUserId: t })),
     });
-
     await tx.gamePlayer.update({
       where: { gameId_userId: { gameId, userId } },
       data: { lastActiveAt: new Date() },
     });
   });
+
+  await touchUser(userId);
 
   return NextResponse.json({ ok: true });
 }

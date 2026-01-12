@@ -43,6 +43,9 @@ model User {
   karma        Int      @default(0)
   tMoney       Int      @default(0)
 
+  // ✅ NEW: site-wide last active timestamp
+  lastSeenAt   DateTime @default(now())
+
   enrollments  Enrollment[]
   gamePlayers  GamePlayer[]
   messages     GameMessage[]
@@ -88,8 +91,6 @@ model Enrollment {
 
 model Game {
   id            String    @id @default(cuid())
-
-  // ✅ NEW: nice human-readable game number (1,2,3...)
   number        Int       @unique @default(autoincrement())
 
   gameType      GameType

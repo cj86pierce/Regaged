@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
 import { isSystemUser } from "@/lib/systemUser";
+import { touchUser } from "@/lib/touchUser";
 
 export async function POST(req: Request, { params }: { params: { messageId: string } }) {
   const session = await getServerSession(authOptions);
@@ -23,9 +24,7 @@ export async function POST(req: Request, { params }: { params: { messageId: stri
   if (msg.userId === userId) return NextResponse.json({ error: "You cannot react to your own message." }, { status: 400 });
   if (await isSystemUser(msg.userId)) return NextResponse.json({ error: "You cannot react to system messages." }, { status: 400 });
 
-  const gp = await prisma.gamePlayer.findUnique({
-    where: { gameId_userId: { gameId: msg.gameId, userId } },
-  });
+  const gp = await prisma.gamePlayer.findUnique({ where: { gameId_userId: { gameId: msg.gameId, userId } } });
   if (!gp || gp.status !== "ACTIVE") return NextResponse.json({ error: "Not in game" }, { status: 403 });
 
   const existing = await prisma.messageReaction.findUnique({
@@ -35,17 +34,14 @@ export async function POST(req: Request, { params }: { params: { messageId: stri
 
   await prisma.$transaction(async (tx) => {
     await tx.messageReaction.create({ data: { messageId, reactorUserId: userId, type } });
-
-    await tx.gamePlayer.update({
-      where: { gameId_userId: { gameId: msg.gameId, userId } },
-      data: { lastActiveAt: new Date() }, // reactor active
-    });
-
+    await tx.gamePlayer.update({ where: { gameId_userId: { gameId: msg.gameId, userId } }, data: { lastActiveAt: new Date() } });
     await tx.gamePlayer.update({
       where: { gameId_userId: { gameId: msg.gameId, userId: msg.userId } },
       data: type === "PLUS" ? { plusCount: { increment: 1 } } : { minusCount: { increment: 1 } },
     });
   });
+
+  await touchUser(userId);
 
   return NextResponse.json({ ok: true });
 }

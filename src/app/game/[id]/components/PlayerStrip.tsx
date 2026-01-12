@@ -37,7 +37,8 @@ export default function PlayerStrip({
 }) {
   return (
     <div style={{ border: "1px solid #cfd7df", borderRadius: 10, padding: "6px 8px", background: "#eef7ff", overflow: "hidden" }}>
-      <div style={{ display: "flex", gap: 4, flexWrap: "nowrap", justifyContent: "space-between" }}>
+      {/* Fixed gap, no space-between = no weird shrinking */}
+      <div style={{ display: "flex", gap: 4, flexWrap: "nowrap", justifyContent: "flex-start" }}>
         {players.map((p) => {
           const isPov = p.userId === povUserId;
           const eliminated = p.status === "ELIMINATED";

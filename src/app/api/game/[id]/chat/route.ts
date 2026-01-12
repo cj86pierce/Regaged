@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
+import { touchUser } from "@/lib/touchUser";
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -22,15 +23,14 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   }
 
   await prisma.$transaction(async (tx) => {
-    await tx.gameMessage.create({
-      data: { gameId, userId, channel: "PUBLIC", body: text },
-    });
-
-    await tx.gamePlayer.update({
+    tx.gameMessage.create({ data: { gameId, userId, channel: "PUBLIC", body: text } });
+    tx.gamePlayer.update({
       where: { gameId_userId: { gameId, userId } },
       data: { chatCount: { increment: 1 }, lastActiveAt: new Date() },
     });
   });
+
+  await touchUser(userId);
 
   return NextResponse.json({ ok: true });
 }

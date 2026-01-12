@@ -21,7 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Providers>
           <NavBar />
           <div style={{ padding: "16px 12px 40px" }}>
-            <div style={{ maxWidth: 980, margin: "0 auto" }}>{children}</div>
+            <div style={{ maxWidth: 1120, margin: "0 auto" }}>{children}</div>
           </div>
         </Providers>
       </body>
