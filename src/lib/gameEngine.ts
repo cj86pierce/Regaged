@@ -1,17 +1,16 @@
 import { prisma } from "@/lib/prisma";
+import { assignFastingPov } from "@/lib/fastingPov";
 
 const FASTING_MAX_PLAYERS = 15;
 const FASTING_NOM_MS = 2 * 60 * 1000; // 2 minutes
 
 export async function tryStartFastingGame() {
-  // Grab earliest 15 enrollments
   const enrollments = await prisma.enrollment.findMany({
     where: { gameType: "FASTING" },
     orderBy: { createdAt: "asc" },
     take: FASTING_MAX_PLAYERS,
   });
 
-  // Only start when FULL
   if (enrollments.length < FASTING_MAX_PLAYERS) return;
 
   const game = await prisma.game.create({
@@ -32,4 +31,11 @@ export async function tryStartFastingGame() {
   await prisma.enrollment.deleteMany({
     where: { id: { in: enrollments.map((e) => e.id) } },
   });
+
+  // ✅ Assign POV immediately so the round isn't "missing POV" even if tick is delayed
+  try {
+    await assignFastingPov(game.id, false);
+  } catch {
+    // if it fails, cron tick will try again later
+  }
 }
