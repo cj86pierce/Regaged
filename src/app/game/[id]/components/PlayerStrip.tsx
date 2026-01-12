@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect } from "react";
 
 type Player = {
   userId: string;
@@ -35,30 +35,45 @@ export default function PlayerStrip(props: {
   povUserId: string | null;
   gameState: string;
 
-  // nomination selection
+  meUserId: string | null;
+
+  // lock states (user-specific)
+  myNomLockedIn: boolean;
+  myVoteLockedIn: string | null;
+
+  // selection state
   nomSelected: string[];
   setNomSelected: (next: string[]) => void;
 
-  // eviction selection
   evictSelected: string | null;
   setEvictSelected: (id: string | null) => void;
 }) {
-  const { players, povUserId, gameState, nomSelected, setNomSelected, evictSelected, setEvictSelected } = props;
+  const {
+    players,
+    povUserId,
+    gameState,
+    meUserId,
+    myNomLockedIn,
+    myVoteLockedIn,
+    nomSelected,
+    setNomSelected,
+    evictSelected,
+    setEvictSelected,
+  } = props;
 
   const isNominate = gameState === "ROUND_NOMINATE";
   const isVote = gameState === "ROUND_VOTE";
 
-  const povName = useMemo(() => {
-    if (!povUserId) return null;
-    return players.find((p) => p.userId === povUserId)?.username ?? null;
-  }, [players, povUserId]);
+  const meIsNominee = !!meUserId && players.some((p) => p.userId === meUserId && p.isNominee);
 
-  // reset selections when phase changes
+  // clear selections when phase changes or locks happen
   useEffect(() => {
     if (!isNominate) setNomSelected([]);
     if (!isVote) setEvictSelected(null);
+    if (myNomLockedIn) setNomSelected([]);
+    if (myVoteLockedIn) setEvictSelected(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameState]);
+  }, [gameState, myNomLockedIn, myVoteLockedIn]);
 
   function toggleNomPick(userId: string) {
     const has = nomSelected.includes(userId);
@@ -87,29 +102,42 @@ export default function PlayerStrip(props: {
         overflow: "hidden",
       }}
     >
-      <div style={{ fontSize: 12, fontWeight: 900, marginBottom: 6, opacity: 0.85 }}>
-        POV: <span style={{ fontWeight: 1000 }}>{povName ?? "—"}</span>
-        {isNominate && <span style={{ marginLeft: 10, opacity: 0.75 }}>(select 2)</span>}
-        {isVote && <span style={{ marginLeft: 10, opacity: 0.75 }}>(select 1 nominee)</span>}
-      </div>
-
       <div style={{ display: "flex", gap: 4, flexWrap: "nowrap", justifyContent: "flex-start" }}>
         {players.map((p) => {
           const eliminated = p.status === "ELIMINATED";
           const isPov = p.userId === povUserId;
           const mins = minutesSince(p.lastActiveAt);
 
-          const canNomPick = isNominate && !eliminated && !isPov;
-          const canEvictPick = isVote && !eliminated && p.isNominee;
+          // --- Indicator logic (slot where ✅/❓/POV/placement shows) ---
+          let indicatorText = "";
+
+          if (eliminated && p.eliminatedPlace) {
+            indicatorText = suffix(p.eliminatedPlace); // 15th, 14th...
+          } else if (isVote && myVoteLockedIn) {
+            // After voting: nominees show ❓, others show ✅ (POV overrides ✅)
+            if (p.isNominee) indicatorText = "❓";
+            else indicatorText = isPov ? "POV" : "✅";
+          } else if (isNominate && myNomLockedIn) {
+            // After nom locked: everyone shows ✅ except POV shows POV
+            indicatorText = isPov ? "POV" : "✅";
+          } else {
+            // Before locks: indicator area is handled by boxes below
+            indicatorText = "";
+          }
+
+          // --- Selection box rules ---
+          const showNomBox = isNominate && !myNomLockedIn && !eliminated && !isPov;
+          const showVoteBox = isVote && !myVoteLockedIn && !eliminated && p.isNominee;
 
           const nomOn = nomSelected.includes(p.userId);
           const evictOn = evictSelected === p.userId;
 
-          const bottom =
-            eliminated && p.eliminatedPlace ? suffix(p.eliminatedPlace) : "";
+          // Disabled vote selection if you are a nominee (nominees cannot vote)
+          const voteBoxDisabled = meIsNominee;
 
           return (
             <div key={p.userId} style={{ width: tileW }}>
+              {/* Avatar (ONLY eliminated is grayscale) */}
               <div
                 style={{
                   width: tileW,
@@ -117,37 +145,18 @@ export default function PlayerStrip(props: {
                   borderRadius: 6,
                   background: eliminated ? "#6f7781" : "#f5f7fa",
                   border: "1px solid rgba(0,0,0,0.15)",
-                  position: "relative",
                   overflow: "hidden",
-                  filter: "grayscale(1)",
-                  opacity: eliminated ? 0.75 : 1,
+                  filter: eliminated ? "grayscale(1)" : "none",
+                  opacity: eliminated ? 0.8 : 1,
                 }}
                 title={p.username}
               >
                 <div style={{ width: "100%", height: "100%", display: "grid", placeItems: "center", fontSize: 18, opacity: 0.7 }}>
                   🙂
                 </div>
-
-                {isPov && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: 4,
-                      right: 4,
-                      background: "#fff3cd",
-                      border: "1px solid #e5c46a",
-                      borderRadius: 999,
-                      padding: "2px 6px",
-                      fontSize: 9,
-                      fontWeight: 900,
-                      filter: "none",
-                    }}
-                  >
-                    POV
-                  </div>
-                )}
               </div>
 
+              {/* Name */}
               <Link
                 href={`/u/${encodeURIComponent(p.username)}`}
                 style={{
@@ -167,45 +176,48 @@ export default function PlayerStrip(props: {
                 {trunc(p.username, 10)}
               </Link>
 
+              {/* last active */}
               <div style={{ fontSize: 10, opacity: 0.85, textAlign: "center", marginTop: 2 }}>
                 {mins >= 60 ? "offline" : `${mins} min`}
               </div>
 
-              <div style={{ fontSize: 10, fontWeight: 1000, textAlign: "center", marginTop: 2, opacity: 0.9 }}>
-                {bottom}
+              {/* indicator slot (replaces ✅/❓/POV/placement) */}
+              <div style={{ height: 16, marginTop: 2, display: "grid", placeItems: "center", fontSize: 11, fontWeight: 1000 }}>
+                {indicatorText}
               </div>
 
-              <div style={{ display: "grid", placeItems: "center", marginTop: 4 }}>
-                {isNominate ? (
+              {/* selection box slot */}
+              <div style={{ height: 20, marginTop: 2, display: "grid", placeItems: "center" }}>
+                {showNomBox ? (
                   <button
-                    disabled={!canNomPick}
                     onClick={() => toggleNomPick(p.userId)}
-                    title={canNomPick ? "Select nominee" : eliminated ? "Eliminated" : isPov ? "POV immune" : ""}
                     style={{
                       width: 18,
                       height: 18,
                       borderRadius: 4,
                       border: "1px solid rgba(0,0,0,0.35)",
                       background: nomOn ? "#111" : "#fff",
-                      cursor: canNomPick ? "pointer" : "not-allowed",
+                      cursor: "pointer",
                     }}
+                    title="Select nominee"
                   />
-                ) : isVote ? (
+                ) : showVoteBox ? (
                   <button
-                    disabled={!canEvictPick}
+                    disabled={voteBoxDisabled}
                     onClick={() => toggleEvictPick(p.userId)}
-                    title={canEvictPick ? "Select to evict" : ""}
                     style={{
                       width: 18,
                       height: 18,
                       borderRadius: 4,
                       border: "1px solid rgba(0,0,0,0.35)",
                       background: evictOn ? "#111" : "#fff",
-                      cursor: canEvictPick ? "pointer" : "not-allowed",
+                      cursor: voteBoxDisabled ? "not-allowed" : "pointer",
+                      opacity: voteBoxDisabled ? 0.5 : 1,
                     }}
+                    title={voteBoxDisabled ? "Nominees cannot vote" : "Select to evict"}
                   />
                 ) : (
-                  <div style={{ height: 18 }} />
+                  <div />
                 )}
               </div>
             </div>
