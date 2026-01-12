@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import PlayerStrip from "./components/PlayerStrip";
 import ChatPanel from "./components/ChatPanel";
 import Sidebar from "./components/Sidebar";
@@ -61,8 +61,6 @@ export default function GamePage({ params }: { params: { id: string } }) {
   const [votePick, setVotePick] = useState<string | null>(null);
   const [chatText, setChatText] = useState("");
 
-  const lastAutoTickAtRef = useRef<number>(0);
-
   async function load() {
     const res = await fetch(`/api/game/${gameId}/state`, { cache: "no-store" });
     const json = await res.json();
@@ -70,22 +68,13 @@ export default function GamePage({ params }: { params: { id: string } }) {
     setData(json);
   }
 
-  async function cronTick() {
-    await fetch(`/api/cron/tick`, { method: "POST" }).catch(() => null);
-  }
-
   useEffect(() => {
     load().catch((e) => setError(e.message));
 
-    const poll = setInterval(() => load().catch(() => {}), 1500);
-    const engine = setInterval(() => {
-      cronTick().catch(() => {});
-    }, 2000);
+    // Poll game state (keep this modest to avoid DB connection pressure)
+    const poll = setInterval(() => load().catch(() => {}), 3000);
 
-    return () => {
-      clearInterval(poll);
-      clearInterval(engine);
-    };
+    return () => clearInterval(poll);
   }, [gameId]);
 
   const timeLeft = useMemo(() => {
@@ -93,17 +82,6 @@ export default function GamePage({ params }: { params: { id: string } }) {
     const ms = new Date(data.game.stateEndsAt).getTime() - Date.now();
     return Math.max(0, Math.ceil(ms / 1000));
   }, [data]);
-
-  useEffect(() => {
-    if (timeLeft === null) return;
-    if (timeLeft > 0) return;
-
-    const now = Date.now();
-    if (now - lastAutoTickAtRef.current < 1500) return;
-    lastAutoTickAtRef.current = now;
-
-    cronTick().catch(() => {});
-  }, [timeLeft]);
 
   async function sendChat() {
     setError(null);
