@@ -10,6 +10,11 @@ type Player = {
   userId: string;
   username: string;
   status: "ACTIVE" | "ELIMINATED";
+
+  // ✅ new fields coming from state API
+  lastActiveAt: string;
+  eliminatedPlace: number | null;
+
   chatCount: number;
   plusCount: number;
   minusCount: number;
