@@ -14,10 +14,6 @@ type Player = {
   eliminatedPlace: number | null;
   isNominee: boolean;
   hasVoted: boolean | null;
-  chatCount: number;
-  plusCount: number;
-  minusCount: number;
-  povWins: number;
 };
 
 type Message = {
@@ -36,23 +32,10 @@ type GameState = {
   ok: boolean;
   meUserId: string | null;
   myNomLocked: boolean | null;
-  game: {
-    id: string;
-    number: number;
-    state: string;
-    roundNumber: number;
-    povUserId: string | null;
-    stateEndsAt: string | null;
-  };
+  game: { id: string; number: number; state: string; roundNumber: number; povUserId: string | null; stateEndsAt: string | null };
   lobby: { current: number; needed: number } | null;
   nominees: { a: string; b: string; evictedUserId: string | null } | null;
-  voteInfo: {
-    nomineeAUserId: string;
-    nomineeBUserId: string;
-    votesA: number;
-    votesB: number;
-    myVoteTargetUserId: string | null;
-  } | null;
+  voteInfo: { myVoteTargetUserId: string | null } | null;
   players: Player[];
   messages: Message[];
   pagination: { page: number; pageSize: number; totalPages: number; totalCount: number };
@@ -68,11 +51,21 @@ export default function GamePage({ params }: { params: { id: string } }) {
   const [chatText, setChatText] = useState("");
   const [page, setPage] = useState(1);
 
+  // ✅ selection lives here
+  const [nomSelected, setNomSelected] = useState<string[]>([]);
+  const [evictSelected, setEvictSelected] = useState<string | null>(null);
+
   async function load() {
     const res = await fetch(`/api/game/${gameId}/state?page=${page}&pageSize=25`, { cache: "no-store" });
     const json = await res.json();
     if (!res.ok) throw new Error(json?.error ?? "Failed to load game");
     setData(json);
+
+    // Clear selections when phase changes / locks
+    if (json.game.state !== "ROUND_NOMINATE") setNomSelected([]);
+    if (json.game.state !== "ROUND_VOTE") setEvictSelected(null);
+    if (json.myNomLocked) setNomSelected([]);
+    if (json.voteInfo?.myVoteTargetUserId) setEvictSelected(null);
   }
 
   useEffect(() => {
@@ -96,10 +89,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
       body: JSON.stringify({ text: chatText }),
     });
     const json = await res.json();
-    if (!res.ok) {
-      setError(json?.error ?? "Chat failed");
-      return;
-    }
+    if (!res.ok) return setError(json?.error ?? "Chat failed");
     setChatText("");
     setPage(1);
     await load();
@@ -117,46 +107,36 @@ export default function GamePage({ params }: { params: { id: string } }) {
     else await load();
   }
 
-  async function submitNoms(targets: string[]) {
+  async function confirmNoms() {
+    if (nomSelected.length !== 2) return;
     setError(null);
     const res = await fetch(`/api/game/${gameId}/nominations`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ targets }),
+      body: JSON.stringify({ targets: nomSelected }),
     });
     const json = await res.json();
-    if (!res.ok) {
-      setError(json?.error ?? "Nomination failed");
-      return;
-    }
+    if (!res.ok) return setError(json?.error ?? "Nomination failed");
     await load();
   }
 
-  async function evict(targetUserId: string) {
+  async function confirmVote() {
+    if (!evictSelected) return;
     setError(null);
     const res = await fetch(`/api/game/${gameId}/vote`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ targetUserId }),
+      body: JSON.stringify({ targetUserId: evictSelected }),
     });
     const json = await res.json();
-    if (!res.ok) {
-      setError(json?.error ?? "Vote failed");
-      return;
-    }
+    if (!res.ok) return setError(json?.error ?? "Vote failed");
     await load();
   }
 
   if (!data) return <p style={{ padding: 16 }}>Loading game…</p>;
 
-  const nomineeA = data.nominees?.a ?? null;
-  const nomineeB = data.nominees?.b ?? null;
-
-  const nomineePlayers =
-    nomineeA && nomineeB ? data.players.filter((p) => p.userId === nomineeA || p.userId === nomineeB) : [];
-
-  const myVoteLockedIn = data.voteInfo?.myVoteTargetUserId ?? null;
   const myNomLockedIn = data.myNomLocked === true;
+  const myVoteLockedIn = data.voteInfo?.myVoteTargetUserId ?? null;
 
   return (
     <div style={{ padding: 12 }}>
@@ -189,9 +169,13 @@ export default function GamePage({ params }: { params: { id: string } }) {
         gameState={data.game.state}
         meUserId={data.meUserId}
         myNomLockedIn={myNomLockedIn}
-        onSubmitNoms={submitNoms}
+        onSubmitNoms={async () => {}}
         myVoteLockedIn={myVoteLockedIn}
-        onEvict={evict}
+        onEvict={async () => {}}
+        nomSelected={nomSelected}
+        setNomSelected={setNomSelected}
+        evictSelected={evictSelected}
+        setEvictSelected={setEvictSelected}
       />
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 14, marginTop: 10 }}>
@@ -200,38 +184,16 @@ export default function GamePage({ params }: { params: { id: string } }) {
 
           {tab === "public" && (
             <ChatPanel
-              gameId={gameId}
               meUserId={data.meUserId}
               messages={data.messages}
               chatText={chatText}
               setChatText={setChatText}
               onSend={sendChat}
               onReact={react}
-              gameState={data.game.state}
-              povUserId={data.game.povUserId}
-              players={data.players}
-              myNomLockedIn={myNomLockedIn}
-              nomPicks={[]}
-              toggleNom={() => {}}
-              submitNoms={async () => {}}
-              nominees={data.nominees}
-              nomineePlayers={nomineePlayers}
-              voteInfo={data.voteInfo}
-              myVoteLockedIn={myVoteLockedIn}
-              votePick={null}
-              setVotePick={() => {}}
-              submitVote={async () => {}}
               page={data.pagination.page}
               totalPages={data.pagination.totalPages}
               setPage={setPage}
             />
-          )}
-
-          {tab === "private" && (
-            <div style={{ border: "1px solid #d7d7d7", borderRadius: 10, padding: 12, background: "#fff" }}>
-              <b>Private messages</b>
-              <div style={{ marginTop: 8, opacity: 0.75 }}>Not implemented yet.</div>
-            </div>
           )}
 
           {error && (
@@ -241,18 +203,17 @@ export default function GamePage({ params }: { params: { id: string } }) {
           )}
         </div>
 
-        {/* vote box still exists here for clarity; it will show locked-in, but main action is on player cards */}
         <Sidebar
-          gameId={gameId}
           gameState={data.game.state}
           roundNumber={data.game.roundNumber}
-          messages={data.messages}
-          nominees={data.nominees}
-          nomineePlayers={nomineePlayers.map((p) => ({ userId: p.userId, username: p.username }))}
+          nomSelected={nomSelected}
+          canConfirmNoms={data.game.state === "ROUND_NOMINATE" && !myNomLockedIn && nomSelected.length === 2}
+          onConfirmNoms={confirmNoms}
+          myNomLockedIn={myNomLockedIn}
+          evictSelected={evictSelected}
+          canConfirmVote={data.game.state === "ROUND_VOTE" && !myVoteLockedIn && !!evictSelected}
+          onConfirmVote={confirmVote}
           myVoteLockedIn={myVoteLockedIn}
-          votePick={null}
-          setVotePick={() => {}}
-          submitVote={async () => {}}
         />
       </div>
     </div>
