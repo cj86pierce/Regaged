@@ -26,13 +26,22 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   });
   if (!gp || gp.status !== "ACTIVE") return NextResponse.json({ error: "Not in game" }, { status: 403 });
 
-  const body = await req.json().catch(() => null);
-  const picks = Array.isArray(body?.targets) ? body.targets : [];
+  const body: any = await req.json().catch(() => null);
 
-  const targets = picks.map(String);
-  const uniq = Array.from(new Set(targets)).filter(Boolean);
+  // Ensure we always deal with string[]
+  const rawTargets: unknown = body?.targets;
+  if (!Array.isArray(rawTargets)) {
+    return NextResponse.json({ error: "targets must be an array" }, { status: 400 });
+  }
 
-  if (uniq.length !== 2) return NextResponse.json({ error: "Pick exactly 2 unique nominees." }, { status: 400 });
+  const targetsAsStrings: string[] = rawTargets.map((x) => String(x));
+  const uniq: string[] = Array.from(new Set(targetsAsStrings))
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+
+  if (uniq.length !== 2) {
+    return NextResponse.json({ error: "Pick exactly 2 unique nominees." }, { status: 400 });
+  }
 
   // Cannot nominate POV
   if (game.povUserId && uniq.includes(game.povUserId)) {
@@ -44,9 +53,12 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     where: { gameId, status: "ACTIVE", userId: { in: uniq } },
     select: { userId: true },
   });
-  if (validTargets.length !== 2) return NextResponse.json({ error: "Invalid nominee selection." }, { status: 400 });
 
-  // Replace your nominations for this round (so you can change your mind until time ends)
+  if (validTargets.length !== 2) {
+    return NextResponse.json({ error: "Invalid nominee selection." }, { status: 400 });
+  }
+
+  // Replace your nominations for this round (so you can change your mind until phase ends)
   await prisma.$transaction(async (tx) => {
     await tx.nomination.deleteMany({
       where: { gameId, roundNumber: game.roundNumber, voterUserId: userId },
