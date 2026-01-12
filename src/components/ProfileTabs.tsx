@@ -7,10 +7,10 @@ export type ProfileGameBubble = {
   gameId: string;
   gameNumber: number;
   gameType: string;
-  state: string; // ENROLLING/ROUND_NOMINATE/ROUND_VOTE/FINAL3/COMPLETED
-  joinedAt: string; // ISO
+  state: string;
+  joinedAt: string;
   yourStatus: "ACTIVE" | "ELIMINATED";
-  eliminatedPlace: number | null; // 1/2/3/15...
+  eliminatedPlace: number | null;
 };
 
 export type ProfileTabsData = {
@@ -97,11 +97,7 @@ function Bubble({ g }: { g: ProfileGameBubble }) {
 
   return (
     <div style={{ textAlign: "center", width: 92 }}>
-      <Link
-        href={`/game/${g.gameId}`}
-        style={{ textDecoration: "none", color: "inherit" }}
-        title={`Game #${g.gameNumber} · ${g.gameType} · ${g.state}`}
-      >
+      <Link href={`/game/${g.gameId}`} style={{ textDecoration: "none", color: "inherit" }}>
         <div
           style={{
             width: 72,
@@ -173,7 +169,6 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
   return (
     <main style={{ padding: 8 }}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 14 }}>
-        {/* LEFT */}
         <Card title="Profile">
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
             <div
@@ -289,27 +284,48 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
           </div>
         </Card>
 
-        {/* RIGHT: Actions FIRST, then Stats */}
+        {/* RIGHT */}
         <div style={{ display: "grid", gap: 14 }}>
-          {/* ✅ Enroll is the TOP thing */}
           <Card title="Participate!">
-            <Link
-              href="/enroll"
-              style={{
-                display: "block",
-                textAlign: "center",
-                textDecoration: "none",
-                fontWeight: 1000,
-                padding: "10px 12px",
-                borderRadius: 10,
-                background: "linear-gradient(#ffd85a, #ffb703)",
-                color: "#3a2b00",
-                border: "1px solid rgba(0,0,0,0.12)",
-                boxShadow: "0 8px 18px rgba(255, 183, 3, 0.25)",
-              }}
-            >
-              Enroll now ▶
-            </Link>
+            <div style={{ display: "grid", gap: 10 }}>
+              <Link
+                href="/enroll"
+                style={{
+                  display: "block",
+                  textAlign: "center",
+                  textDecoration: "none",
+                  fontWeight: 1000,
+                  padding: "10px 12px",
+                  borderRadius: 10,
+                  background: "linear-gradient(#ffd85a, #ffb703)",
+                  color: "#3a2b00",
+                  border: "1px solid rgba(0,0,0,0.12)",
+                  boxShadow: "0 8px 18px rgba(255, 183, 3, 0.25)",
+                }}
+              >
+                Enroll now ▶
+              </Link>
+
+              {/* ✅ Avatar builder link */}
+              {data.isOwnProfile && (
+                <Link
+                  href="/profile/avatar"
+                  style={{
+                    display: "block",
+                    textAlign: "center",
+                    textDecoration: "none",
+                    fontWeight: 1000,
+                    padding: "10px 12px",
+                    borderRadius: 10,
+                    background: "linear-gradient(#eaf2ff, #d6e6ff)",
+                    color: "#0b2b66",
+                    border: "1px solid rgba(0,0,0,0.12)",
+                  }}
+                >
+                  Customize Avatar
+                </Link>
+              )}
+            </div>
           </Card>
 
           <Card title="Stats">
