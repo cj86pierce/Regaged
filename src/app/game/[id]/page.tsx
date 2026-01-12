@@ -49,7 +49,6 @@ export default function GamePage({ params }: { params: { id: string } }) {
   const [chatText, setChatText] = useState("");
   const [page, setPage] = useState(1);
 
-  // selections
   const [nomSelected, setNomSelected] = useState<string[]>([]);
   const [evictSelected, setEvictSelected] = useState<string | null>(null);
 
@@ -59,7 +58,6 @@ export default function GamePage({ params }: { params: { id: string } }) {
     if (!res.ok) throw new Error(json?.error ?? "Failed to load game");
     setData(json);
 
-    // clear selections when locked/phase change
     if (json.game.state !== "ROUND_NOMINATE") setNomSelected([]);
     if (json.game.state !== "ROUND_VOTE") setEvictSelected(null);
     if (json.myNomLocked) setNomSelected([]);

@@ -1,18 +1,14 @@
 "use client";
 
-type Player = { userId: string; username: string };
-
 export default function Sidebar(props: {
   gameState: string;
   roundNumber: number;
 
-  // Nominate confirm
   nomSelected: string[];
   canConfirmNoms: boolean;
   onConfirmNoms: () => Promise<void>;
   myNomLockedIn: boolean;
 
-  // Vote confirm
   evictSelected: string | null;
   canConfirmVote: boolean;
   onConfirmVote: () => Promise<void>;
@@ -31,10 +27,18 @@ export default function Sidebar(props: {
     myVoteLockedIn,
   } = props;
 
+  const boxBase: React.CSSProperties = {
+    border: "1px solid rgba(0,0,0,0.10)",
+    borderRadius: 10,
+    padding: 12,
+    background: "#fff",
+    overflow: "hidden",
+    wordBreak: "break-word",
+  };
+
   return (
     <div style={{ display: "grid", gap: 14 }}>
-      {/* Confirm box */}
-      <div style={{ border: "1px solid rgba(0,0,0,0.10)", borderRadius: 10, padding: 12, background: "#fff" }}>
+      <div style={boxBase}>
         <div style={{ fontWeight: 1000, marginBottom: 8 }}>
           {gameState === "ROUND_NOMINATE" ? "Confirm Nominations" : gameState === "ROUND_VOTE" ? "Confirm Vote" : "Round"}
         </div>
@@ -106,14 +110,20 @@ export default function Sidebar(props: {
         )}
       </div>
 
-      {/* Read this */}
-      <div style={{ border: "1px solid #d7d7d7", borderRadius: 10, background: "#fff", padding: 12 }}>
+      <div style={boxBase}>
         <div style={{ fontWeight: 1000, color: "#b02a37" }}>Read this</div>
         <div style={{ fontSize: 12, marginTop: 8, lineHeight: 1.35 }}>
           <b>Fasting:</b> POV is awarded first (immune). Pick 2 nominees. Then vote to evict one nominee.
-          <br />
-          <br />
+          <br /><br />
           <b>State:</b> {gameState} · <b>Round:</b> {roundNumber}
+        </div>
+      </div>
+
+      {/* Keep story space reserved so it never "disappears" */}
+      <div style={{ ...boxBase, maxHeight: 240, overflowY: "auto" }}>
+        <div style={{ fontWeight: 1000, color: "#b02a37" }}>Game Story</div>
+        <div style={{ fontSize: 12, marginTop: 8, opacity: 0.75 }}>
+          (Story will populate from system messages.)
         </div>
       </div>
     </div>
