@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import PlayerStrip from "./components/PlayerStrip";
 import ChatPanel from "./components/ChatPanel";
 import Sidebar from "./components/Sidebar";
@@ -61,6 +61,9 @@ export default function GamePage({ params }: { params: { id: string } }) {
   const [votePick, setVotePick] = useState<string | null>(null);
   const [chatText, setChatText] = useState("");
 
+  // Throttle: don’t nudge more than once per minute per client
+  const lastNudgeAtRef = useRef<number>(0);
+
   async function load() {
     const res = await fetch(`/api/game/${gameId}/state`, { cache: "no-store" });
     const json = await res.json();
@@ -68,11 +71,16 @@ export default function GamePage({ params }: { params: { id: string } }) {
     setData(json);
   }
 
+  async function nudgeTick() {
+    // GET works (cron route supports GET)
+    await fetch(`/api/cron/tick`, { method: "GET" }).catch(() => null);
+  }
+
   useEffect(() => {
     load().catch((e) => setError(e.message));
 
-    // modest polling only (cron advances rounds)
-    const poll = setInterval(() => load().catch(() => {}), 4000);
+    // modest polling
+    const poll = setInterval(() => load().catch(() => {}), 3000);
     return () => clearInterval(poll);
   }, [gameId]);
 
@@ -81,6 +89,18 @@ export default function GamePage({ params }: { params: { id: string } }) {
     const ms = new Date(data.game.stateEndsAt).getTime() - Date.now();
     return Math.max(0, Math.ceil(ms / 1000));
   }, [data]);
+
+  // If timer hits 0, ask server to advance (safe + throttled)
+  useEffect(() => {
+    if (timeLeft === null) return;
+    if (timeLeft > 0) return;
+
+    const now = Date.now();
+    if (now - lastNudgeAtRef.current < 60_000) return; // 60s throttle
+    lastNudgeAtRef.current = now;
+
+    nudgeTick().catch(() => {});
+  }, [timeLeft]);
 
   async function sendChat() {
     setError(null);
@@ -177,7 +197,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
             {timeLeft === 0 && (
               <>
                 {" "}
-                · <b>Waiting for server to advance…</b>
+                · <b>Advancing…</b>
               </>
             )}
           </div>
