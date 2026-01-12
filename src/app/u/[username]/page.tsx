@@ -15,7 +15,25 @@ export default async function PublicProfilePage({
 
   const user = await prisma.user.findUnique({
     where: { username },
-    select: { id: true, username: true, karma: true, tMoney: true, createdAt: true, lastSeenAt: true },
+    select: {
+      id: true,
+      username: true,
+      karma: true,
+      tMoney: true,
+      createdAt: true,
+      lastSeenAt: true,
+
+      // ✅ avatar fields
+      bodyStyle: true,
+      hairStyle: true,
+      eyesStyle: true,
+      mouthStyle: true,
+      shirtStyle: true,
+      bodyColor: true,
+      hairColor: true,
+      eyeColor: true,
+      shirtColor: true,
+    },
   });
 
   if (!user) {
@@ -34,6 +52,7 @@ export default async function PublicProfilePage({
     where: { userId: user.id },
     include: { color: true },
   });
+
   const highestColor =
     purchased.length > 0
       ? purchased.map((p) => p.color).sort((a, b) => b.karmaNeeded - a.karmaNeeded)[0]
@@ -54,9 +73,7 @@ export default async function PublicProfilePage({
       status: true,
       eliminatedPlace: true,
       joinedAt: true,
-      game: {
-        select: { number: true, gameType: true, state: true },
-      },
+      game: { select: { number: true, gameType: true, state: true } },
     },
   });
 
@@ -92,6 +109,20 @@ export default async function PublicProfilePage({
     colorName: highestColor?.name ?? "White",
     colorAnimated: highestColor?.isAnimated ?? false,
     lastSeenAt: user.lastSeenAt.toISOString(),
+
+    // ✅ required by ProfileTabsData now
+    avatar: {
+      bodyStyle: user.bodyStyle,
+      hairStyle: user.hairStyle,
+      eyesStyle: user.eyesStyle,
+      mouthStyle: user.mouthStyle,
+      shirtStyle: user.shirtStyle,
+      bodyColor: user.bodyColor,
+      hairColor: user.hairColor,
+      eyeColor: user.eyeColor,
+      shirtColor: user.shirtColor,
+    },
+
     stats: {
       gamesPlayed: gpAgg._count._all ?? 0,
       totalChats: gpAgg._sum.chatCount ?? 0,
