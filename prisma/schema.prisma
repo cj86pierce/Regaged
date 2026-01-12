@@ -1,0 +1,211 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum GameType {
+  FASTING
+}
+
+enum GameState {
+  ENROLLING
+  ROUND_NOMINATE
+  ROUND_VOTE
+  FINAL3
+  COMPLETED
+}
+
+enum PlayerStatus {
+  ACTIVE
+  ELIMINATED
+}
+
+enum ChatChannel {
+  PUBLIC
+  PRIVATE
+}
+
+enum ReactionType {
+  PLUS
+  MINUS
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  karma        Int      @default(0)
+  tMoney       Int      @default(0) // T$
+
+  enrollments  Enrollment[]
+  gamePlayers  GamePlayer[]
+  messages     GameMessage[]
+  reactions    MessageReaction[]
+  colorBuys    UserColor[]
+}
+
+model ColorLevel {
+  id            Int      @id
+  name          String   @unique
+  karmaNeeded   Int
+  priceT        Int      // price in T$
+  strength      Int      // 1..20 etc
+  isAnimated    Boolean  @default(false)
+
+  purchases     UserColor[]
+}
+
+model UserColor {
+  id          String   @id @default(cuid())
+  userId      String
+  colorId     Int
+  purchasedAt DateTime @default(now())
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  color       ColorLevel @relation(fields: [colorId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, colorId])
+  @@index([userId])
+}
+
+model Enrollment {
+  id        String   @id @default(cuid())
+  userId    String
+  gameType  GameType
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, gameType]) // only one enrollment per game type at a time
+  @@index([gameType, createdAt])
+}
+
+model Game {
+  id            String    @id @default(cuid())
+  gameType      GameType
+  state         GameState @default(ENROLLING)
+  roundNumber   Int       @default(0)
+
+  startsAt      DateTime?
+  stateEndsAt   DateTime? // when the current phase auto-ends
+
+  povUserId     String?   // current round POV holder (User.id)
+  createdAt     DateTime  @default(now())
+  completedAt   DateTime?
+
+  players       GamePlayer[]
+  nominations   Nomination[]
+  evictionVotes EvictionVote[]
+  messages      GameMessage[]
+  roundResults  RoundResult[]
+
+  @@index([state, stateEndsAt])
+}
+
+model GamePlayer {
+  id              String       @id @default(cuid())
+  gameId          String
+  userId          String
+  status          PlayerStatus @default(ACTIVE)
+
+  joinedAt        DateTime     @default(now())
+  eliminatedAt    DateTime?
+
+  povWins         Int          @default(0)
+  chatCount       Int          @default(0)
+  plusCount       Int          @default(0)
+  minusCount      Int          @default(0)
+
+  lastHadPovRound Int? // used to enforce “no POV next round”
+
+  game            Game         @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([gameId, userId])
+  @@index([gameId, status])
+}
+
+model Nomination {
+  id            String   @id @default(cuid())
+  gameId        String
+  roundNumber   Int
+  voterUserId   String
+  targetUserId  String
+  createdAt     DateTime @default(now())
+
+  game          Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@index([gameId, roundNumber])
+  @@index([gameId, roundNumber, targetUserId])
+  // enforce “2 noms per voter per round” in app logic
+}
+
+model EvictionVote {
+  id            String   @id @default(cuid())
+  gameId        String
+  roundNumber   Int
+  voterUserId   String
+  targetUserId  String
+  createdAt     DateTime @default(now())
+
+  game          Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@unique([gameId, roundNumber, voterUserId]) // 1 vote per voter per round
+  @@index([gameId, roundNumber, targetUserId])
+}
+
+model RoundResult {
+  id             String   @id @default(cuid())
+  gameId         String
+  roundNumber    Int
+  nomineeAUserId String
+  nomineeBUserId String
+  evictedUserId  String?
+  createdAt      DateTime @default(now())
+
+  game           Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@unique([gameId, roundNumber])
+}
+
+model GameMessage {
+  id        String      @id @default(cuid())
+  gameId    String
+  userId    String
+  channel   ChatChannel
+  body      String
+  createdAt DateTime    @default(now())
+
+  game      Game        @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reactions MessageReaction[]
+
+  @@index([gameId, channel, createdAt])
+}
+
+model MessageReaction {
+  id          String       @id @default(cuid())
+  messageId   String
+  reactorUserId String
+  type        ReactionType
+  createdAt   DateTime     @default(now())
+
+  message     GameMessage  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  reactor     User         @relation(fields: [reactorUserId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, reactorUserId]) // one reaction per user per message
+  @@index([messageId, type])
+}
+
