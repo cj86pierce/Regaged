@@ -24,6 +24,10 @@ export default function PlayerStrip({
   players: Player[];
   povUserId: string | null;
 }) {
+  // Fixed sizing so every tile is identical
+  const tileW = 58; // fits 15 across inside ~980px with small gaps
+  const avatar = 48;
+
   return (
     <div
       style={{
@@ -33,7 +37,6 @@ export default function PlayerStrip({
         background: "#eef7ff",
       }}
     >
-      {/* Single row, no wrap */}
       <div
         style={{
           display: "flex",
@@ -51,24 +54,25 @@ export default function PlayerStrip({
             <Link
               key={p.userId}
               href={`/u/${encodeURIComponent(p.username)}`}
-              style={{ textDecoration: "none", color: "inherit", flex: "1 1 0" }}
+              style={{ textDecoration: "none", color: "inherit" }}
               title={p.username}
             >
               <div
                 style={{
-                  width: "100%",
+                  width: tileW,
                   border: "1px solid #b9c4cf",
                   borderRadius: 6,
                   background: eliminated ? "#e9ecef" : "#ffffff",
                   opacity: eliminated ? 0.55 : 1,
                   padding: 4,
                   position: "relative",
+                  boxSizing: "border-box",
                 }}
               >
                 <div
                   style={{
-                    width: "100%",
-                    aspectRatio: "1 / 1",
+                    width: avatar,
+                    height: avatar,
                     borderRadius: 6,
                     border: "1px solid rgba(0,0,0,0.10)",
                     background: "linear-gradient(#f3f6f9, #fff)",
@@ -77,6 +81,7 @@ export default function PlayerStrip({
                     fontWeight: 900,
                     opacity: 0.7,
                     fontSize: 14,
+                    margin: "0 auto",
                   }}
                 >
                   🙂

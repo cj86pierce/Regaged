@@ -43,23 +43,15 @@ export default function ChatPanel(props: {
   toggleNom: (userId: string) => void;
   submitNoms: () => Promise<void>;
 
-  nominees: { a: string; b: string; evictedUserId: string | null } | null;
-  nomineePlayers: Player[];
-  voteInfo:
-    | {
-        nomineeAUserId: string;
-        nomineeBUserId: string;
-        votesA: number;
-        votesB: number;
-        myVoteTargetUserId: string | null;
-      }
-    | null;
-  myVoteLockedIn: string | null;
-  votePick: string | null;
-  setVotePick: (id: string | null) => void;
-  submitVote: () => Promise<void>;
+  // vote still exists in props (used by right sidebar), we ignore it here
+  nominees: any;
+  nomineePlayers: any;
+  voteInfo: any;
+  myVoteLockedIn: any;
+  votePick: any;
+  setVotePick: any;
+  submitVote: any;
 
-  // pagination from page.tsx
   page: number;
   totalPages: number;
   setPage: (p: number) => void;
@@ -80,21 +72,12 @@ export default function ChatPanel(props: {
     toggleNom,
     submitNoms,
 
-    nominees,
-    nomineePlayers,
-    voteInfo,
-    myVoteLockedIn,
-    votePick,
-    setVotePick,
-    submitVote,
-
     page,
     totalPages,
     setPage,
   } = props;
 
   const isNominate = gameState === "ROUND_NOMINATE";
-  const isVote = gameState === "ROUND_VOTE";
 
   const invertBoxStyle = {
     border: "1px solid rgba(0,0,0,0.10)",
@@ -130,11 +113,11 @@ export default function ChatPanel(props: {
           </button>
         </div>
         <div style={{ fontSize: 11, opacity: 0.7, marginTop: 6 }}>
-          Tip: newest messages are on <b>Page 1</b>.
+          Newest messages are on <b>Page 1</b>.
         </div>
       </div>
 
-      {/* NOMS / VOTE boxes - inverted */}
+      {/* NOMINATIONS ONLY (black/inverted) */}
       {isNominate && (
         <div style={invertBoxStyle}>
           <div style={{ fontWeight: 1000, marginBottom: 6 }}>Nominate 2 players</div>
@@ -193,73 +176,7 @@ export default function ChatPanel(props: {
         </div>
       )}
 
-      {isVote && (
-        <div style={invertBoxStyle}>
-          <div style={{ fontWeight: 1000, marginBottom: 6 }}>Vote to Evict</div>
-
-          {!nominees ? (
-            <div style={{ opacity: 0.85 }}>Waiting for nominees…</div>
-          ) : (
-            <>
-              {voteInfo && (
-                <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 8 }}>
-                  Current votes:{" "}
-                  <b>
-                    {(nomineePlayers.find((p) => p.userId === voteInfo.nomineeAUserId)?.username ?? "A")}: {voteInfo.votesA}{" "}
-                    | {(nomineePlayers.find((p) => p.userId === voteInfo.nomineeBUserId)?.username ?? "B")}: {voteInfo.votesB}
-                  </b>
-                </div>
-              )}
-
-              {myVoteLockedIn ? (
-                <div style={{ fontWeight: 900, color: "#7CFF7C" }}>✅ Vote locked in.</div>
-              ) : (
-                <>
-                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                    {nomineePlayers.map((p) => (
-                      <button
-                        key={p.userId}
-                        onClick={() => setVotePick(p.userId)}
-                        style={{
-                          padding: "8px 12px",
-                          borderRadius: 10,
-                          border: "1px solid rgba(255,255,255,0.18)",
-                          background: votePick === p.userId ? "#0b5ed7" : "rgba(255,255,255,0.08)",
-                          color: "#fff",
-                          cursor: "pointer",
-                          fontWeight: 1000,
-                        }}
-                      >
-                        Evict {p.username.length > 12 ? p.username.slice(0, 12) + "…" : p.username}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div style={{ marginTop: 10 }}>
-                    <button
-                      onClick={submitVote}
-                      disabled={!votePick}
-                      style={{
-                        padding: "8px 12px",
-                        borderRadius: 10,
-                        border: "1px solid rgba(255,255,255,0.20)",
-                        background: votePick ? "#ffd85a" : "rgba(255,255,255,0.10)",
-                        color: votePick ? "#2b2000" : "#fff",
-                        cursor: votePick ? "pointer" : "not-allowed",
-                        fontWeight: 1000,
-                      }}
-                    >
-                      Submit
-                    </button>
-                  </div>
-                </>
-              )}
-            </>
-          )}
-        </div>
-      )}
-
-      {/* Pagination controls (no scroll list) */}
+      {/* Pagination controls */}
       <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ fontSize: 12, opacity: 0.75 }}>
           Page <b>{page}</b> / {totalPages} (Page 1 = newest)
@@ -273,7 +190,7 @@ export default function ChatPanel(props: {
         </div>
       </div>
 
-      {/* Message feed (newest first, no scroll container) */}
+      {/* Message feed */}
       <div style={{ border: "1px solid #d7d7d7", borderRadius: 10, background: "#fff" }}>
         {messages.map((m) => {
           const isMine = meUserId && m.userId === meUserId;
@@ -281,6 +198,10 @@ export default function ChatPanel(props: {
           const disableReact = isMine || m.isSystem || alreadyReacted;
 
           const points = m.plus - m.minus;
+
+          // If message is nomination-vote summary, invert bracketed items: [Name(3)]
+          const isNomSummary = m.isSystem && /^(\[SYSTEM\]\s*)?Nomination votes:/i.test(m.body);
+          const bodyText = m.body.replace(/^\[SYSTEM\]\s*/i, "");
 
           return (
             <div
@@ -311,9 +232,11 @@ export default function ChatPanel(props: {
               </div>
 
               <div style={{ fontSize: 14 }}>
-                <div style={{ color: m.isSystem ? "#6c757d" : "#111" }}>
-                  {m.body}
-                </div>
+                {isNomSummary ? (
+                  <NominationVoteLine text={bodyText} />
+                ) : (
+                  <div style={{ color: m.isSystem ? "#6c757d" : "#111" }}>{bodyText}</div>
+                )}
               </div>
 
               <div style={{ textAlign: "right" }}>
@@ -359,6 +282,43 @@ export default function ChatPanel(props: {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function NominationVoteLine({ text }: { text: string }) {
+  // text example: "Nomination votes: a(0) · [b(3)] · c(1)"
+  // Bracketed entries are nominees and should be inverted.
+  const parts = text.split("·").map((p) => p.trim());
+
+  return (
+    <div style={{ lineHeight: 1.4 }}>
+      {parts.map((p, idx) => {
+        const isBracket = p.startsWith("[") && p.endsWith("]");
+        const clean = isBracket ? p.slice(1, -1) : p;
+
+        return (
+          <span key={idx} style={{ marginRight: 8 }}>
+            {isBracket ? (
+              <span
+                style={{
+                  display: "inline-block",
+                  padding: "2px 6px",
+                  borderRadius: 8,
+                  background: "#111",
+                  color: "#fff",
+                  fontWeight: 900,
+                }}
+              >
+                {clean}
+              </span>
+            ) : (
+              <span style={{ fontWeight: 700 }}>{clean}</span>
+            )}
+            {idx < parts.length - 1 ? <span style={{ opacity: 0.5 }}> · </span> : null}
+          </span>
+        );
+      })}
     </div>
   );
 }

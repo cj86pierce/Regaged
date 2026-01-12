@@ -9,7 +9,6 @@ type Message = {
   plus: number;
   minus: number;
   myReaction: "PLUS" | "MINUS" | null;
-  isSystem?: boolean;
 };
 
 type Player = {
@@ -23,7 +22,6 @@ export default function Sidebar(props: {
   roundNumber: number;
   messages: Message[];
 
-  // voting props
   nominees: { a: string; b: string; evictedUserId: string | null } | null;
   nomineePlayers: Player[];
   myVoteLockedIn: string | null;
@@ -41,7 +39,7 @@ export default function Sidebar(props: {
       text: m.body.replace(/^\[SYSTEM\]\s*/i, ""),
       createdAt: m.createdAt,
     }))
-    .slice(0, 30);
+    .slice(0, 20);
 
   const showVoteBox = gameState === "ROUND_VOTE" && nominees;
 
@@ -101,8 +99,19 @@ export default function Sidebar(props: {
       {/* Read this */}
       <div style={{ border: "1px solid #d7d7d7", borderRadius: 10, background: "#fff", padding: 12 }}>
         <div style={{ fontWeight: 1000, color: "#b02a37" }}>Read this</div>
+
         <div style={{ fontSize: 12, marginTop: 8, lineHeight: 1.35 }}>
-          This is a social reality game. Stay active in chat, build alliances, and avoid being nominated and evicted.
+          <b>Fasting (Big Brother – fast):</b>
+          <br />
+          • A POV is awarded each round (POV is immune).
+          <br />
+          • Everyone nominates 2 players (can’t nominate POV).
+          <br />
+          • Top 2 become nominees (ties: less active is nominated).
+          <br />
+          • Everyone except nominees votes to evict.
+          <br />
+          • Repeat until the game ends.
           <br />
           <br />
           <b>State:</b> {gameState} · <b>Round:</b> {roundNumber}
