@@ -3,6 +3,16 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+export type ProfileGameBubble = {
+  gameId: string;
+  gameNumber: number;
+  gameType: string; // FASTING for now
+  state: string; // ROUND_NOMINATE/ROUND_VOTE/FINAL3/COMPLETED
+  joinedAt: string; // ISO
+  yourStatus: "ACTIVE" | "ELIMINATED";
+  eliminatedPlace: number | null;
+};
+
 export type ProfileTabsData = {
   isOwnProfile: boolean;
   username: string;
@@ -12,6 +22,9 @@ export type ProfileTabsData = {
   colorName: string;
   colorAnimated: boolean;
 
+  // ✅ site-wide last seen
+  lastSeenAt: string; // ISO
+
   stats: {
     gamesPlayed: number;
     totalChats: number;
@@ -20,16 +33,9 @@ export type ProfileTabsData = {
     totalPov: number;
   };
 
-  recentGames: Array<{
-    gameId: string;
-    gameType: string;
-    state: string;
-    roundNumber: number;
-    startedAt: string | null;
-    completedAt: string | null;
-    yourStatus: string; // ACTIVE/ELIMINATED
-    eliminatedAt: string | null;
-  }>;
+  recentGames: ProfileGameBubble[];
+  recentGamesPage: number;
+  recentGamesTotalPages: number;
 };
 
 function Pill({ children }: { children: React.ReactNode }) {
@@ -68,6 +74,72 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
   );
 }
 
+function onlineLabel(lastSeenAtIso: string) {
+  const ms = Date.now() - new Date(lastSeenAtIso).getTime();
+  const mins = Math.floor(ms / 60000);
+
+  if (mins <= 2) return { text: "online", style: { background: "#d1e7dd", borderColor: "rgba(0,0,0,0.08)" } };
+  if (mins <= 60) return { text: `${mins} min`, style: { background: "#fff3cd", borderColor: "rgba(0,0,0,0.08)" } };
+  return { text: "offline", style: { background: "#f8d7da", borderColor: "rgba(0,0,0,0.08)" } };
+}
+
+function Bubble({ g }: { g: ProfileGameBubble }) {
+  const isActiveGame = g.state !== "COMPLETED" && g.yourStatus === "ACTIVE";
+
+  const labelTop = g.gameType.toLowerCase(); // "fasting"
+  const labelBottom = isActiveGame ? "enter" : g.eliminatedPlace ? `${g.eliminatedPlace}` : "";
+
+  return (
+    <div style={{ textAlign: "center", width: 92 }}>
+      <Link
+        href={isActiveGame ? `/game/${g.gameId}` : `/game/${g.gameId}`}
+        style={{ textDecoration: "none", color: "inherit" }}
+        title={`Game #${g.gameNumber} · ${g.gameType} · ${g.state}`}
+      >
+        <div
+          style={{
+            width: 72,
+            height: 72,
+            borderRadius: 999,
+            border: "2px solid rgba(0,0,0,0.25)",
+            background: isActiveGame ? "linear-gradient(#eaf2ff, #d6e6ff)" : "linear-gradient(#f3f6f9, #fff)",
+            margin: "0 auto",
+            display: "grid",
+            placeItems: "center",
+            fontWeight: 1000,
+            position: "relative",
+          }}
+        >
+          <div style={{ fontSize: 12, opacity: 0.95, textTransform: "uppercase" }}>{labelTop}</div>
+          <div
+            style={{
+              position: "absolute",
+              bottom: -9,
+              left: "50%",
+              transform: "translateX(-50%)",
+              padding: "2px 8px",
+              borderRadius: 999,
+              fontSize: 11,
+              fontWeight: 1000,
+              border: "1px solid rgba(0,0,0,0.20)",
+              background: isActiveGame ? "#111" : "#fff",
+              color: isActiveGame ? "#fff" : "#111",
+              minWidth: 46,
+              textAlign: "center",
+            }}
+          >
+            {labelBottom || "—"}
+          </div>
+        </div>
+      </Link>
+
+      <div style={{ marginTop: 14, fontSize: 11, opacity: 0.75 }}>
+        #{g.gameNumber}
+      </div>
+    </div>
+  );
+}
+
 export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
   const [tab, setTab] = useState<"overview" | "games" | "blog" | "social">("overview");
 
@@ -78,6 +150,8 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
       return data.joinedAt;
     }
   }, [data.joinedAt]);
+
+  const presence = useMemo(() => onlineLabel(data.lastSeenAt), [data.lastSeenAt]);
 
   const tabBtn = (key: typeof tab, label: string) => {
     const active = tab === key;
@@ -101,8 +175,8 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
 
   return (
     <main style={{ padding: 8 }}>
-      {/* Header / identity */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 14 }}>
+        {/* Left main */}
         <Card title="Profile">
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
             <div
@@ -126,13 +200,26 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
               <div style={{ fontSize: 24, fontWeight: 1000, letterSpacing: -0.2 }}>{data.username}</div>
               <div style={{ fontSize: 12, opacity: 0.7, marginTop: 2 }}>Joined {joinedLabel}</div>
 
-              <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
                 <Pill>Karma: {data.karma}</Pill>
                 <Pill>T$: {data.tMoney}</Pill>
                 <Pill>
                   {data.colorName}
                   {data.colorAnimated ? " (animated)" : ""}
                 </Pill>
+
+                <span
+                  style={{
+                    padding: "6px 10px",
+                    borderRadius: 999,
+                    border: "1px solid rgba(0,0,0,0.08)",
+                    fontWeight: 1000,
+                    fontSize: 12,
+                    ...presence.style,
+                  }}
+                >
+                  {presence.text}
+                </span>
               </div>
 
               <div style={{ marginTop: 10, fontSize: 12, opacity: 0.75 }}>
@@ -164,80 +251,54 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
                   </div>
                 </Card>
 
-                <Card title="Quick Stats">
-                  <div style={{ display: "grid", gap: 10 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ opacity: 0.8 }}>Games played</span>
-                      <b>{data.stats.gamesPlayed}</b>
+                <Card title="Recent Games">
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-start" }}>
+                    {data.recentGames.map((g) => (
+                      <Bubble key={g.gameId} g={g} />
+                    ))}
+                  </div>
+
+                  <div style={{ marginTop: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ fontSize: 12, opacity: 0.75 }}>
+                      Page <b>{data.recentGamesPage}</b> / {data.recentGamesTotalPages}
                     </div>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ opacity: 0.8 }}>Total chat messages</span>
-                      <b>{data.stats.totalChats}</b>
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ opacity: 0.8 }}>Total ✅ received</span>
-                      <b>{data.stats.totalPlus}</b>
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ opacity: 0.8 }}>Total ❌ received</span>
-                      <b>{data.stats.totalMinus}</b>
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ opacity: 0.8 }}>Total POV wins</span>
-                      <b>{data.stats.totalPov}</b>
+
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <Link
+                        href={data.recentGamesPage <= 1 ? "#" : `?page=${data.recentGamesPage - 1}`}
+                        style={{
+                          pointerEvents: data.recentGamesPage <= 1 ? "none" : "auto",
+                          opacity: data.recentGamesPage <= 1 ? 0.4 : 1,
+                          textDecoration: "none",
+                          fontWeight: 1000,
+                          padding: "6px 10px",
+                          borderRadius: 10,
+                          border: "1px solid rgba(0,0,0,0.10)",
+                          background: "#f3f6f9",
+                          color: "#111",
+                        }}
+                      >
+                        ◀ Prev
+                      </Link>
+
+                      <Link
+                        href={data.recentGamesPage >= data.recentGamesTotalPages ? "#" : `?page=${data.recentGamesPage + 1}`}
+                        style={{
+                          pointerEvents: data.recentGamesPage >= data.recentGamesTotalPages ? "none" : "auto",
+                          opacity: data.recentGamesPage >= data.recentGamesTotalPages ? 0.4 : 1,
+                          textDecoration: "none",
+                          fontWeight: 1000,
+                          padding: "6px 10px",
+                          borderRadius: 10,
+                          border: "1px solid rgba(0,0,0,0.10)",
+                          background: "#f3f6f9",
+                          color: "#111",
+                        }}
+                      >
+                        Next ▶
+                      </Link>
                     </div>
                   </div>
-                </Card>
-
-                <Card title="Recent Games">
-                  {data.recentGames.length === 0 ? (
-                    <div style={{ opacity: 0.75 }}>No games yet.</div>
-                  ) : (
-                    <div style={{ display: "grid", gap: 10 }}>
-                      {data.recentGames.slice(0, 8).map((g) => (
-                        <div
-                          key={g.gameId}
-                          style={{
-                            border: "1px solid rgba(0,0,0,0.08)",
-                            borderRadius: 12,
-                            padding: 10,
-                            background: "#fff",
-                            display: "grid",
-                            gridTemplateColumns: "1fr auto",
-                            gap: 10,
-                            alignItems: "center",
-                          }}
-                        >
-                          <div>
-                            <div style={{ fontWeight: 1000, color: "#0b5ed7" }}>
-                              {g.gameType} · {g.state} (Round {g.roundNumber})
-                            </div>
-                            <div style={{ fontSize: 12, opacity: 0.75, marginTop: 4 }}>
-                              You: <b>{g.yourStatus}</b>
-                              {g.eliminatedAt ? ` · Eliminated ${new Date(g.eliminatedAt).toLocaleString()}` : ""}
-                              {g.completedAt ? ` · Finished ${new Date(g.completedAt).toLocaleString()}` : ""}
-                            </div>
-                          </div>
-
-                          <Link
-                            href={`/game/${g.gameId}`}
-                            style={{
-                              textDecoration: "none",
-                              fontWeight: 1000,
-                              padding: "8px 10px",
-                              borderRadius: 10,
-                              border: "1px solid rgba(0,0,0,0.10)",
-                              background: "#eaf2ff",
-                              color: "#0b2b66",
-                              textAlign: "center",
-                            }}
-                          >
-                            View
-                          </Link>
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </Card>
               </div>
             )}
@@ -245,7 +306,7 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
             {tab === "games" && (
               <Card title="Games">
                 <div style={{ opacity: 0.8, lineHeight: 1.45 }}>
-                  Coming next: wins breakdown, placements, game history bubbles like classic Tengaged.
+                  Coming next: wins breakdown, placements, and full history like classic Tengaged.
                 </div>
               </Card>
             )}
@@ -253,7 +314,7 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
             {tab === "blog" && (
               <Card title="Blog">
                 <div style={{ opacity: 0.8, lineHeight: 1.45 }}>
-                  Coming next: real blog posts + likes/comments, and homepage “Top Participants blogs” becomes real.
+                  Coming next: real blog posts + likes/comments, and homepage blogs become real.
                 </div>
               </Card>
             )}
@@ -261,15 +322,40 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
             {tab === "social" && (
               <Card title="Social">
                 <div style={{ opacity: 0.8, lineHeight: 1.45 }}>
-                  Coming later: friends, groups, fraternity, bets — like the right sidebar in your screenshot.
+                  Coming later: friends, groups, fraternity, bets — like classic Tengaged.
                 </div>
               </Card>
             )}
           </div>
         </Card>
 
-        {/* Right sidebar (kept simple for now, will match screenshot later) */}
+        {/* Right side */}
         <div style={{ display: "grid", gap: 14 }}>
+          <Card title="Stats">
+            <div style={{ display: "grid", gap: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ opacity: 0.8 }}>Games played</span>
+                <b>{data.stats.gamesPlayed}</b>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ opacity: 0.8 }}>Total chat messages</span>
+                <b>{data.stats.totalChats}</b>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ opacity: 0.8 }}>Total ✅ received</span>
+                <b>{data.stats.totalPlus}</b>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ opacity: 0.8 }}>Total ❌ received</span>
+                <b>{data.stats.totalMinus}</b>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ opacity: 0.8 }}>Total POV wins</span>
+                <b>{data.stats.totalPov}</b>
+              </div>
+            </div>
+          </Card>
+
           <Card title="Actions">
             <div style={{ display: "grid", gap: 10 }}>
               <Link
@@ -284,7 +370,6 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
                   background: "linear-gradient(#ffd85a, #ffb703)",
                   color: "#3a2b00",
                   border: "1px solid rgba(0,0,0,0.12)",
-                  boxShadow: "0 8px 18px rgba(255, 183, 3, 0.25)",
                 }}
               >
                 Enroll now ▶
@@ -293,12 +378,6 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
               <Link href="/" style={{ fontWeight: 900, color: "#0b5ed7", textAlign: "center" }}>
                 Back to home
               </Link>
-            </div>
-          </Card>
-
-          <Card title="Notes">
-            <div style={{ fontSize: 12, opacity: 0.75, lineHeight: 1.45 }}>
-              We’ll reshape this sidebar to match your screenshot next (donations, friends grid, bets, etc.).
             </div>
           </Card>
         </div>

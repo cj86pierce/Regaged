@@ -1,25 +1,19 @@
-import Link from "next/link";
+export const dynamic = "force-dynamic";
+
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
-import ProfileTabs, { ProfileTabsData } from "@/components/ProfileTabs";
+import ProfileTabs, { ProfileTabsData, ProfileGameBubble } from "@/components/ProfileTabs";
+import Link from "next/link";
 
-export default async function ProfilePage() {
+export default async function ProfilePage({ searchParams }: { searchParams: { page?: string } }) {
   const session = await getServerSession(authOptions);
   const userId = (session?.user as any)?.id as string | undefined;
 
   if (!userId) {
     return (
       <main style={{ padding: 8 }}>
-        <div
-          style={{
-            border: "1px solid rgba(0,0,0,0.08)",
-            borderRadius: 14,
-            background: "#fff",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.06)",
-            padding: 14,
-          }}
-        >
+        <div style={{ border: "1px solid rgba(0,0,0,0.08)", borderRadius: 14, background: "#fff", padding: 14 }}>
           <h1 style={{ marginTop: 0 }}>Profile</h1>
           <p>You’re not logged in.</p>
           <div style={{ display: "flex", gap: 12 }}>
@@ -33,22 +27,14 @@ export default async function ProfilePage() {
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, username: true, karma: true, tMoney: true, createdAt: true },
+    select: { username: true, karma: true, tMoney: true, createdAt: true, lastSeenAt: true },
   });
-
-  if (!user) {
-    return (
-      <main style={{ padding: 8 }}>
-        <p>User not found.</p>
-      </main>
-    );
-  }
+  if (!user) throw new Error("User not found");
 
   const purchased = await prisma.userColor.findMany({
     where: { userId },
     include: { color: true },
   });
-
   const highestColor =
     purchased.length > 0
       ? purchased.map((p) => p.color).sort((a, b) => b.karmaNeeded - a.karmaNeeded)[0]
@@ -60,27 +46,44 @@ export default async function ProfilePage() {
     _sum: { chatCount: true, plusCount: true, minusCount: true, povWins: true },
   });
 
-  const gamesPlayed = gpAgg._count._all ?? 0;
-
-  const recent = await prisma.gamePlayer.findMany({
+  // Pull a slice, then sort active-first in JS
+  const raw = await prisma.gamePlayer.findMany({
     where: { userId },
     orderBy: { joinedAt: "desc" },
-    take: 12,
+    take: 70,
     select: {
       gameId: true,
       status: true,
-      eliminatedAt: true,
+      eliminatedPlace: true,
+      joinedAt: true,
       game: {
-        select: {
-          gameType: true,
-          state: true,
-          roundNumber: true,
-          startsAt: true,
-          completedAt: true,
-        },
+        select: { number: true, gameType: true, state: true },
       },
     },
   });
+
+  const all: ProfileGameBubble[] = raw
+    .map((r) => ({
+      gameId: r.gameId,
+      gameNumber: r.game.number,
+      gameType: r.game.gameType,
+      state: r.game.state,
+      joinedAt: r.joinedAt.toISOString(),
+      yourStatus: r.status,
+      eliminatedPlace: r.eliminatedPlace ?? null,
+    }))
+    .sort((a, b) => {
+      const aActive = a.state !== "COMPLETED" && a.yourStatus === "ACTIVE";
+      const bActive = b.state !== "COMPLETED" && b.yourStatus === "ACTIVE";
+      if (aActive !== bActive) return aActive ? -1 : 1; // active first
+      return new Date(b.joinedAt).getTime() - new Date(a.joinedAt).getTime(); // newest first
+    });
+
+  const page = Math.max(1, Number(searchParams?.page ?? "1") || 1);
+  const pageSize = 7;
+  const totalPages = Math.max(1, Math.ceil(all.length / pageSize));
+  const start = (page - 1) * pageSize;
+  const recentGames = all.slice(start, start + pageSize);
 
   const data: ProfileTabsData = {
     isOwnProfile: true,
@@ -90,23 +93,17 @@ export default async function ProfilePage() {
     tMoney: user.tMoney,
     colorName: highestColor?.name ?? "White",
     colorAnimated: highestColor?.isAnimated ?? false,
+    lastSeenAt: user.lastSeenAt.toISOString(),
     stats: {
-      gamesPlayed,
+      gamesPlayed: gpAgg._count._all ?? 0,
       totalChats: gpAgg._sum.chatCount ?? 0,
       totalPlus: gpAgg._sum.plusCount ?? 0,
       totalMinus: gpAgg._sum.minusCount ?? 0,
       totalPov: gpAgg._sum.povWins ?? 0,
     },
-    recentGames: recent.map((r) => ({
-      gameId: r.gameId,
-      gameType: r.game.gameType,
-      state: r.game.state,
-      roundNumber: r.game.roundNumber,
-      startedAt: r.game.startsAt ? r.game.startsAt.toISOString() : null,
-      completedAt: r.game.completedAt ? r.game.completedAt.toISOString() : null,
-      yourStatus: r.status,
-      eliminatedAt: r.eliminatedAt ? r.eliminatedAt.toISOString() : null,
-    })),
+    recentGames,
+    recentGamesPage: page,
+    recentGamesTotalPages: totalPages,
   };
 
   return <ProfileTabs data={data} />;
