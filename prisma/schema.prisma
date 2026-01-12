@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -47,7 +41,7 @@ model User {
   createdAt    DateTime @default(now())
 
   karma        Int      @default(0)
-  tMoney       Int      @default(0) // T$
+  tMoney       Int      @default(0)
 
   enrollments  Enrollment[]
   gamePlayers  GamePlayer[]
@@ -60,8 +54,8 @@ model ColorLevel {
   id            Int      @id
   name          String   @unique
   karmaNeeded   Int
-  priceT        Int      // price in T$
-  strength      Int      // 1..20 etc
+  priceT        Int
+  strength      Int
   isAnimated    Boolean  @default(false)
 
   purchases     UserColor[]
@@ -73,7 +67,7 @@ model UserColor {
   colorId     Int
   purchasedAt DateTime @default(now())
 
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   color       ColorLevel @relation(fields: [colorId], references: [id], onDelete: Restrict)
 
   @@unique([userId, colorId])
@@ -88,7 +82,7 @@ model Enrollment {
 
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, gameType]) // only one enrollment per game type at a time
+  @@unique([userId, gameType])
   @@index([gameType, createdAt])
 }
 
@@ -99,9 +93,9 @@ model Game {
   roundNumber   Int       @default(0)
 
   startsAt      DateTime?
-  stateEndsAt   DateTime? // when the current phase auto-ends
+  stateEndsAt   DateTime?
 
-  povUserId     String?   // current round POV holder (User.id)
+  povUserId     String?
   createdAt     DateTime  @default(now())
   completedAt   DateTime?
 
@@ -123,12 +117,18 @@ model GamePlayer {
   joinedAt        DateTime     @default(now())
   eliminatedAt    DateTime?
 
+  // ✅ NEW: last activity timestamp (chat/vote/react/nominate)
+  lastActiveAt    DateTime     @default(now())
+
+  // ✅ NEW: placement number (15=first out, 1=winner)
+  eliminatedPlace Int?
+
   povWins         Int          @default(0)
   chatCount       Int          @default(0)
   plusCount       Int          @default(0)
   minusCount      Int          @default(0)
 
-  lastHadPovRound Int? // used to enforce “no POV next round”
+  lastHadPovRound Int?
 
   game            Game         @relation(fields: [gameId], references: [id], onDelete: Cascade)
   user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -149,7 +149,6 @@ model Nomination {
 
   @@index([gameId, roundNumber])
   @@index([gameId, roundNumber, targetUserId])
-  // enforce “2 noms per voter per round” in app logic
 }
 
 model EvictionVote {
@@ -162,7 +161,7 @@ model EvictionVote {
 
   game          Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
 
-  @@unique([gameId, roundNumber, voterUserId]) // 1 vote per voter per round
+  @@unique([gameId, roundNumber, voterUserId])
   @@index([gameId, roundNumber, targetUserId])
 }
 
@@ -196,16 +195,15 @@ model GameMessage {
 }
 
 model MessageReaction {
-  id          String       @id @default(cuid())
-  messageId   String
+  id            String       @id @default(cuid())
+  messageId     String
   reactorUserId String
-  type        ReactionType
-  createdAt   DateTime     @default(now())
+  type          ReactionType
+  createdAt     DateTime     @default(now())
 
-  message     GameMessage  @relation(fields: [messageId], references: [id], onDelete: Cascade)
-  reactor     User         @relation(fields: [reactorUserId], references: [id], onDelete: Cascade)
+  message       GameMessage  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  reactor       User         @relation(fields: [reactorUserId], references: [id], onDelete: Cascade)
 
-  @@unique([messageId, reactorUserId]) // one reaction per user per message
+  @@unique([messageId, reactorUserId])
   @@index([messageId, type])
 }
-

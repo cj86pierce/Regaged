@@ -15,10 +15,6 @@ function pickWeighted<T extends { weight: number }>(items: T[]): T {
   return items[items.length - 1];
 }
 
-/**
- * Assign POV for FASTING.
- * force=true is DEV-only reroll.
- */
 export async function assignFastingPov(gameId: string, force = false) {
   const game = await prisma.game.findUnique({
     where: { id: gameId },
@@ -29,9 +25,7 @@ export async function assignFastingPov(gameId: string, force = false) {
   if (game.gameType !== "FASTING") throw new Error("Not a FASTING game");
   if (game.state !== "ROUND_NOMINATE") throw new Error("POV can only be assigned in ROUND_NOMINATE");
 
-  if (game.povUserId && !force) {
-    return { ok: true, povUserId: game.povUserId, alreadyAssigned: true };
-  }
+  if (game.povUserId && !force) return { ok: true, povUserId: game.povUserId, alreadyAssigned: true };
 
   const players = await prisma.gamePlayer.findMany({
     where: { gameId, status: "ACTIVE" },
@@ -47,39 +41,22 @@ export async function assignFastingPov(gameId: string, force = false) {
     .filter((p) => p.lastHadPovRound !== excludedRound)
     .map((p) => {
       const score = activityScore(p);
-      return {
-        userId: p.userId,
-        username: p.user.username,
-        weight: Math.max(1, score),
-      };
+      return { userId: p.userId, username: p.user.username, weight: Math.max(1, score) };
     });
 
-  const pool =
-    eligible.length > 0
-      ? eligible
-      : players.map((p) => ({ userId: p.userId, username: p.user.username, weight: 1 }));
-
+  const pool = eligible.length ? eligible : players.map((p) => ({ userId: p.userId, username: p.user.username, weight: 1 }));
   const winner = pickWeighted(pool);
+
   const systemUserId = await getSystemUserId();
 
   await prisma.$transaction(async (tx) => {
-    await tx.game.update({
-      where: { id: gameId },
-      data: { povUserId: winner.userId },
-    });
-
+    await tx.game.update({ where: { id: gameId }, data: { povUserId: winner.userId } });
     await tx.gamePlayer.update({
       where: { gameId_userId: { gameId, userId: winner.userId } },
       data: { povWins: { increment: 1 }, lastHadPovRound: game.roundNumber },
     });
-
     await tx.gameMessage.create({
-      data: {
-        gameId,
-        userId: systemUserId,
-        channel: "PUBLIC",
-        body: `[SYSTEM] POV awarded to ${winner.username}.`,
-      },
+      data: { gameId, userId: systemUserId, channel: "PUBLIC", body: `[SYSTEM] POV awarded to ${winner.username}.` },
     });
   });
 

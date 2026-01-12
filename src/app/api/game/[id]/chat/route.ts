@@ -10,7 +10,6 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   const gameId = params.id;
 
-  // must be active in the game
   const gp = await prisma.gamePlayer.findUnique({
     where: { gameId_userId: { gameId, userId } },
   });
@@ -22,27 +21,15 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     return NextResponse.json({ error: "Message must be 1–240 chars." }, { status: 400 });
   }
 
-  // 5s cooldown (based on last message time)
-  const last = await prisma.gameMessage.findFirst({
-    where: { gameId, userId, channel: "PUBLIC" },
-    orderBy: { createdAt: "desc" },
-    select: { createdAt: true },
-  });
-  if (last) {
-    const diff = Date.now() - last.createdAt.getTime();
-    if (diff < 5000) {
-      const left = Math.ceil((5000 - diff) / 1000);
-      return NextResponse.json({ error: `Cooldown (${left}s)` }, { status: 429 });
-    }
-  }
+  await prisma.$transaction(async (tx) => {
+    await tx.gameMessage.create({
+      data: { gameId, userId, channel: "PUBLIC", body: text },
+    });
 
-  await prisma.gameMessage.create({
-    data: { gameId, userId, channel: "PUBLIC", body: text },
-  });
-
-  await prisma.gamePlayer.update({
-    where: { gameId_userId: { gameId, userId } },
-    data: { chatCount: { increment: 1 } },
+    await tx.gamePlayer.update({
+      where: { gameId_userId: { gameId, userId } },
+      data: { chatCount: { increment: 1 }, lastActiveAt: new Date() },
+    });
   });
 
   return NextResponse.json({ ok: true });

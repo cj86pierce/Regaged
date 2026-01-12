@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "GamePlayer" ADD COLUMN     "eliminatedPlace" INTEGER,
+ADD COLUMN     "lastActiveAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;

@@ -31,7 +31,6 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     select: { nomineeAUserId: true, nomineeBUserId: true, evictedUserId: true },
   });
 
-  // nomination lock status (for UI)
   let myNomLocked: boolean | null = null;
   if (meUserId && game.state === "ROUND_NOMINATE") {
     const myNoms = await prisma.nomination.count({
@@ -40,7 +39,6 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     myNomLocked = myNoms >= 2;
   }
 
-  // vote info (for UI)
   let voteInfo: null | {
     nomineeAUserId: string;
     nomineeBUserId: string;
@@ -67,13 +65,11 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     voteInfo = { nomineeAUserId: a, nomineeBUserId: b, votesA, votesB, myVoteTargetUserId };
   }
 
-  // total count for pagination
   const totalCount = await prisma.gameMessage.count({
     where: { gameId, channel: "PUBLIC" },
   });
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
-  // newest first
   const messagesRaw = await prisma.gameMessage.findMany({
     where: { gameId, channel: "PUBLIC" },
     orderBy: { createdAt: "desc" },
@@ -99,6 +95,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       userId: p.userId,
       username: p.user.username,
       status: p.status,
+      lastActiveAt: p.lastActiveAt,
+      eliminatedPlace: p.eliminatedPlace ?? null,
       chatCount: p.chatCount,
       plusCount: p.plusCount,
       minusCount: p.minusCount,

@@ -40,13 +40,15 @@ export async function resolveFastingEviction(gameId: string) {
   if (!rr) throw new Error("Nominees not set");
   if (rr.evictedUserId) return { ok: true, alreadyResolved: true, evictedUserId: rr.evictedUserId };
 
-  const players = await prisma.gamePlayer.findMany({
+  const activePlayers = await prisma.gamePlayer.findMany({
     where: { gameId, status: "ACTIVE" },
     include: { user: { select: { username: true } } },
   });
 
-  const a = players.find((p) => p.userId === rr.nomineeAUserId);
-  const b = players.find((p) => p.userId === rr.nomineeBUserId);
+  const activeCountBefore = activePlayers.length;
+
+  const a = activePlayers.find((p) => p.userId === rr.nomineeAUserId);
+  const b = activePlayers.find((p) => p.userId === rr.nomineeBUserId);
   if (!a || !b) throw new Error("Nominees not active");
 
   const votes = await prisma.evictionVote.findMany({
@@ -62,7 +64,7 @@ export async function resolveFastingEviction(gameId: string) {
   if (countA === countB) {
     const actA = activityScore(a);
     const actB = activityScore(b);
-    if (actB < actA) evicted = b; // less active evicted
+    if (actB < actA) evicted = b;
   }
 
   const systemUserId = await getSystemUserId();
@@ -75,7 +77,11 @@ export async function resolveFastingEviction(gameId: string) {
 
     await tx.gamePlayer.update({
       where: { gameId_userId: { gameId, userId: evicted.userId } },
-      data: { status: "ELIMINATED", eliminatedAt: new Date() },
+      data: {
+        status: "ELIMINATED",
+        eliminatedAt: new Date(),
+        eliminatedPlace: activeCountBefore, // 15th, 14th, ...
+      },
     });
 
     await tx.gameMessage.create({
@@ -83,7 +89,7 @@ export async function resolveFastingEviction(gameId: string) {
         gameId,
         userId: systemUserId,
         channel: "PUBLIC",
-        body: `[SYSTEM] Evicted: ${evicted.user.username} (${countA}-${countB}).`,
+        body: `[SYSTEM] Evicted: ${evicted.user.username}.`,
       },
     });
 
@@ -105,28 +111,22 @@ export async function resolveFastingEviction(gameId: string) {
 
       const [first, second, third] = ranked;
 
-      // Pay rewards only to real users (skip silent bots)
-      const real = (u: Ranked | undefined) => u && !u.username.startsWith("bot_");
+      // store placements
+      if (first) await tx.gamePlayer.update({ where: { gameId_userId: { gameId, userId: first.userId } }, data: { eliminatedPlace: 1 } });
+      if (second) await tx.gamePlayer.update({ where: { gameId_userId: { gameId, userId: second.userId } }, data: { eliminatedPlace: 2 } });
+      if (third) await tx.gamePlayer.update({ where: { gameId_userId: { gameId, userId: third.userId } }, data: { eliminatedPlace: 3 } });
 
-      if (real(first)) await tx.user.update({ where: { id: first!.userId }, data: { karma: { increment: 12 }, tMoney: { increment: 12 } } });
-      if (real(second)) await tx.user.update({ where: { id: second!.userId }, data: { karma: { increment: 5 }, tMoney: { increment: 10 } } });
-      if (real(third)) await tx.user.update({ where: { id: third!.userId }, data: { karma: { increment: 3 }, tMoney: { increment: 6 } } });
-
-      await tx.gameMessage.create({
-        data: {
-          gameId,
-          userId: systemUserId,
-          channel: "PUBLIC",
-          body: `[SYSTEM] Final results: 1st ${first?.username ?? "N/A"}, 2nd ${second?.username ?? "N/A"}, 3rd ${third?.username ?? "N/A"}.`,
-        },
-      });
+      // pay rewards
+      if (first) await tx.user.update({ where: { id: first.userId }, data: { karma: { increment: 12 }, tMoney: { increment: 12 } } });
+      if (second) await tx.user.update({ where: { id: second.userId }, data: { karma: { increment: 5 }, tMoney: { increment: 10 } } });
+      if (third) await tx.user.update({ where: { id: third.userId }, data: { karma: { increment: 3 }, tMoney: { increment: 6 } } });
 
       await tx.gameMessage.create({
         data: {
           gameId,
           userId: systemUserId,
           channel: "PUBLIC",
-          body: `[SYSTEM] Rewards paid.`,
+          body: `[SYSTEM] Final results: 1st ${first?.username ?? "?"}, 2nd ${second?.username ?? "?"}, 3rd ${third?.username ?? "?"}.`,
         },
       });
 

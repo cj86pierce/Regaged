@@ -6,15 +6,26 @@ type Player = {
   userId: string;
   username: string;
   status: "ACTIVE" | "ELIMINATED";
-  chatCount: number;
-  plusCount: number;
-  minusCount: number;
-  povWins: number;
+  lastActiveAt: string | Date;
+  eliminatedPlace: number | null;
 };
 
-function trunc(name: string, max = 9) {
-  if (name.length <= max) return name;
-  return name.slice(0, max) + "…";
+function trunc(name: string, max = 10) {
+  return name.length > max ? name.slice(0, max) + "…" : name;
+}
+
+function suffix(n: number) {
+  const j = n % 10, k = n % 100;
+  if (j === 1 && k !== 11) return `${n}st`;
+  if (j === 2 && k !== 12) return `${n}nd`;
+  if (j === 3 && k !== 13) return `${n}rd`;
+  return `${n}th`;
+}
+
+function minutesSince(d: string | Date) {
+  const t = typeof d === "string" ? new Date(d).getTime() : d.getTime();
+  const mins = Math.floor((Date.now() - t) / 60000);
+  return Math.max(0, Math.min(60, mins));
 }
 
 export default function PlayerStrip({
@@ -24,81 +35,62 @@ export default function PlayerStrip({
   players: Player[];
   povUserId: string | null;
 }) {
-  // Fixed sizing so every tile is identical
-  const tileW = 58; // fits 15 across inside ~980px with small gaps
-  const avatar = 48;
-
   return (
-    <div
-      style={{
-        border: "1px solid #cfd7df",
-        borderRadius: 10,
-        padding: 6,
-        background: "#eef7ff",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          gap: 3,
-          flexWrap: "nowrap",
-          justifyContent: "space-between",
-          overflow: "hidden",
-        }}
-      >
+    <div style={{ border: "1px solid #cfd7df", borderRadius: 10, padding: "6px 8px", background: "#eef7ff", overflow: "hidden" }}>
+      <div style={{ display: "flex", gap: 4, flexWrap: "nowrap", justifyContent: "space-between" }}>
         {players.map((p) => {
-          const isPov = povUserId === p.userId;
+          const isPov = p.userId === povUserId;
           const eliminated = p.status === "ELIMINATED";
+          const mins = minutesSince(p.lastActiveAt);
 
           return (
-            <Link
-              key={p.userId}
-              href={`/u/${encodeURIComponent(p.username)}`}
-              style={{ textDecoration: "none", color: "inherit" }}
-              title={p.username}
-            >
+            <Link key={p.userId} href={`/u/${encodeURIComponent(p.username)}`} title={p.username} style={{ textDecoration: "none", color: "inherit" }}>
               <div
                 style={{
-                  width: tileW,
+                  width: 64,
+                  height: 128,
                   border: "1px solid #b9c4cf",
                   borderRadius: 6,
-                  background: eliminated ? "#e9ecef" : "#ffffff",
-                  opacity: eliminated ? 0.55 : 1,
-                  padding: 4,
+                  background: eliminated ? "#bfc5cc" : "#ffffff",
+                  opacity: eliminated ? 0.85 : 1,
                   position: "relative",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
                   boxSizing: "border-box",
+                  padding: 3,
                 }}
               >
                 <div
                   style={{
-                    width: avatar,
-                    height: avatar,
-                    borderRadius: 6,
-                    border: "1px solid rgba(0,0,0,0.10)",
-                    background: "linear-gradient(#f3f6f9, #fff)",
-                    display: "grid",
-                    placeItems: "center",
-                    fontWeight: 900,
-                    opacity: 0.7,
-                    fontSize: 14,
-                    margin: "0 auto",
+                    width: "100%",
+                    height: 80,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: eliminated ? "#a9b0b8" : "#f5f7fa",
+                    borderRadius: 4,
+                    overflow: "hidden",
                   }}
                 >
-                  🙂
+                  <div style={{ width: "100%", height: "100%", display: "grid", placeItems: "center", fontSize: 16, opacity: 0.6 }}>
+                    🙂
+                  </div>
                 </div>
 
                 {isPov && (
                   <div
                     style={{
                       position: "absolute",
-                      top: -6,
-                      right: -6,
+                      top: -5,
+                      right: -5,
                       background: "#fff3cd",
                       border: "1px solid #e5c46a",
                       borderRadius: 999,
                       padding: "2px 6px",
                       fontSize: 9,
-                      fontWeight: 1000,
+                      fontWeight: 900,
+                      zIndex: 2,
                     }}
                   >
                     POV
@@ -109,17 +101,23 @@ export default function PlayerStrip({
                   style={{
                     marginTop: 4,
                     fontSize: 10,
-                    fontWeight: 900,
+                    fontWeight: 800,
                     color: "#0b5ed7",
                     textDecoration: "underline",
                     textAlign: "center",
-                    lineHeight: 1.1,
                     whiteSpace: "nowrap",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
+                    width: "100%",
                   }}
                 >
-                  {trunc(p.username, 9)}
+                  {trunc(p.username, 10)}
+                </div>
+
+                <div style={{ fontSize: 10, opacity: 0.8, marginTop: 2 }}>{mins} min</div>
+
+                <div style={{ fontSize: 10, fontWeight: 900, marginTop: 2, opacity: 0.9 }}>
+                  {p.eliminatedPlace ? suffix(p.eliminatedPlace) : ""}
                 </div>
               </div>
             </Link>
