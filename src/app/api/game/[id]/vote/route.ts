@@ -21,17 +21,6 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     return NextResponse.json({ error: "Voting phase ended" }, { status: 400 });
   }
 
-  const me = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { username: true },
-  });
-  if (!me) return NextResponse.json({ error: "User not found" }, { status: 404 });
-
-  // silent bots do not vote
-  if (me.username.startsWith("bot_")) {
-    return NextResponse.json({ error: "Bots cannot vote." }, { status: 403 });
-  }
-
   const gp = await prisma.gamePlayer.findUnique({
     where: { gameId_userId: { gameId, userId } },
   });
