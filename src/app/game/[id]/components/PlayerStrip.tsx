@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 
 type Player = {
   userId: string;
@@ -47,21 +48,34 @@ export default function PlayerStrip(props: {
   const isNominate = gameState === "ROUND_NOMINATE";
   const isVote = gameState === "ROUND_VOTE";
 
-  const tileW = 64; // keep your row layout
-  const avatarH = 80;
+  const povName = useMemo(() => {
+    if (!povUserId) return null;
+    return players.find((p) => p.userId === povUserId)?.username ?? null;
+  }, [players, povUserId]);
+
+  // reset selections when phase changes
+  useEffect(() => {
+    if (!isNominate) setNomSelected([]);
+    if (!isVote) setEvictSelected(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameState]);
 
   function toggleNomPick(userId: string) {
-    setNomSelected((prev) => {
-      const has = prev.includes(userId);
-      if (has) return prev.filter((x) => x !== userId);
-      if (prev.length >= 2) return prev;
-      return [...prev, userId];
-    });
+    const has = nomSelected.includes(userId);
+    if (has) {
+      setNomSelected(nomSelected.filter((x) => x !== userId));
+      return;
+    }
+    if (nomSelected.length >= 2) return;
+    setNomSelected([...nomSelected, userId]);
   }
 
   function toggleEvictPick(userId: string) {
     setEvictSelected(evictSelected === userId ? null : userId);
   }
+
+  const tileW = 64;
+  const avatarH = 80;
 
   return (
     <div
@@ -73,25 +87,29 @@ export default function PlayerStrip(props: {
         overflow: "hidden",
       }}
     >
+      <div style={{ fontSize: 12, fontWeight: 900, marginBottom: 6, opacity: 0.85 }}>
+        POV: <span style={{ fontWeight: 1000 }}>{povName ?? "—"}</span>
+        {isNominate && <span style={{ marginLeft: 10, opacity: 0.75 }}>(select 2)</span>}
+        {isVote && <span style={{ marginLeft: 10, opacity: 0.75 }}>(select 1 nominee)</span>}
+      </div>
+
       <div style={{ display: "flex", gap: 4, flexWrap: "nowrap", justifyContent: "flex-start" }}>
         {players.map((p) => {
           const eliminated = p.status === "ELIMINATED";
           const isPov = p.userId === povUserId;
           const mins = minutesSince(p.lastActiveAt);
 
-          const canNomPick =
-            isNominate && !eliminated && !isPov;
+          const canNomPick = isNominate && !eliminated && !isPov;
+          const canEvictPick = isVote && !eliminated && p.isNominee;
 
-          const canEvictPick =
-            isVote && !eliminated && p.isNominee;
-
-          // selection state
           const nomOn = nomSelected.includes(p.userId);
           const evictOn = evictSelected === p.userId;
 
+          const bottom =
+            eliminated && p.eliminatedPlace ? suffix(p.eliminatedPlace) : "";
+
           return (
             <div key={p.userId} style={{ width: tileW }}>
-              {/* Avatar (no outer "card box") */}
               <div
                 style={{
                   width: tileW,
@@ -101,21 +119,12 @@ export default function PlayerStrip(props: {
                   border: "1px solid rgba(0,0,0,0.15)",
                   position: "relative",
                   overflow: "hidden",
-                  filter: "grayscale(1)", // black & white
+                  filter: "grayscale(1)",
                   opacity: eliminated ? 0.75 : 1,
                 }}
                 title={p.username}
               >
-                <div
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    display: "grid",
-                    placeItems: "center",
-                    fontSize: 18,
-                    opacity: 0.7,
-                  }}
-                >
+                <div style={{ width: "100%", height: "100%", display: "grid", placeItems: "center", fontSize: 18, opacity: 0.7 }}>
                   🙂
                 </div>
 
@@ -131,7 +140,7 @@ export default function PlayerStrip(props: {
                       padding: "2px 6px",
                       fontSize: 9,
                       fontWeight: 900,
-                      filter: "none", // keep badge colored
+                      filter: "none",
                     }}
                   >
                     POV
@@ -139,7 +148,6 @@ export default function PlayerStrip(props: {
                 )}
               </div>
 
-              {/* Name (clickable) */}
               <Link
                 href={`/u/${encodeURIComponent(p.username)}`}
                 style={{
@@ -159,17 +167,14 @@ export default function PlayerStrip(props: {
                 {trunc(p.username, 10)}
               </Link>
 
-              {/* Last active */}
               <div style={{ fontSize: 10, opacity: 0.85, textAlign: "center", marginTop: 2 }}>
                 {mins >= 60 ? "offline" : `${mins} min`}
               </div>
 
-              {/* Placement for eliminated */}
               <div style={{ fontSize: 10, fontWeight: 1000, textAlign: "center", marginTop: 2, opacity: 0.9 }}>
-                {eliminated && p.eliminatedPlace ? suffix(p.eliminatedPlace) : ""}
+                {bottom}
               </div>
 
-              {/* Selection boxes replace check/? */}
               <div style={{ display: "grid", placeItems: "center", marginTop: 4 }}>
                 {isNominate ? (
                   <button
