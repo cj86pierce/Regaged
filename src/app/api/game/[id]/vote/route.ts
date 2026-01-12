@@ -21,6 +21,17 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     return NextResponse.json({ error: "Voting phase ended" }, { status: 400 });
   }
 
+  const me = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { username: true },
+  });
+  if (!me) return NextResponse.json({ error: "User not found" }, { status: 404 });
+
+  // silent bots do not vote
+  if (me.username.startsWith("bot_")) {
+    return NextResponse.json({ error: "Bots cannot vote." }, { status: 403 });
+  }
+
   const gp = await prisma.gamePlayer.findUnique({
     where: { gameId_userId: { gameId, userId } },
   });
@@ -32,7 +43,6 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   });
   if (!rr) return NextResponse.json({ error: "Nominees not set yet" }, { status: 400 });
 
-  // nominees cannot vote
   if (userId === rr.nomineeAUserId || userId === rr.nomineeBUserId) {
     return NextResponse.json({ error: "Nominees cannot vote" }, { status: 403 });
   }
@@ -41,7 +51,6 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const targetUserId = (body?.targetUserId ?? "").toString();
   if (!targetUserId) return NextResponse.json({ error: "targetUserId required" }, { status: 400 });
 
-  // must vote for one of the nominees
   if (targetUserId !== rr.nomineeAUserId && targetUserId !== rr.nomineeBUserId) {
     return NextResponse.json({ error: "You must vote to evict a nominee." }, { status: 400 });
   }

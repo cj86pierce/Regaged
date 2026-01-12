@@ -61,7 +61,6 @@ export default function GamePage({ params }: { params: { id: string } }) {
   const [votePick, setVotePick] = useState<string | null>(null);
   const [chatText, setChatText] = useState("");
 
-  // Avoid spamming tick when timeLeft hits 0 repeatedly
   const lastAutoTickAtRef = useRef<number>(0);
 
   async function load() {
@@ -78,10 +77,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
   useEffect(() => {
     load().catch((e) => setError(e.message));
 
-    // 1) keep UI fresh
     const poll = setInterval(() => load().catch(() => {}), 1500);
-
-    // 2) auto-advance engine (local/dev)
     const engine = setInterval(() => {
       cronTick().catch(() => {});
     }, 2000);
@@ -98,13 +94,12 @@ export default function GamePage({ params }: { params: { id: string } }) {
     return Math.max(0, Math.ceil(ms / 1000));
   }, [data]);
 
-  // If timer hits 0, immediately tick once (fast transition feel)
   useEffect(() => {
     if (timeLeft === null) return;
     if (timeLeft > 0) return;
 
     const now = Date.now();
-    if (now - lastAutoTickAtRef.current < 1500) return; // throttle
+    if (now - lastAutoTickAtRef.current < 1500) return;
     lastAutoTickAtRef.current = now;
 
     cronTick().catch(() => {});
@@ -178,24 +173,13 @@ export default function GamePage({ params }: { params: { id: string } }) {
     await load();
   }
 
-  async function devTick() {
-    setError(null);
-    const res = await fetch(`/api/cron/tick`, { method: "POST" });
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok) setError((json as any)?.error ?? "Tick failed");
-    await load();
-    console.log(json);
-  }
-
   if (!data) return <p style={{ padding: 16 }}>Loading game…</p>;
 
   const nomineeA = data.nominees?.a ?? null;
   const nomineeB = data.nominees?.b ?? null;
 
   const nomineePlayers =
-    nomineeA && nomineeB
-      ? data.players.filter((p) => p.userId === nomineeA || p.userId === nomineeB)
-      : [];
+    nomineeA && nomineeB ? data.players.filter((p) => p.userId === nomineeA || p.userId === nomineeB) : [];
 
   const myVoteLockedIn = data.voteInfo?.myVoteTargetUserId ?? null;
   const myNomLockedIn = data.myNomLocked === true;
@@ -214,12 +198,6 @@ export default function GamePage({ params }: { params: { id: string } }) {
               </>
             )}
           </div>
-        </div>
-
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <button onClick={devTick} style={{ padding: "6px 10px" }}>
-            DEV: Tick
-          </button>
         </div>
       </div>
 

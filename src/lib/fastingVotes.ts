@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getSystemUserId } from "@/lib/systemUser";
 
-const FASTING_NOM_MS = 2 * 60 * 1000; // 2 minutes
+const FASTING_NOM_MS = 2 * 60 * 1000;
 
 function activityScore(p: { chatCount: number; plusCount: number; minusCount: number }) {
   return p.chatCount + 2 * p.plusCount - p.minusCount;
@@ -58,21 +58,13 @@ export async function resolveFastingEviction(gameId: string) {
   const countB = votes.filter((v) => v.targetUserId === rr.nomineeBUserId).length;
 
   let evicted = a;
-  let saved = b;
-
-  if (countB > countA) {
-    evicted = b;
-    saved = a;
-  } else if (countA === countB) {
+  if (countB > countA) evicted = b;
+  if (countA === countB) {
     const actA = activityScore(a);
     const actB = activityScore(b);
-    if (actB < actA) {
-      evicted = b;
-      saved = a;
-    }
+    if (actB < actA) evicted = b; // less active evicted
   }
 
-  const activeAfter = players.length - 1;
   const systemUserId = await getSystemUserId();
 
   await prisma.$transaction(async (tx) => {
@@ -95,17 +87,52 @@ export async function resolveFastingEviction(gameId: string) {
       },
     });
 
-    // keep your current endgame behavior (whatever you currently have)
-    // If you are still using FINAL3 -> COMPLETED logic elsewhere, this will still work.
-    // We only change phase timers for continuing rounds.
-    if (activeAfter <= 3) {
+    const remaining = await tx.gamePlayer.findMany({
+      where: { gameId, status: "ACTIVE" },
+      include: { user: { select: { username: true } } },
+    });
+
+    if (remaining.length <= 3) {
+      const ranked = rankFinal3(
+        remaining.map((p) => ({
+          userId: p.userId,
+          username: p.user.username,
+          povWins: p.povWins,
+          plusCount: p.plusCount,
+          activity: activityScore(p),
+        }))
+      );
+
+      const [first, second, third] = ranked;
+
+      // Pay rewards only to real users (skip silent bots)
+      const real = (u: Ranked | undefined) => u && !u.username.startsWith("bot_");
+
+      if (real(first)) await tx.user.update({ where: { id: first!.userId }, data: { karma: { increment: 12 }, tMoney: { increment: 12 } } });
+      if (real(second)) await tx.user.update({ where: { id: second!.userId }, data: { karma: { increment: 5 }, tMoney: { increment: 10 } } });
+      if (real(third)) await tx.user.update({ where: { id: third!.userId }, data: { karma: { increment: 3 }, tMoney: { increment: 6 } } });
+
+      await tx.gameMessage.create({
+        data: {
+          gameId,
+          userId: systemUserId,
+          channel: "PUBLIC",
+          body: `[SYSTEM] Final results: 1st ${first?.username ?? "N/A"}, 2nd ${second?.username ?? "N/A"}, 3rd ${third?.username ?? "N/A"}.`,
+        },
+      });
+
+      await tx.gameMessage.create({
+        data: {
+          gameId,
+          userId: systemUserId,
+          channel: "PUBLIC",
+          body: `[SYSTEM] Rewards paid.`,
+        },
+      });
+
       await tx.game.update({
         where: { id: gameId },
-        data: {
-          state: "FINAL3",
-          // leave your existing final3 timing/logic as-is elsewhere
-          // if you already changed it to instant end, this will be overwritten by that flow
-        },
+        data: { state: "COMPLETED", stateEndsAt: null, povUserId: null, completedAt: new Date() },
       });
     } else {
       await tx.game.update({

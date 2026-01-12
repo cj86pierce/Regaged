@@ -18,20 +18,13 @@ export default function EnrollPage() {
     await refreshMyGame();
   }
 
-  async function devFill() {
-    const r = await fetch("/api/dev/fill-fasting", { method: "POST" });
-    const d = await r.json();
-    if (d.gameId) setGameId(d.gameId);
-  }
-
   return (
-    <main>
+    <main style={{ padding: 12 }}>
       <h1>Enroll</h1>
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <button onClick={enroll}>Enroll in Fasting (0 T$)</button>
+        <button onClick={enroll}>Enroll in Fasting</button>
         <button onClick={refreshMyGame}>Refresh My Game</button>
-        <button onClick={devFill}>DEV: Start a game now</button>
       </div>
 
       {msg && <p>{msg}</p>}

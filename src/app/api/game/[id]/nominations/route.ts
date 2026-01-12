@@ -12,13 +12,24 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   const game = await prisma.game.findUnique({
     where: { id: gameId },
-    select: { id: true, state: true, roundNumber: true, povUserId: true, stateEndsAt: true },
+    select: { state: true, roundNumber: true, povUserId: true, stateEndsAt: true },
   });
   if (!game) return NextResponse.json({ error: "Game not found" }, { status: 404 });
   if (game.state !== "ROUND_NOMINATE") return NextResponse.json({ error: "Not in nomination phase" }, { status: 400 });
 
   if (game.stateEndsAt && Date.now() > game.stateEndsAt.getTime()) {
     return NextResponse.json({ error: "Nomination phase ended" }, { status: 400 });
+  }
+
+  const me = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { username: true },
+  });
+  if (!me) return NextResponse.json({ error: "User not found" }, { status: 404 });
+
+  // silent bots do not nominate
+  if (me.username.startsWith("bot_")) {
+    return NextResponse.json({ error: "Bots cannot nominate." }, { status: 403 });
   }
 
   const gp = await prisma.gamePlayer.findUnique({
@@ -28,37 +39,24 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   const body: any = await req.json().catch(() => null);
 
-  // Ensure we always deal with string[]
   const rawTargets: unknown = body?.targets;
-  if (!Array.isArray(rawTargets)) {
-    return NextResponse.json({ error: "targets must be an array" }, { status: 400 });
-  }
+  if (!Array.isArray(rawTargets)) return NextResponse.json({ error: "targets must be an array" }, { status: 400 });
 
-  const targetsAsStrings: string[] = rawTargets.map((x) => String(x));
-  const uniq: string[] = Array.from(new Set(targetsAsStrings))
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
+  const uniq: string[] = Array.from(new Set(rawTargets.map((x) => String(x).trim()))).filter((s) => s.length > 0);
 
-  if (uniq.length !== 2) {
-    return NextResponse.json({ error: "Pick exactly 2 unique nominees." }, { status: 400 });
-  }
+  if (uniq.length !== 2) return NextResponse.json({ error: "Pick exactly 2 unique nominees." }, { status: 400 });
 
-  // Cannot nominate POV
   if (game.povUserId && uniq.includes(game.povUserId)) {
     return NextResponse.json({ error: "You cannot nominate the POV." }, { status: 400 });
   }
 
-  // Validate targets are ACTIVE players in this game
   const validTargets = await prisma.gamePlayer.findMany({
     where: { gameId, status: "ACTIVE", userId: { in: uniq } },
     select: { userId: true },
   });
 
-  if (validTargets.length !== 2) {
-    return NextResponse.json({ error: "Invalid nominee selection." }, { status: 400 });
-  }
+  if (validTargets.length !== 2) return NextResponse.json({ error: "Invalid nominee selection." }, { status: 400 });
 
-  // Replace your nominations for this round (so you can change your mind until phase ends)
   await prisma.$transaction(async (tx) => {
     await tx.nomination.deleteMany({
       where: { gameId, roundNumber: game.roundNumber, voterUserId: userId },
