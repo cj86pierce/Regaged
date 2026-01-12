@@ -14,7 +14,6 @@ async function maybeAdvanceGame(gameId: string) {
   if (!g) return;
   if (g.gameType !== "FASTING") return;
 
-  // Ensure POV exists during nomination phase
   if (g.state === "ROUND_NOMINATE" && !g.povUserId) {
     try {
       await assignFastingPov(gameId, false);
@@ -25,7 +24,6 @@ async function maybeAdvanceGame(gameId: string) {
   if (g.state !== "ROUND_NOMINATE" && g.state !== "ROUND_VOTE") return;
   if (g.stateEndsAt.getTime() > Date.now()) return;
 
-  // Per-game lock
   const lockRows = await prisma.$queryRaw<{ locked: boolean }[]>`
     SELECT pg_try_advisory_lock(hashtext(${gameId})) as locked
   `;
@@ -60,7 +58,6 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   const session = await getServerSession(authOptions);
   const meUserId = (session?.user as any)?.id as string | undefined;
 
-  // ✅ only advance non-lobby games (ENROLLING should not advance here)
   const gForAdvance = await prisma.game.findUnique({
     where: { id: gameId },
     select: { state: true },
@@ -86,14 +83,9 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     orderBy: { joinedAt: "asc" },
   });
 
-  // Lobby info
   const activeCount = playersRaw.filter((p) => p.status === "ACTIVE").length;
-  const lobby =
-    game.state === "ENROLLING"
-      ? { current: activeCount, needed: Math.max(0, 15 - activeCount) }
-      : null;
+  const lobby = game.state === "ENROLLING" ? { current: activeCount, needed: Math.max(0, 15 - activeCount) } : null;
 
-  // Nominee info
   const roundResult =
     game.state !== "ENROLLING"
       ? await prisma.roundResult.findUnique({
@@ -102,7 +94,19 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         })
       : null;
 
-  // Nom lock
+  const nomineeA = roundResult?.nomineeAUserId ?? null;
+  const nomineeB = roundResult?.nomineeBUserId ?? null;
+
+  // who has voted (only matters during ROUND_VOTE)
+  let votedSet = new Set<string>();
+  if (game.state === "ROUND_VOTE") {
+    const votes = await prisma.evictionVote.findMany({
+      where: { gameId, roundNumber: game.roundNumber },
+      select: { voterUserId: true },
+    });
+    votedSet = new Set(votes.map((v) => v.voterUserId));
+  }
+
   let myNomLocked: boolean | null = null;
   if (meUserId && game.state === "ROUND_NOMINATE") {
     const myNoms = await prisma.nomination.count({
@@ -111,7 +115,6 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     myNomLocked = myNoms >= 2;
   }
 
-  // Vote info
   let voteInfo: null | {
     nomineeAUserId: string;
     nomineeBUserId: string;
@@ -126,19 +129,21 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       select: { voterUserId: true, targetUserId: true },
     });
 
-    const a = roundResult.nomineeAUserId;
-    const b = roundResult.nomineeBUserId;
-
-    const votesA = votes.filter((v) => v.targetUserId === a).length;
-    const votesB = votes.filter((v) => v.targetUserId === b).length;
+    const votesA = votes.filter((v) => v.targetUserId === roundResult.nomineeAUserId).length;
+    const votesB = votes.filter((v) => v.targetUserId === roundResult.nomineeBUserId).length;
 
     const myVoteTargetUserId =
       meUserId ? votes.find((v) => v.voterUserId === meUserId)?.targetUserId ?? null : null;
 
-    voteInfo = { nomineeAUserId: a, nomineeBUserId: b, votesA, votesB, myVoteTargetUserId };
+    voteInfo = {
+      nomineeAUserId: roundResult.nomineeAUserId,
+      nomineeBUserId: roundResult.nomineeBUserId,
+      votesA,
+      votesB,
+      myVoteTargetUserId,
+    };
   }
 
-  // Messages pagination
   const totalCount = await prisma.gameMessage.count({ where: { gameId, channel: "PUBLIC" } });
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
@@ -161,17 +166,26 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       : null,
     voteInfo,
     pagination: { page, pageSize, totalPages, totalCount },
-    players: playersRaw.map((p) => ({
-      userId: p.userId,
-      username: p.user.username,
-      status: p.status,
-      lastActiveAt: p.lastActiveAt,
-      eliminatedPlace: p.eliminatedPlace ?? null,
-      chatCount: p.chatCount,
-      plusCount: p.plusCount,
-      minusCount: p.minusCount,
-      povWins: p.povWins,
-    })),
+    players: playersRaw.map((p) => {
+      const isNominee = !!(nomineeA && nomineeB && (p.userId === nomineeA || p.userId === nomineeB));
+      const eligibleToVote =
+        game.state === "ROUND_VOTE" && p.status === "ACTIVE" && !isNominee;
+      const hasVoted = eligibleToVote ? votedSet.has(p.userId) : null;
+
+      return {
+        userId: p.userId,
+        username: p.user.username,
+        status: p.status,
+        lastActiveAt: p.lastActiveAt,
+        eliminatedPlace: p.eliminatedPlace ?? null,
+        isNominee,
+        hasVoted,
+        chatCount: p.chatCount,
+        plusCount: p.plusCount,
+        minusCount: p.minusCount,
+        povWins: p.povWins,
+      };
+    }),
     messages: messagesRaw.map((m) => {
       const plus = m.reactions.filter((r) => r.type === "PLUS").length;
       const minus = m.reactions.filter((r) => r.type === "MINUS").length;

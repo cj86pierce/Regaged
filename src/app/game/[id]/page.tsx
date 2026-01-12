@@ -12,6 +12,8 @@ type Player = {
   status: "ACTIVE" | "ELIMINATED";
   lastActiveAt: string;
   eliminatedPlace: number | null;
+  isNominee: boolean;
+  hasVoted: boolean | null;
   chatCount: number;
   plusCount: number;
   minusCount: number;
@@ -42,6 +44,7 @@ type GameState = {
     povUserId: string | null;
     stateEndsAt: string | null;
   };
+  lobby: { current: number; needed: number } | null;
   nominees: { a: string; b: string; evictedUserId: string | null } | null;
   voteInfo: {
     nomineeAUserId: string;
@@ -62,10 +65,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
   const [error, setError] = useState<string | null>(null);
 
   const [tab, setTab] = useState<"public" | "private">("public");
-  const [nomPicks, setNomPicks] = useState<string[]>([]);
-  const [votePick, setVotePick] = useState<string | null>(null);
   const [chatText, setChatText] = useState("");
-
   const [page, setPage] = useState(1);
 
   async function load() {
@@ -117,37 +117,27 @@ export default function GamePage({ params }: { params: { id: string } }) {
     else await load();
   }
 
-  function toggleNom(userId: string) {
-    setNomPicks((prev) => {
-      if (prev.includes(userId)) return prev.filter((x) => x !== userId);
-      if (prev.length >= 2) return prev;
-      return [...prev, userId];
-    });
-  }
-
-  async function submitNoms() {
+  async function submitNoms(targets: string[]) {
     setError(null);
     const res = await fetch(`/api/game/${gameId}/nominations`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ targets: nomPicks }),
+      body: JSON.stringify({ targets }),
     });
     const json = await res.json();
     if (!res.ok) {
       setError(json?.error ?? "Nomination failed");
       return;
     }
-    setNomPicks([]);
     await load();
   }
 
-  async function submitVote() {
-    if (!votePick) return;
+  async function evict(targetUserId: string) {
     setError(null);
     const res = await fetch(`/api/game/${gameId}/vote`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ targetUserId: votePick }),
+      body: JSON.stringify({ targetUserId }),
     });
     const json = await res.json();
     if (!res.ok) {
@@ -175,17 +165,34 @@ export default function GamePage({ params }: { params: { id: string } }) {
           Fasting <span style={{ opacity: 0.6, fontWeight: 900 }}>· Game #{data.game.number}</span>
         </div>
         <div style={{ fontSize: 12, opacity: 0.75 }}>
-          Round <b>{data.game.roundNumber}</b> · State <b>{data.game.state}</b>
-          {timeLeft !== null && (
+          {data.game.state === "ENROLLING" && data.lobby ? (
             <>
-              {" "}
-              · Ends in <b>{timeLeft}s</b>
+              Filling: <b>{data.lobby.current}/15</b> ({data.lobby.needed} needed)
+            </>
+          ) : (
+            <>
+              Round <b>{data.game.roundNumber}</b> · State <b>{data.game.state}</b>
+              {timeLeft !== null && (
+                <>
+                  {" "}
+                  · Ends in <b>{timeLeft}s</b>
+                </>
+              )}
             </>
           )}
         </div>
       </div>
 
-      <PlayerStrip players={data.players} povUserId={data.game.povUserId} />
+      <PlayerStrip
+        players={data.players}
+        povUserId={data.game.povUserId}
+        gameState={data.game.state}
+        meUserId={data.meUserId}
+        myNomLockedIn={myNomLockedIn}
+        onSubmitNoms={submitNoms}
+        myVoteLockedIn={myVoteLockedIn}
+        onEvict={evict}
+      />
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 14, marginTop: 10 }}>
         <div>
@@ -204,16 +211,16 @@ export default function GamePage({ params }: { params: { id: string } }) {
               povUserId={data.game.povUserId}
               players={data.players}
               myNomLockedIn={myNomLockedIn}
-              nomPicks={nomPicks}
-              toggleNom={toggleNom}
-              submitNoms={submitNoms}
+              nomPicks={[]}
+              toggleNom={() => {}}
+              submitNoms={async () => {}}
               nominees={data.nominees}
               nomineePlayers={nomineePlayers}
               voteInfo={data.voteInfo}
               myVoteLockedIn={myVoteLockedIn}
-              votePick={votePick}
-              setVotePick={setVotePick}
-              submitVote={submitVote}
+              votePick={null}
+              setVotePick={() => {}}
+              submitVote={async () => {}}
               page={data.pagination.page}
               totalPages={data.pagination.totalPages}
               setPage={setPage}
@@ -223,7 +230,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
           {tab === "private" && (
             <div style={{ border: "1px solid #d7d7d7", borderRadius: 10, padding: 12, background: "#fff" }}>
               <b>Private messages</b>
-              <div style={{ marginTop: 8, opacity: 0.75 }}>Not implemented yet (public-only first).</div>
+              <div style={{ marginTop: 8, opacity: 0.75 }}>Not implemented yet.</div>
             </div>
           )}
 
@@ -234,6 +241,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
           )}
         </div>
 
+        {/* vote box still exists here for clarity; it will show locked-in, but main action is on player cards */}
         <Sidebar
           gameId={gameId}
           gameState={data.game.state}
@@ -242,9 +250,9 @@ export default function GamePage({ params }: { params: { id: string } }) {
           nominees={data.nominees}
           nomineePlayers={nomineePlayers.map((p) => ({ userId: p.userId, username: p.username }))}
           myVoteLockedIn={myVoteLockedIn}
-          votePick={votePick}
-          setVotePick={setVotePick}
-          submitVote={submitVote}
+          votePick={null}
+          setVotePick={() => {}}
+          submitVote={async () => {}}
         />
       </div>
     </div>
