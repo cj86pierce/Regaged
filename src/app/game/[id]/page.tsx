@@ -13,7 +13,7 @@ type Player = {
   lastActiveAt: string;
   eliminatedPlace: number | null;
   isNominee: boolean;
-  hasVoted: boolean | null;
+  hasVoted: boolean | null; // returned by API (PlayerStrip no longer uses it)
 };
 
 type Message = {
@@ -32,7 +32,14 @@ type GameState = {
   ok: boolean;
   meUserId: string | null;
   myNomLocked: boolean | null;
-  game: { id: string; number: number; state: string; roundNumber: number; povUserId: string | null; stateEndsAt: string | null };
+  game: {
+    id: string;
+    number: number;
+    state: string;
+    roundNumber: number;
+    povUserId: string | null;
+    stateEndsAt: string | null;
+  };
   lobby: { current: number; needed: number } | null;
   nominees: { a: string; b: string; evictedUserId: string | null } | null;
   voteInfo: { myVoteTargetUserId: string | null } | null;
@@ -51,7 +58,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
   const [chatText, setChatText] = useState("");
   const [page, setPage] = useState(1);
 
-  // ✅ selection lives here
+  // selection state (boxes under players)
   const [nomSelected, setNomSelected] = useState<string[]>([]);
   const [evictSelected, setEvictSelected] = useState<string | null>(null);
 
@@ -61,7 +68,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
     if (!res.ok) throw new Error(json?.error ?? "Failed to load game");
     setData(json);
 
-    // Clear selections when phase changes / locks
+    // clear selections when phase changes/locks
     if (json.game.state !== "ROUND_NOMINATE") setNomSelected([]);
     if (json.game.state !== "ROUND_VOTE") setEvictSelected(null);
     if (json.myNomLocked) setNomSelected([]);
@@ -164,14 +171,9 @@ export default function GamePage({ params }: { params: { id: string } }) {
       </div>
 
       <PlayerStrip
-        players={data.players}
+        players={data.players as any}
         povUserId={data.game.povUserId}
         gameState={data.game.state}
-        meUserId={data.meUserId}
-        myNomLockedIn={myNomLockedIn}
-        onSubmitNoms={async () => {}}
-        myVoteLockedIn={myVoteLockedIn}
-        onEvict={async () => {}}
         nomSelected={nomSelected}
         setNomSelected={setNomSelected}
         evictSelected={evictSelected}
