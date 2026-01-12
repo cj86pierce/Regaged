@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
@@ -65,7 +67,6 @@ export default async function HomePage() {
 
   return (
     <main>
-      {/* “white box” container */}
       <div
         style={{
           background: "#fff",
@@ -75,7 +76,6 @@ export default async function HomePage() {
           overflow: "hidden",
         }}
       >
-        {/* HERO */}
         <div style={{ padding: 18 }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 240px", gap: 16, alignItems: "start" }}>
             <div>
@@ -151,7 +151,6 @@ export default async function HomePage() {
             </div>
           </div>
 
-          {/* Banner */}
           <div
             style={{
               marginTop: 14,
@@ -179,7 +178,6 @@ export default async function HomePage() {
             </div>
           </div>
 
-          {/* Feature grid */}
           <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             {[
               { title: "Nominate & Evict", body: "Create alliances, nominate other participants, and avoid eviction." },
@@ -205,13 +203,10 @@ export default async function HomePage() {
           </div>
         </div>
 
-        {/* Bottom two columns */}
         <div style={{ padding: 18, borderTop: "1px solid rgba(0,0,0,0.06)" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-            {/* Left: blogs */}
             <div>
               <div style={{ color: "#d11b1b", fontWeight: 1000, marginBottom: 10 }}>Top Participants blogs</div>
-
               <div style={{ display: "grid", gap: 10 }}>
                 {topBlogs.map((b) => (
                   <div
@@ -259,7 +254,6 @@ export default async function HomePage() {
               </div>
             </div>
 
-            {/* Right: group games */}
             <div>
               <div style={{ color: "#d11b1b", fontWeight: 1000, marginBottom: 10 }}>Top Group Games</div>
 
@@ -329,7 +323,6 @@ export default async function HomePage() {
         </div>
       </div>
 
-      {/* Small footer */}
       <div style={{ textAlign: "center", marginTop: 14, fontSize: 12, opacity: 0.7 }}>
         Tengaged remake · modern layout inspired by classic Tengaged
       </div>
