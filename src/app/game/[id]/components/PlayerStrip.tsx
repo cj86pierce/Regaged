@@ -12,7 +12,7 @@ type Player = {
   povWins: number;
 };
 
-function trunc(name: string, max = 10) {
+function trunc(name: string, max = 9) {
   if (name.length <= max) return name;
   return name.slice(0, max) + "…";
 }
@@ -29,41 +29,46 @@ export default function PlayerStrip({
       style={{
         border: "1px solid #cfd7df",
         borderRadius: 10,
-        padding: 8,
+        padding: 6,
         background: "#eef7ff",
       }}
     >
-      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+      {/* Single row, no wrap */}
+      <div
+        style={{
+          display: "flex",
+          gap: 3,
+          flexWrap: "nowrap",
+          justifyContent: "space-between",
+          overflow: "hidden",
+        }}
+      >
         {players.map((p) => {
           const isPov = povUserId === p.userId;
           const eliminated = p.status === "ELIMINATED";
-          const short = trunc(p.username, 10);
 
           return (
             <Link
               key={p.userId}
               href={`/u/${encodeURIComponent(p.username)}`}
-              style={{
-                textDecoration: "none",
-                color: "inherit",
-              }}
+              style={{ textDecoration: "none", color: "inherit", flex: "1 1 0" }}
               title={p.username}
             >
               <div
                 style={{
-                  width: 72,
+                  width: "100%",
                   border: "1px solid #b9c4cf",
                   borderRadius: 6,
                   background: eliminated ? "#e9ecef" : "#ffffff",
                   opacity: eliminated ? 0.55 : 1,
-                  padding: 6,
+                  padding: 4,
                   position: "relative",
                 }}
               >
                 <div
                   style={{
-                    width: 60,
-                    height: 60,
+                    width: "100%",
+                    aspectRatio: "1 / 1",
                     borderRadius: 6,
                     border: "1px solid rgba(0,0,0,0.10)",
                     background: "linear-gradient(#f3f6f9, #fff)",
@@ -71,7 +76,7 @@ export default function PlayerStrip({
                     placeItems: "center",
                     fontWeight: 900,
                     opacity: 0.7,
-                    margin: "0 auto",
+                    fontSize: 14,
                   }}
                 >
                   🙂
@@ -87,7 +92,7 @@ export default function PlayerStrip({
                       border: "1px solid #e5c46a",
                       borderRadius: 999,
                       padding: "2px 6px",
-                      fontSize: 10,
+                      fontSize: 9,
                       fontWeight: 1000,
                     }}
                   >
@@ -97,8 +102,8 @@ export default function PlayerStrip({
 
                 <div
                   style={{
-                    marginTop: 6,
-                    fontSize: 11,
+                    marginTop: 4,
+                    fontSize: 10,
                     fontWeight: 900,
                     color: "#0b5ed7",
                     textDecoration: "underline",
@@ -109,7 +114,7 @@ export default function PlayerStrip({
                     textOverflow: "ellipsis",
                   }}
                 >
-                  {short}
+                  {trunc(p.username, 9)}
                 </div>
               </div>
             </Link>

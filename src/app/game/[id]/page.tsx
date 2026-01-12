@@ -98,7 +98,6 @@ export default function GamePage({ params }: { params: { id: string } }) {
       return;
     }
     setChatText("");
-    // sending new message -> go to newest page
     setPage(1);
     await load();
   }
@@ -230,7 +229,18 @@ export default function GamePage({ params }: { params: { id: string } }) {
           )}
         </div>
 
-        <Sidebar gameState={data.game.state} roundNumber={data.game.roundNumber} messages={data.messages} />
+        <Sidebar
+          gameId={gameId}
+          gameState={data.game.state}
+          roundNumber={data.game.roundNumber}
+          messages={data.messages}
+          nominees={data.nominees}
+          nomineePlayers={nomineePlayers.map((p) => ({ userId: p.userId, username: p.username }))}
+          myVoteLockedIn={myVoteLockedIn}
+          votePick={votePick}
+          setVotePick={setVotePick}
+          submitVote={submitVote}
+        />
       </div>
     </div>
   );

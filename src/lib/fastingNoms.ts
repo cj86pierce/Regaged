@@ -28,7 +28,6 @@ export async function resolveFastingNominations(gameId: string) {
     await assignFastingPov(gameId, false);
   }
 
-  // re-read POV after assign (in case it was just created)
   const gameAfter = await prisma.game.findUnique({
     where: { id: gameId },
     select: { roundNumber: true, povUserId: true },
@@ -39,17 +38,13 @@ export async function resolveFastingNominations(gameId: string) {
     where: { gameId_roundNumber: { gameId, roundNumber: game.roundNumber } },
   });
   if (existing) {
-    return {
-      ok: true,
-      alreadyResolved: true,
-      nomineeA: existing.nomineeAUserId,
-      nomineeB: existing.nomineeBUserId,
-    };
+    return { ok: true, alreadyResolved: true, nomineeA: existing.nomineeAUserId, nomineeB: existing.nomineeBUserId };
   }
 
   const players = await prisma.gamePlayer.findMany({
     where: { gameId, status: "ACTIVE" },
     include: { user: { select: { username: true } } },
+    orderBy: { joinedAt: "asc" },
   });
 
   const activeIds = new Set(players.map((p) => p.userId));
@@ -80,6 +75,18 @@ export async function resolveFastingNominations(gameId: string) {
 
   const nomineeA = candidates[0];
   const nomineeB = candidates[1];
+
+  // Build “everyone + counts” string, with nominees bracketed for UI inversion
+  const everyoneLine = candidates
+    .map((c) => {
+      const s = `${c.username}(${c.count})`;
+      if (c.userId === nomineeA.userId || c.userId === nomineeB.userId) {
+        return `[${s}]`; // bracketed = invert in UI
+      }
+      return s;
+    })
+    .join(" · ");
+
   const systemUserId = await getSystemUserId();
 
   await prisma.$transaction(async (tx) => {
@@ -97,16 +104,13 @@ export async function resolveFastingNominations(gameId: string) {
         gameId,
         userId: systemUserId,
         channel: "PUBLIC",
-        body: `[SYSTEM] Nominees: ${nomineeA.username} (${nomineeA.count}) and ${nomineeB.username} (${nomineeB.count}).`,
+        body: `[SYSTEM] Nomination votes: ${everyoneLine}`,
       },
     });
 
     await tx.game.update({
       where: { id: gameId },
-      data: {
-        state: "ROUND_VOTE",
-        stateEndsAt: new Date(Date.now() + FASTING_VOTE_MS),
-      },
+      data: { state: "ROUND_VOTE", stateEndsAt: new Date(Date.now() + FASTING_VOTE_MS) },
     });
   });
 
