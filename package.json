@@ -27,5 +27,7 @@
     "eslint-config-next": "16.1.1",
     "prisma": "^6.19.1",
     "typescript": "^5"
+    "postinstall": "prisma generate"
+
   }
 }
