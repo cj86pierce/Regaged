@@ -43,8 +43,19 @@ model User {
   karma        Int      @default(0)
   tMoney       Int      @default(0)
 
-  // ✅ NEW: site-wide last active timestamp
   lastSeenAt   DateTime @default(now())
+
+  // ✅ Avatar config (5 generic styles + per-part colors)
+  bodyStyle    String   @default("body1")
+  hairStyle    String   @default("hair1")
+  eyesStyle    String   @default("eyes1")
+  mouthStyle   String   @default("mouth1")
+  shirtStyle   String   @default("shirt1")
+
+  bodyColor    String   @default("#F1C27D")
+  hairColor    String   @default("#2B1B0E")
+  eyeColor     String   @default("#2E7DFF")
+  shirtColor   String   @default("#E53935")
 
   enrollments  Enrollment[]
   gamePlayers  GamePlayer[]
