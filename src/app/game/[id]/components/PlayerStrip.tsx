@@ -1,14 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import Avatar, { AvatarConfig } from "@/components/Avatar";
 
 type Player = {
   userId: string;
   username: string;
   status: "ACTIVE" | "ELIMINATED";
   lastActiveAt: string | Date;
-  eliminatedPlace: number | null; // includes 1/2/3 at end
+  eliminatedPlace: number | null;
   isNominee: boolean;
+  avatar: AvatarConfig;
 };
 
 function trunc(name: string, max = 10) {
@@ -33,7 +35,6 @@ export default function PlayerStrip(props: {
   players: Player[];
   povUserId: string | null;
   gameState: string;
-
   meUserId: string | null;
 
   myNomLockedIn: boolean;
@@ -45,17 +46,7 @@ export default function PlayerStrip(props: {
   evictSelected: string | null;
   setEvictSelected: (id: string | null) => void;
 }) {
-  const {
-    players,
-    povUserId,
-    gameState,
-    myNomLockedIn,
-    myVoteLockedIn,
-    nomSelected,
-    setNomSelected,
-    evictSelected,
-    setEvictSelected,
-  } = props;
+  const { players, povUserId, gameState, myNomLockedIn, myVoteLockedIn, nomSelected, setNomSelected, evictSelected, setEvictSelected } = props;
 
   const isNominate = gameState === "ROUND_NOMINATE";
   const isVote = gameState === "ROUND_VOTE";
@@ -73,7 +64,6 @@ export default function PlayerStrip(props: {
   }
 
   const tileW = 64;
-  const avatarH = 80;
 
   return (
     <div style={{ border: "1px solid #cfd7df", borderRadius: 10, padding: "6px 8px", background: "#eef7ff", overflow: "hidden" }}>
@@ -81,59 +71,27 @@ export default function PlayerStrip(props: {
         {players.map((p) => {
           const isPov = p.userId === povUserId;
           const mins = minutesSince(p.lastActiveAt);
-
           const place = p.eliminatedPlace;
 
-          // endgame grayscale rules:
-          // - eliminated always grey
-          // - when completed: 2nd/3rd grey, 1st stays colored
           const endGrey = isCompleted && (place === 2 || place === 3);
-          const eliminatedGrey = p.status === "ELIMINATED";
-          const grayscale = eliminatedGrey || endGrey;
-
-          // selection logic
-          const canNomPick = isNominate && !myNomLockedIn && p.status !== "ELIMINATED" && !isPov;
-          const canEvictPick = isVote && !myVoteLockedIn && p.status !== "ELIMINATED" && p.isNominee;
+          const grayscale = p.status === "ELIMINATED" || endGrey;
 
           const showNomBox = isNominate && !myNomLockedIn && p.status !== "ELIMINATED" && !isPov;
           const showVoteBox = isVote && !myVoteLockedIn && p.status !== "ELIMINATED" && p.isNominee;
 
-          // indicator slot (checks/POV/?/placement)
           let indicatorText = "";
-          if (isCompleted && (place === 1 || place === 2 || place === 3)) {
-            indicatorText = suffix(place);
-          } else if (p.status === "ELIMINATED" && place) {
-            indicatorText = suffix(place);
-          } else if (isVote && myVoteLockedIn) {
-            indicatorText = p.isNominee ? "❓" : (isPov ? "POV" : "✅");
-          } else if (isNominate && myNomLockedIn) {
-            indicatorText = isPov ? "POV" : "✅";
-          } else {
-            indicatorText = "";
-          }
+          if (isCompleted && (place === 1 || place === 2 || place === 3)) indicatorText = suffix(place);
+          else if (p.status === "ELIMINATED" && place) indicatorText = suffix(place);
+          else if (isVote && myVoteLockedIn) indicatorText = p.isNominee ? "❓" : (isPov ? "POV" : "✅");
+          else if (isNominate && myNomLockedIn) indicatorText = isPov ? "POV" : "✅";
 
           const nomOn = nomSelected.includes(p.userId);
           const evictOn = evictSelected === p.userId;
 
           return (
             <div key={p.userId} style={{ width: tileW }}>
-              <div
-                style={{
-                  width: tileW,
-                  height: avatarH,
-                  borderRadius: 6,
-                  background: grayscale ? "#6f7781" : "#f5f7fa",
-                  border: "1px solid rgba(0,0,0,0.15)",
-                  overflow: "hidden",
-                  filter: grayscale ? "grayscale(1)" : "none",
-                  opacity: grayscale ? 0.85 : 1,
-                  position: "relative",
-                }}
-                title={p.username}
-              >
-                <div style={{ width: "100%", height: "100%", display: "grid", placeItems: "center", fontSize: 18, opacity: 0.7 }}>
-                  🙂
-                </div>
+              <div style={{ display: "grid", placeItems: "center" }}>
+                <Avatar config={p.avatar} size={64} grayscale={grayscale} />
               </div>
 
               <Link
@@ -166,7 +124,6 @@ export default function PlayerStrip(props: {
               <div style={{ height: 20, marginTop: 2, display: "grid", placeItems: "center" }}>
                 {showNomBox ? (
                   <button
-                    disabled={!canNomPick}
                     onClick={() => toggleNomPick(p.userId)}
                     style={{
                       width: 18,
@@ -174,13 +131,11 @@ export default function PlayerStrip(props: {
                       borderRadius: 4,
                       border: "1px solid rgba(0,0,0,0.35)",
                       background: nomOn ? "#111" : "#fff",
-                      cursor: canNomPick ? "pointer" : "not-allowed",
+                      cursor: "pointer",
                     }}
-                    title="Select nominee"
                   />
                 ) : showVoteBox ? (
                   <button
-                    disabled={!canEvictPick}
                     onClick={() => toggleEvictPick(p.userId)}
                     style={{
                       width: 18,
@@ -188,9 +143,8 @@ export default function PlayerStrip(props: {
                       borderRadius: 4,
                       border: "1px solid rgba(0,0,0,0.35)",
                       background: evictOn ? "#111" : "#fff",
-                      cursor: canEvictPick ? "pointer" : "not-allowed",
+                      cursor: "pointer",
                     }}
-                    title="Select to evict"
                   />
                 ) : (
                   <div />

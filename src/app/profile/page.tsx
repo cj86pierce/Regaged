@@ -27,14 +27,20 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { username: true, karma: true, tMoney: true, createdAt: true, lastSeenAt: true },
+    select: {
+      username: true,
+      karma: true,
+      tMoney: true,
+      createdAt: true,
+      lastSeenAt: true,
+
+      bodyStyle: true, hairStyle: true, eyesStyle: true, mouthStyle: true, shirtStyle: true,
+      bodyColor: true, hairColor: true, eyeColor: true, shirtColor: true,
+    },
   });
   if (!user) throw new Error("User not found");
 
-  const purchased = await prisma.userColor.findMany({
-    where: { userId },
-    include: { color: true },
-  });
+  const purchased = await prisma.userColor.findMany({ where: { userId }, include: { color: true } });
   const highestColor =
     purchased.length > 0
       ? purchased.map((p) => p.color).sort((a, b) => b.karmaNeeded - a.karmaNeeded)[0]
@@ -46,7 +52,6 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
     _sum: { chatCount: true, plusCount: true, minusCount: true, povWins: true },
   });
 
-  // Pull a slice, then sort active-first in JS
   const raw = await prisma.gamePlayer.findMany({
     where: { userId },
     orderBy: { joinedAt: "desc" },
@@ -56,9 +61,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
       status: true,
       eliminatedPlace: true,
       joinedAt: true,
-      game: {
-        select: { number: true, gameType: true, state: true },
-      },
+      game: { select: { number: true, gameType: true, state: true } },
     },
   });
 
@@ -75,8 +78,8 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
     .sort((a, b) => {
       const aActive = a.state !== "COMPLETED" && a.yourStatus === "ACTIVE";
       const bActive = b.state !== "COMPLETED" && b.yourStatus === "ACTIVE";
-      if (aActive !== bActive) return aActive ? -1 : 1; // active first
-      return new Date(b.joinedAt).getTime() - new Date(a.joinedAt).getTime(); // newest first
+      if (aActive !== bActive) return aActive ? -1 : 1;
+      return new Date(b.joinedAt).getTime() - new Date(a.joinedAt).getTime();
     });
 
   const page = Math.max(1, Number(searchParams?.page ?? "1") || 1);
@@ -94,6 +97,19 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
     colorName: highestColor?.name ?? "White",
     colorAnimated: highestColor?.isAnimated ?? false,
     lastSeenAt: user.lastSeenAt.toISOString(),
+
+    avatar: {
+      bodyStyle: user.bodyStyle,
+      hairStyle: user.hairStyle,
+      eyesStyle: user.eyesStyle,
+      mouthStyle: user.mouthStyle,
+      shirtStyle: user.shirtStyle,
+      bodyColor: user.bodyColor,
+      hairColor: user.hairColor,
+      eyeColor: user.eyeColor,
+      shirtColor: user.shirtColor,
+    },
+
     stats: {
       gamesPlayed: gpAgg._count._all ?? 0,
       totalChats: gpAgg._sum.chatCount ?? 0,
