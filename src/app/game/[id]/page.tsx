@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import PlayerStrip from "./components/PlayerStrip";
 import ChatPanel from "./components/ChatPanel";
 import Sidebar from "./components/Sidebar";
@@ -61,6 +61,9 @@ export default function GamePage({ params }: { params: { id: string } }) {
   const [votePick, setVotePick] = useState<string | null>(null);
   const [chatText, setChatText] = useState("");
 
+  // throttle tick calls at 0 seconds (prevents DB overload)
+  const lastTickAttemptRef = useRef<number>(0);
+
   async function load() {
     const res = await fetch(`/api/game/${gameId}/state`, { cache: "no-store" });
     const json = await res.json();
@@ -68,12 +71,13 @@ export default function GamePage({ params }: { params: { id: string } }) {
     setData(json);
   }
 
+  async function tickOnce() {
+    await fetch(`/api/cron/tick`, { method: "GET" }).catch(() => null);
+  }
+
   useEffect(() => {
     load().catch((e) => setError(e.message));
-
-    // Poll game state (keep this modest to avoid DB connection pressure)
     const poll = setInterval(() => load().catch(() => {}), 3000);
-
     return () => clearInterval(poll);
   }, [gameId]);
 
@@ -82,6 +86,18 @@ export default function GamePage({ params }: { params: { id: string } }) {
     const ms = new Date(data.game.stateEndsAt).getTime() - Date.now();
     return Math.max(0, Math.ceil(ms / 1000));
   }, [data]);
+
+  // If timer hits 0, nudge the tick endpoint (throttled)
+  useEffect(() => {
+    if (timeLeft === null) return;
+    if (timeLeft > 0) return;
+
+    const now = Date.now();
+    if (now - lastTickAttemptRef.current < 30_000) return; // 30s throttle
+    lastTickAttemptRef.current = now;
+
+    tickOnce().catch(() => {});
+  }, [timeLeft]);
 
   async function sendChat() {
     setError(null);

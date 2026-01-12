@@ -4,10 +4,10 @@ import { assignFastingPov } from "@/lib/fastingPov";
 import { resolveFastingNominations } from "@/lib/fastingNoms";
 import { resolveFastingEviction } from "@/lib/fastingVotes";
 
-export async function POST(req: Request) {
+async function runTick() {
   const now = new Date();
 
-  // 1) Always ensure POV exists for active nomination rounds
+  // Ensure POV exists for nomination rounds
   const nominateNeedingPov = await prisma.game.findMany({
     where: {
       gameType: "FASTING",
@@ -21,11 +21,11 @@ export async function POST(req: Request) {
     try {
       await assignFastingPov(g.id, false);
     } catch {
-      // ignore POV errors for now; game might be invalid / edge case
+      // ignore
     }
   }
 
-  // 2) Resolve games whose phase timer has expired
+  // Resolve expired phases
   const due = await prisma.game.findMany({
     where: {
       gameType: "FASTING",
@@ -40,7 +40,6 @@ export async function POST(req: Request) {
   for (const g of due) {
     try {
       if (g.state === "ROUND_NOMINATE") {
-        // Ensure POV exists, then resolve nominations -> moves to ROUND_VOTE
         await assignFastingPov(g.id, false);
         const r = await resolveFastingNominations(g.id);
         results.push({ gameId: g.id, action: "resolveNoms", result: r });
@@ -53,10 +52,19 @@ export async function POST(req: Request) {
     }
   }
 
-  return NextResponse.json({
-    ok: true,
-    ensuredPov: nominateNeedingPov.length,
-    processedDue: due.length,
-    results,
-  });
+  return { ok: true, ensuredPov: nominateNeedingPov.length, processedDue: due.length, results };
+}
+
+export async function GET() {
+  try {
+    const out = await runTick();
+    return NextResponse.json(out);
+  } catch (e: any) {
+    return NextResponse.json({ ok: false, error: e?.message ?? "Tick failed" }, { status: 500 });
+  }
+}
+
+export async function POST() {
+  // Allow POST too (manual calls / future tooling)
+  return GET();
 }
