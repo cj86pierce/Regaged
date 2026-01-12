@@ -23,8 +23,11 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   }
 
   await prisma.$transaction(async (tx) => {
-    tx.gameMessage.create({ data: { gameId, userId, channel: "PUBLIC", body: text } });
-    tx.gamePlayer.update({
+    await tx.gameMessage.create({
+      data: { gameId, userId, channel: "PUBLIC", body: text },
+    });
+
+    await tx.gamePlayer.update({
       where: { gameId_userId: { gameId, userId } },
       data: { chatCount: { increment: 1 }, lastActiveAt: new Date() },
     });
