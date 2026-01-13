@@ -9,6 +9,7 @@ datasource db {
 
 enum GameType {
   FASTING
+  FASTING_LITE
 }
 
 enum GameState {
@@ -40,39 +41,46 @@ model User {
   passwordHash String
   createdAt    DateTime @default(now())
 
-  karma        Int      @default(0)
-  tMoney       Int      @default(0)
+  karma  Int @default(0)
+  tMoney Int @default(0)
 
-  lastSeenAt   DateTime @default(now())
+  // site-wide activity
+  lastSeenAt DateTime @default(now())
 
-  // ✅ Avatar config (5 generic styles + per-part colors)
-  bodyStyle    String   @default("body1")
-  hairStyle    String   @default("hair1")
-  eyesStyle    String   @default("eyes1")
-  mouthStyle   String   @default("mouth1")
-  shirtStyle   String   @default("shirt1")
+  // =========================
+  // AVATAR (PNG PARTS + COLORS)
+  // =========================
+  bodyStyle      String @default("body_m") // body_m | body_f
+  hairStyle      String @default("hair_m_01") // hair_m_01... hair_f_03...
+  eyesStyle      String @default("eyes_01") // eyes_01..eyes_06
+  mouthStyle     String @default("mouth_01") // mouth_01..mouth_06
+  shirtStyle     String @default("shirt_01") // shirt_01..shirt_06
+  accessoryStyle String @default("none") // none | accessory_01
 
-  bodyColor    String   @default("#F1C27D")
-  hairColor    String   @default("#2B1B0E")
-  eyeColor     String   @default("#2E7DFF")
-  shirtColor   String   @default("#E53935")
+  bodyColor      String @default("#F1C27D")
+  hairColor      String @default("#2B1B0E")
+  eyeColor       String @default("#2E7DFF")
+  mouthColor     String @default("#E0AC69")
+  shirtColor     String @default("#E53935")
+  accessoryColor String @default("#111111")
+  // =========================
 
-  enrollments  Enrollment[]
-  gamePlayers  GamePlayer[]
-  messages     GameMessage[]
-  reactions    MessageReaction[]
-  colorBuys    UserColor[]
+  enrollments Enrollment[]
+  gamePlayers GamePlayer[]
+  messages    GameMessage[]
+  reactions   MessageReaction[]
+  colorBuys   UserColor[]
 }
 
 model ColorLevel {
-  id            Int      @id
-  name          String   @unique
-  karmaNeeded   Int
-  priceT        Int
-  strength      Int
-  isAnimated    Boolean  @default(false)
+  id          Int     @id
+  name        String  @unique
+  karmaNeeded Int
+  priceT      Int
+  strength    Int
+  isAnimated  Boolean @default(false)
 
-  purchases     UserColor[]
+  purchases UserColor[]
 }
 
 model UserColor {
@@ -81,8 +89,8 @@ model UserColor {
   colorId     Int
   purchasedAt DateTime @default(now())
 
-  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  color       ColorLevel @relation(fields: [colorId], references: [id], onDelete: Restrict)
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  color ColorLevel @relation(fields: [colorId], references: [id], onDelete: Restrict)
 
   @@unique([userId, colorId])
   @@index([userId])
@@ -94,26 +102,28 @@ model Enrollment {
   gameType  GameType
   createdAt DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, gameType])
   @@index([gameType, createdAt])
 }
 
 model Game {
-  id            String    @id @default(cuid())
-  number        Int       @unique @default(autoincrement())
+  id String @id @default(cuid())
 
-  gameType      GameType
-  state         GameState @default(ENROLLING)
-  roundNumber   Int       @default(0)
+  // nice human-readable counter for display (keeps increasing even if you delete games)
+  number Int @unique @default(autoincrement())
 
-  startsAt      DateTime?
-  stateEndsAt   DateTime?
+  gameType    GameType
+  state       GameState @default(ENROLLING)
+  roundNumber Int       @default(0)
 
-  povUserId     String?
-  createdAt     DateTime  @default(now())
-  completedAt   DateTime?
+  startsAt    DateTime?
+  stateEndsAt DateTime?
+
+  povUserId   String?
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
 
   players       GamePlayer[]
   nominations   Nomination[]
@@ -125,54 +135,54 @@ model Game {
 }
 
 model GamePlayer {
-  id              String       @id @default(cuid())
-  gameId          String
-  userId          String
-  status          PlayerStatus @default(ACTIVE)
+  id     String       @id @default(cuid())
+  gameId String
+  userId String
+  status PlayerStatus @default(ACTIVE)
 
-  joinedAt        DateTime     @default(now())
-  eliminatedAt    DateTime?
+  joinedAt     DateTime  @default(now())
+  eliminatedAt DateTime?
 
-  lastActiveAt    DateTime     @default(now())
+  lastActiveAt    DateTime @default(now())
   eliminatedPlace Int?
 
-  povWins         Int          @default(0)
-  chatCount       Int          @default(0)
-  plusCount       Int          @default(0)
-  minusCount      Int          @default(0)
+  povWins    Int @default(0)
+  chatCount  Int @default(0)
+  plusCount  Int @default(0)
+  minusCount Int @default(0)
 
   lastHadPovRound Int?
 
-  game            Game         @relation(fields: [gameId], references: [id], onDelete: Cascade)
-  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([gameId, userId])
   @@index([gameId, status])
 }
 
 model Nomination {
-  id            String   @id @default(cuid())
-  gameId        String
-  roundNumber   Int
-  voterUserId   String
-  targetUserId  String
-  createdAt     DateTime @default(now())
+  id           String   @id @default(cuid())
+  gameId       String
+  roundNumber  Int
+  voterUserId  String
+  targetUserId String
+  createdAt    DateTime @default(now())
 
-  game          Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
 
   @@index([gameId, roundNumber])
   @@index([gameId, roundNumber, targetUserId])
 }
 
 model EvictionVote {
-  id            String   @id @default(cuid())
-  gameId        String
-  roundNumber   Int
-  voterUserId   String
-  targetUserId  String
-  createdAt     DateTime @default(now())
+  id           String   @id @default(cuid())
+  gameId       String
+  roundNumber  Int
+  voterUserId  String
+  targetUserId String
+  createdAt    DateTime @default(now())
 
-  game          Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
 
   @@unique([gameId, roundNumber, voterUserId])
   @@index([gameId, roundNumber, targetUserId])
@@ -187,7 +197,7 @@ model RoundResult {
   evictedUserId  String?
   createdAt      DateTime @default(now())
 
-  game           Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
 
   @@unique([gameId, roundNumber])
 }
@@ -200,8 +210,8 @@ model GameMessage {
   body      String
   createdAt DateTime    @default(now())
 
-  game      Game        @relation(fields: [gameId], references: [id], onDelete: Cascade)
-  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game      Game              @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   reactions MessageReaction[]
 
   @@index([gameId, channel, createdAt])
@@ -214,8 +224,8 @@ model MessageReaction {
   type          ReactionType
   createdAt     DateTime     @default(now())
 
-  message       GameMessage  @relation(fields: [messageId], references: [id], onDelete: Cascade)
-  reactor       User         @relation(fields: [reactorUserId], references: [id], onDelete: Cascade)
+  message GameMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  reactor User        @relation(fields: [reactorUserId], references: [id], onDelete: Cascade)
 
   @@unique([messageId, reactorUserId])
   @@index([messageId, type])
