@@ -112,16 +112,20 @@ export default function AvatarEditor({ initial }: { initial: Initial }) {
             <StylePicker label="Body" value={cfg.bodyStyle} options={["body1","body2","body3","body4","body5"]} onChange={(v) => setCfg({ ...cfg, bodyStyle: v })} />
             <ColorPicker label="Body color" value={cfg.bodyColor} onChange={(v) => setCfg({ ...cfg, bodyColor: v })} />
 
-            <StylePicker label="Hair" value={cfg.hairStyle} options={["hair1","hair2","hair3","hair4","hair5"]} onChange={(v) => setCfg({ ...cfg, hairStyle: v })} />
+            {/* ✅ Hair now includes hair6–hair10 */}
+            <StylePicker
+              label="Hair"
+              value={cfg.hairStyle}
+              options={["hair1","hair2","hair3","hair4","hair5","hair6","hair7","hair8","hair9","hair10"]}
+              onChange={(v) => setCfg({ ...cfg, hairStyle: v })}
+            />
             <ColorPicker label="Hair color" value={cfg.hairColor} onChange={(v) => setCfg({ ...cfg, hairColor: v })} />
 
             <StylePicker label="Eyes" value={cfg.eyesStyle} options={["eyes1","eyes2","eyes3","eyes4","eyes5"]} onChange={(v) => setCfg({ ...cfg, eyesStyle: v })} />
             <ColorPicker label="Eye color" value={cfg.eyeColor} onChange={(v) => setCfg({ ...cfg, eyeColor: v })} />
 
             <StylePicker label="Mouth" value={cfg.mouthStyle} options={["mouth1","mouth2","mouth3","mouth4","mouth5"]} onChange={(v) => setCfg({ ...cfg, mouthStyle: v })} />
-            <div style={{ opacity: 0.7, fontSize: 12, alignSelf: "end" }}>
-              Mouth color is fixed for now.
-            </div>
+            <div style={{ opacity: 0.7, fontSize: 12, alignSelf: "end" }}>Mouth color is fixed for now.</div>
 
             <StylePicker label="Shirt" value={cfg.shirtStyle} options={["shirt1","shirt2","shirt3","shirt4","shirt5"]} onChange={(v) => setCfg({ ...cfg, shirtStyle: v })} />
             <ColorPicker label="Shirt color" value={cfg.shirtColor} onChange={(v) => setCfg({ ...cfg, shirtColor: v })} />

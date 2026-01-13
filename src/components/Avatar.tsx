@@ -24,8 +24,6 @@ export default function Avatar({
 }) {
   const s = size;
 
-  // Simple 5-style shapes. We keep it generic + clean.
-  // Later: swap these with nicer SVG assets, same API.
   const Body = () => {
     switch (config.bodyStyle) {
       case "body2":
@@ -115,9 +113,11 @@ export default function Avatar({
     }
   };
 
+  // ✅ Added hair6–hair10 as more “female/long hair” silhouettes
   const Hair = () => {
     const c = config.hairColor;
     switch (config.hairStyle) {
+      // original 1–5
       case "hair2":
         return <path d="M30 30 Q50 10 70 30 Q64 18 50 18 Q36 18 30 30Z" fill={c} />;
       case "hair3":
@@ -126,6 +126,56 @@ export default function Avatar({
         return <path d="M30 26 Q50 6 70 26 Q74 40 50 30 Q26 40 30 26Z" fill={c} />;
       case "hair5":
         return <path d="M28 30 Q50 4 72 30 Q70 44 50 26 Q30 44 28 30Z" fill={c} />;
+
+      // hair6: long straight
+      case "hair6":
+        return (
+          <>
+            <path d="M28 34 Q50 10 72 34 Q70 18 50 20 Q30 18 28 34Z" fill={c} />
+            <path d="M26 36 Q20 60 28 92 Q34 98 38 92 Q30 68 34 40Z" fill={c} opacity="0.95" />
+            <path d="M74 36 Q80 60 72 92 Q66 98 62 92 Q70 68 66 40Z" fill={c} opacity="0.95" />
+          </>
+        );
+
+      // hair7: ponytail
+      case "hair7":
+        return (
+          <>
+            <path d="M28 34 Q50 8 72 34 Q70 18 50 20 Q30 18 28 34Z" fill={c} />
+            <path d="M70 44 Q86 52 80 72 Q72 88 62 78 Q74 66 68 52Z" fill={c} opacity="0.95" />
+          </>
+        );
+
+      // hair8: bob cut
+      case "hair8":
+        return (
+          <>
+            <path d="M28 34 Q50 10 72 34 Q72 52 66 62 Q50 70 34 62 Q28 52 28 34Z" fill={c} />
+            <path d="M34 38 Q50 26 66 38 Q62 30 50 30 Q38 30 34 38Z" fill={c} opacity="0.9" />
+          </>
+        );
+
+      // hair9: twin buns
+      case "hair9":
+        return (
+          <>
+            <circle cx="30" cy="26" r="10" fill={c} />
+            <circle cx="70" cy="26" r="10" fill={c} />
+            <path d="M28 34 Q50 10 72 34 Q70 18 50 20 Q30 18 28 34Z" fill={c} />
+          </>
+        );
+
+      // hair10: long with bangs
+      case "hair10":
+        return (
+          <>
+            <path d="M28 34 Q50 10 72 34 Q70 18 50 20 Q30 18 28 34Z" fill={c} />
+            <path d="M34 34 Q50 22 66 34 Q64 26 50 26 Q36 26 34 34Z" fill={c} opacity="0.9" />
+            <path d="M26 40 Q22 64 30 92 Q36 98 40 92 Q34 68 36 44Z" fill={c} opacity="0.95" />
+            <path d="M74 40 Q78 64 70 92 Q64 98 60 92 Q66 68 64 44Z" fill={c} opacity="0.95" />
+          </>
+        );
+
       default:
         return <path d="M32 30 Q50 12 68 30 Q64 22 50 22 Q36 22 32 30Z" fill={c} />;
     }
