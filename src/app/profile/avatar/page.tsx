@@ -17,8 +17,20 @@ export default async function AvatarPage() {
     where: { id: userId },
     select: {
       username: true,
-      bodyStyle: true, hairStyle: true, eyesStyle: true, mouthStyle: true, shirtStyle: true,
-      bodyColor: true, hairColor: true, eyeColor: true, shirtColor: true,
+
+      bodyStyle: true,
+      hairStyle: true,
+      eyesStyle: true,
+      mouthStyle: true,
+      shirtStyle: true,
+      accessoryStyle: true,
+
+      bodyColor: true,
+      hairColor: true,
+      eyeColor: true,
+      mouthColor: true,
+      shirtColor: true,
+      accessoryColor: true,
     },
   });
 
