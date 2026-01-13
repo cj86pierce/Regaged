@@ -5,6 +5,11 @@ import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
 import ProfileTabs, { ProfileTabsData, ProfileGameBubble } from "@/components/ProfileTabs";
 import Link from "next/link";
+import type { AvatarConfig } from "@/components/Avatar";
+
+function oneOf(v: string, allowed: string[], fallback: string) {
+  return allowed.includes(v) ? v : fallback;
+}
 
 export default async function ProfilePage({ searchParams }: { searchParams: { page?: string } }) {
   const session = await getServerSession(authOptions);
@@ -34,13 +39,27 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
       createdAt: true,
       lastSeenAt: true,
 
-      bodyStyle: true, hairStyle: true, eyesStyle: true, mouthStyle: true, shirtStyle: true,
-      bodyColor: true, hairColor: true, eyeColor: true, shirtColor: true,
+      bodyStyle: true,
+      hairStyle: true,
+      eyesStyle: true,
+      mouthStyle: true,
+      shirtStyle: true,
+      accessoryStyle: true,
+
+      bodyColor: true,
+      hairColor: true,
+      eyeColor: true,
+      mouthColor: true,
+      shirtColor: true,
+      accessoryColor: true,
     },
   });
   if (!user) throw new Error("User not found");
 
-  const purchased = await prisma.userColor.findMany({ where: { userId }, include: { color: true } });
+  const purchased = await prisma.userColor.findMany({
+    where: { userId },
+    include: { color: true },
+  });
   const highestColor =
     purchased.length > 0
       ? purchased.map((p) => p.color).sort((a, b) => b.karmaNeeded - a.karmaNeeded)[0]
@@ -88,6 +107,27 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
   const start = (page - 1) * pageSize;
   const recentGames = all.slice(start, start + pageSize);
 
+  // ✅ sanitize avatar config for TS + runtime safety
+  const avatar: AvatarConfig = {
+    bodyStyle: oneOf(user.bodyStyle, ["body_m", "body_f"], "body_m") as "body_m" | "body_f",
+    hairStyle: oneOf(
+      user.hairStyle,
+      ["hair_m_01", "hair_m_02", "hair_m_03", "hair_f_01", "hair_f_02", "hair_f_03"],
+      "hair_m_01"
+    ),
+    eyesStyle: oneOf(user.eyesStyle, ["eyes_01", "eyes_02", "eyes_03", "eyes_04", "eyes_05", "eyes_06"], "eyes_01"),
+    mouthStyle: oneOf(user.mouthStyle, ["mouth_01", "mouth_02", "mouth_03", "mouth_04", "mouth_05", "mouth_06"], "mouth_01"),
+    shirtStyle: oneOf(user.shirtStyle, ["shirt_01", "shirt_02", "shirt_03", "shirt_04", "shirt_05", "shirt_06"], "shirt_01"),
+    accessoryStyle: oneOf(user.accessoryStyle, ["none", "accessory_01"], "none"),
+
+    bodyColor: user.bodyColor,
+    hairColor: user.hairColor,
+    eyeColor: user.eyeColor,
+    mouthColor: user.mouthColor,
+    shirtColor: user.shirtColor,
+    accessoryColor: user.accessoryColor,
+  };
+
   const data: ProfileTabsData = {
     isOwnProfile: true,
     username: user.username,
@@ -97,19 +137,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
     colorName: highestColor?.name ?? "White",
     colorAnimated: highestColor?.isAnimated ?? false,
     lastSeenAt: user.lastSeenAt.toISOString(),
-
-    avatar: {
-      bodyStyle: user.bodyStyle,
-      hairStyle: user.hairStyle,
-      eyesStyle: user.eyesStyle,
-      mouthStyle: user.mouthStyle,
-      shirtStyle: user.shirtStyle,
-      bodyColor: user.bodyColor,
-      hairColor: user.hairColor,
-      eyeColor: user.eyeColor,
-      shirtColor: user.shirtColor,
-    },
-
+    avatar,
     stats: {
       gamesPlayed: gpAgg._count._all ?? 0,
       totalChats: gpAgg._sum.chatCount ?? 0,
