@@ -2,15 +2,17 @@
 
 import { useState } from "react";
 
-function LayerTint({
-  src,
+function MaskTint({
+  maskSrc,
   tint,
   zIndex,
 }: {
-  src: string;
+  maskSrc: string;
   tint: string; // hex
   zIndex: number;
 }) {
+  // This draws a colored rectangle, then uses the PNG as a mask
+  // so ONLY the shirt pixels get tinted, not the body underneath.
   return (
     <div
       style={{
@@ -19,22 +21,20 @@ function LayerTint({
         zIndex,
         backgroundColor: tint,
         pointerEvents: "none",
+
+        // WebKit (Chrome, Safari)
+        WebkitMaskImage: `url(${maskSrc})`,
+        WebkitMaskRepeat: "no-repeat",
+        WebkitMaskPosition: "center",
+        WebkitMaskSize: "contain",
+
+        // Standard (Firefox may support differently; Vercel/Chrome is fine)
+        maskImage: `url(${maskSrc})`,
+        maskRepeat: "no-repeat",
+        maskPosition: "center",
+        maskSize: "contain",
       }}
-    >
-      <img
-        src={src}
-        alt=""
-        style={{
-          position: "absolute",
-          inset: 0,
-          width: "100%",
-          height: "100%",
-          objectFit: "contain",
-          mixBlendMode: "multiply",
-          pointerEvents: "none",
-        }}
-      />
-    </div>
+    />
   );
 }
 
@@ -83,27 +83,24 @@ function AvatarPng({
       }}
     >
       {/* ✅ ORDER (bottom -> top):
-          1) Body (tinted)
-          2) Shirt base (tinted)
-          3) Shirt highlight (no tint, stays white)
+          1) Body tinted (mask)
+          2) Shirt base tinted (mask)
+          3) Shirt highlight normal PNG (white)
       */}
 
-      <LayerTint
-        src={`/avatars/body/Body_${gender}.png`}
+      <MaskTint
+        maskSrc={`/avatars/body/Body_${gender}.png`}
         tint={bodyColor}
         zIndex={1}
       />
 
-      <LayerTint
-        src="/avatars/shirts/Shirt_1_base.png"
+      <MaskTint
+        maskSrc="/avatars/shirts/Shirt_1_base.png"
         tint={shirtColor}
         zIndex={2}
       />
 
-      <LayerPlain
-        src="/avatars/shirts/Shirt_1_highlight.png"
-        zIndex={3}
-      />
+      <LayerPlain src="/avatars/shirts/Shirt_1_highlight.png" zIndex={3} />
     </div>
   );
 }
@@ -115,7 +112,7 @@ export default function AvatarTestPage() {
 
   return (
     <main style={{ padding: 16 }}>
-      <h1 style={{ marginTop: 0 }}>PNG Avatar Test</h1>
+      <h1 style={{ marginTop: 0 }}>PNG Avatar Test (Mask Tint)</h1>
 
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
         <div
@@ -170,13 +167,7 @@ export default function AvatarTestPage() {
           </div>
 
           <div style={{ marginTop: 12, fontSize: 12, opacity: 0.75, lineHeight: 1.35 }}>
-            <b>Important:</b> for tinting to look good, your PNGs should be grayscale.
-            <br />
-            • Body PNG: flat gray silhouette
-            <br />
-            • Shirt base: grayscale (tintable)
-            <br />
-            • Shirt highlight: white details only
+            This uses <b>masking</b>, so shirt color won’t affect the body.
           </div>
         </div>
 
