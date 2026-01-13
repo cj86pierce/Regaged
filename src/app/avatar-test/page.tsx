@@ -2,80 +2,107 @@
 
 import { useState } from "react";
 
-function hueRotateFromHex(hex: string) {
-  const h = hex.replace("#", "");
-  const r = parseInt(h.slice(0, 2), 16) / 255;
-  const g = parseInt(h.slice(2, 4), 16) / 255;
-  const b = parseInt(h.slice(4, 6), 16) / 255;
-
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  let hue = 0;
-
-  if (max !== min) {
-    if (max === r) hue = (g - b) / (max - min);
-    else if (max === g) hue = 2 + (b - r) / (max - min);
-    else hue = 4 + (r - g) / (max - min);
-    hue *= 60;
-    if (hue < 0) hue += 360;
-  }
-
-  return Math.round(hue);
-}
-
-// Simple “good enough to test” tint filter.
-// Works best when the base PNG is grayscale/light gray.
-function tintFilter(hex: string) {
-  const hue = hueRotateFromHex(hex);
-  return `brightness(0) saturate(100%) invert(1) sepia(1) saturate(10000%) hue-rotate(${hue}deg)`;
-}
-
-function AvatarPngTest({
-  gender,
-  shirtColor,
-  size = 200,
-  grayscaleBody = false,
+function LayerTint({
+  src,
+  tint,
+  zIndex,
 }: {
-  gender: "M" | "F";
-  shirtColor: string;
-  size?: number;
-  grayscaleBody?: boolean;
+  src: string;
+  tint: string; // hex
+  zIndex: number;
 }) {
-  const w = size;
-  const h = Math.round(size * (230 / 200));
-
-  const layer: React.CSSProperties = {
-    position: "absolute",
-    inset: 0,
-    width: "100%",
-    height: "100%",
-    objectFit: "contain",
-    pointerEvents: "none",
-  };
-
   return (
-    <div style={{ width: w, height: h, position: "relative", border: "1px solid rgba(0,0,0,0.15)", borderRadius: 10, overflow: "hidden", background: "#fff" }}>
-      {/* Shirt highlight (stays white) */}
-      <img src="/avatars/shirts/Shirt_1_highlight.png" alt="" style={layer} />
-
-      {/* Shirt base (tinted) */}
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        zIndex,
+        backgroundColor: tint,
+        pointerEvents: "none",
+      }}
+    >
       <img
-        src="/avatars/shirts/Shirt_1_base.png"
+        src={src}
         alt=""
         style={{
-          ...layer,
-          filter: tintFilter(shirtColor),
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: "contain",
+          mixBlendMode: "multiply",
+          pointerEvents: "none",
         }}
       />
+    </div>
+  );
+}
 
-      {/* Body (optional grayscale toggle to test later) */}
-      <img
+function LayerPlain({ src, zIndex }: { src: string; zIndex: number }) {
+  return (
+    <img
+      src={src}
+      alt=""
+      style={{
+        position: "absolute",
+        inset: 0,
+        width: "100%",
+        height: "100%",
+        objectFit: "contain",
+        zIndex,
+        pointerEvents: "none",
+      }}
+    />
+  );
+}
+
+function AvatarPng({
+  gender,
+  bodyColor,
+  shirtColor,
+  size = 220,
+}: {
+  gender: "M" | "F";
+  bodyColor: string;
+  shirtColor: string;
+  size?: number;
+}) {
+  const w = size;
+  const h = Math.round(size * (230 / 200)); // keep 200x230 aspect
+
+  return (
+    <div
+      style={{
+        width: w,
+        height: h,
+        position: "relative",
+        border: "1px solid rgba(0,0,0,0.15)",
+        borderRadius: 12,
+        overflow: "hidden",
+        background: "#fff",
+      }}
+    >
+      {/* ✅ ORDER (bottom -> top):
+          1) Body (tinted)
+          2) Shirt base (tinted)
+          3) Shirt highlight (no tint, stays white)
+      */}
+
+      <LayerTint
         src={`/avatars/body/Body_${gender}.png`}
-        alt=""
-        style={{
-          ...layer,
-          filter: grayscaleBody ? "grayscale(1)" : "none",
-        }}
+        tint={bodyColor}
+        zIndex={1}
+      />
+
+      <LayerTint
+        src="/avatars/shirts/Shirt_1_base.png"
+        tint={shirtColor}
+        zIndex={2}
+      />
+
+      <LayerPlain
+        src="/avatars/shirts/Shirt_1_highlight.png"
+        zIndex={3}
       />
     </div>
   );
@@ -83,6 +110,7 @@ function AvatarPngTest({
 
 export default function AvatarTestPage() {
   const [gender, setGender] = useState<"M" | "F">("M");
+  const [bodyColor, setBodyColor] = useState("#F1C27D");
   const [shirtColor, setShirtColor] = useState("#E53935");
 
   return (
@@ -90,35 +118,79 @@ export default function AvatarTestPage() {
       <h1 style={{ marginTop: 0 }}>PNG Avatar Test</h1>
 
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-        <div style={{ border: "1px solid rgba(0,0,0,0.10)", borderRadius: 12, padding: 12, background: "#fff" }}>
+        <div
+          style={{
+            border: "1px solid rgba(0,0,0,0.10)",
+            borderRadius: 12,
+            padding: 12,
+            background: "#fff",
+            width: 320,
+          }}
+        >
           <div style={{ fontWeight: 900, marginBottom: 10 }}>Controls</div>
 
-          <div style={{ display: "grid", gap: 10 }}>
+          <div style={{ display: "grid", gap: 12 }}>
             <label style={{ display: "grid", gap: 6 }}>
               <span style={{ fontWeight: 800 }}>Gender</span>
-              <select value={gender} onChange={(e) => setGender(e.target.value as any)} style={{ padding: 8, borderRadius: 10, border: "1px solid rgba(0,0,0,0.15)" }}>
-                <option value="M">Body_M</option>
-                <option value="F">Body_F</option>
+              <select
+                value={gender}
+                onChange={(e) => setGender(e.target.value as any)}
+                style={{
+                  padding: 8,
+                  borderRadius: 10,
+                  border: "1px solid rgba(0,0,0,0.15)",
+                }}
+              >
+                <option value="M">Body_M.png</option>
+                <option value="F">Body_F.png</option>
               </select>
             </label>
 
             <label style={{ display: "grid", gap: 6 }}>
+              <span style={{ fontWeight: 800 }}>Body Color</span>
+              <input
+                type="color"
+                value={bodyColor}
+                onChange={(e) => setBodyColor(e.target.value)}
+                style={{ height: 40, width: 120 }}
+              />
+              <div style={{ fontSize: 12, opacity: 0.7 }}>{bodyColor}</div>
+            </label>
+
+            <label style={{ display: "grid", gap: 6 }}>
               <span style={{ fontWeight: 800 }}>Shirt Color</span>
-              <input type="color" value={shirtColor} onChange={(e) => setShirtColor(e.target.value)} style={{ height: 40, width: 120 }} />
+              <input
+                type="color"
+                value={shirtColor}
+                onChange={(e) => setShirtColor(e.target.value)}
+                style={{ height: 40, width: 120 }}
+              />
               <div style={{ fontSize: 12, opacity: 0.7 }}>{shirtColor}</div>
             </label>
           </div>
+
+          <div style={{ marginTop: 12, fontSize: 12, opacity: 0.75, lineHeight: 1.35 }}>
+            <b>Important:</b> for tinting to look good, your PNGs should be grayscale.
+            <br />
+            • Body PNG: flat gray silhouette
+            <br />
+            • Shirt base: grayscale (tintable)
+            <br />
+            • Shirt highlight: white details only
+          </div>
         </div>
 
-        <div style={{ border: "1px solid rgba(0,0,0,0.10)", borderRadius: 12, padding: 12, background: "#fff" }}>
+        <div
+          style={{
+            border: "1px solid rgba(0,0,0,0.10)",
+            borderRadius: 12,
+            padding: 12,
+            background: "#fff",
+          }}
+        >
           <div style={{ fontWeight: 900, marginBottom: 10 }}>Preview</div>
-          <AvatarPngTest gender={gender} shirtColor={shirtColor} size={220} />
+          <AvatarPng gender={gender} bodyColor={bodyColor} shirtColor={shirtColor} size={240} />
         </div>
-      </div>
-
-      <div style={{ marginTop: 14, fontSize: 12, opacity: 0.75 }}>
-        If the shirt tint looks weird, your <b>Shirt_1_base.png</b> is probably not grayscale/light gray.
-        Highlights should be in <b>Shirt_1_highlight.png</b> and stay white.
       </div>
     </main>
   );
