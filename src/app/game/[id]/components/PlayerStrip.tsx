@@ -46,7 +46,17 @@ export default function PlayerStrip(props: {
   evictSelected: string | null;
   setEvictSelected: (id: string | null) => void;
 }) {
-  const { players, povUserId, gameState, myNomLockedIn, myVoteLockedIn, nomSelected, setNomSelected, evictSelected, setEvictSelected } = props;
+  const {
+    players,
+    povUserId,
+    gameState,
+    myNomLockedIn,
+    myVoteLockedIn,
+    nomSelected,
+    setNomSelected,
+    evictSelected,
+    setEvictSelected,
+  } = props;
 
   const isNominate = gameState === "ROUND_NOMINATE";
   const isVote = gameState === "ROUND_VOTE";
@@ -66,7 +76,15 @@ export default function PlayerStrip(props: {
   const tileW = 64;
 
   return (
-    <div style={{ border: "1px solid #cfd7df", borderRadius: 10, padding: "6px 8px", background: "#eef7ff", overflow: "hidden" }}>
+    <div
+      style={{
+        border: "1px solid #cfd7df",
+        borderRadius: 10,
+        padding: "6px 8px",
+        background: "#eef7ff",
+        overflow: "hidden",
+      }}
+    >
       <div style={{ display: "flex", gap: 4, flexWrap: "nowrap", justifyContent: "flex-start" }}>
         {players.map((p) => {
           const isPov = p.userId === povUserId;
@@ -91,7 +109,8 @@ export default function PlayerStrip(props: {
           return (
             <div key={p.userId} style={{ width: tileW }}>
               <div style={{ display: "grid", placeItems: "center" }}>
-                <Avatar config={p.avatar} size={64} grayscale={grayscale} />
+                {/* ✅ width, not size */}
+                <Avatar config={p.avatar} width={64} grayscale={grayscale} />
               </div>
 
               <Link
