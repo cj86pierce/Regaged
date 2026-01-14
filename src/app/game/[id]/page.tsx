@@ -14,8 +14,6 @@ type Player = {
   lastActiveAt: string;
   eliminatedPlace: number | null;
   isNominee: boolean;
-
-  // ✅ new
   avatar: AvatarConfig;
 };
 
@@ -56,6 +54,13 @@ export default function GamePage({ params }: { params: { id: string } }) {
   const [nomSelected, setNomSelected] = useState<string[]>([]);
   const [evictSelected, setEvictSelected] = useState<string | null>(null);
 
+  // ✅ real-time clock for smooth countdown
+  const [now, setNow] = useState<number>(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 250);
+    return () => clearInterval(t);
+  }, []);
+
   async function load() {
     const res = await fetch(`/api/game/${gameId}/state?page=${page}&pageSize=25`, { cache: "no-store" });
     const json = await res.json();
@@ -75,11 +80,13 @@ export default function GamePage({ params }: { params: { id: string } }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameId, page]);
 
+  // ✅ true countdown based on server endsAt and local clock
   const timeLeft = useMemo(() => {
     if (!data?.game.stateEndsAt) return null;
-    const ms = new Date(data.game.stateEndsAt).getTime() - Date.now();
+    const end = new Date(data.game.stateEndsAt).getTime();
+    const ms = end - now;
     return Math.max(0, Math.ceil(ms / 1000));
-  }, [data]);
+  }, [data?.game.stateEndsAt, now]);
 
   async function sendChat() {
     setError(null);

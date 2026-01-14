@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
 import { touchUser } from "@/lib/touchUser";
 
+const FAST_FORWARD_SECONDS = 15;
+
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   const userId = (session?.user as any)?.id as string | undefined;
@@ -42,6 +44,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     await tx.nomination.createMany({
       data: uniq.map((t) => ({ gameId, roundNumber: game.roundNumber, voterUserId: userId, targetUserId: t })),
     });
+
     await tx.gamePlayer.update({
       where: { gameId_userId: { gameId, userId } },
       data: { lastActiveAt: new Date() },
@@ -49,6 +52,37 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   });
 
   await touchUser(userId);
+
+  // ✅ FAST-FORWARD: if everyone eligible has submitted, set timer to 15s (if >15s left)
+  const activePlayers = await prisma.gamePlayer.findMany({
+    where: { gameId, status: "ACTIVE" },
+    select: { userId: true },
+  });
+
+  const eligibleVoters = activePlayers
+    .map((p) => p.userId)
+    .filter((uid) => uid !== game.povUserId); // POV can’t nominate? (they still nominate in your rules, just can’t be nominated. If POV can nominate, remove this filter.)
+
+  // if POV *is allowed to nominate* in your rules, comment the filter above out.
+
+  const nomCounts = await prisma.nomination.groupBy({
+    by: ["voterUserId"],
+    where: { gameId, roundNumber: game.roundNumber },
+    _count: { _all: true },
+  });
+
+  const votersWith2 = new Set(nomCounts.filter((r) => r._count._all >= 2).map((r) => r.voterUserId));
+  const allDone = eligibleVoters.every((uid) => votersWith2.has(uid));
+
+  if (allDone && game.stateEndsAt) {
+    const leftMs = game.stateEndsAt.getTime() - Date.now();
+    if (leftMs > FAST_FORWARD_SECONDS * 1000) {
+      await prisma.game.update({
+        where: { id: gameId },
+        data: { stateEndsAt: new Date(Date.now() + FAST_FORWARD_SECONDS * 1000) },
+      });
+    }
+  }
 
   return NextResponse.json({ ok: true });
 }
