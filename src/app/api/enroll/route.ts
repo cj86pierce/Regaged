@@ -64,9 +64,9 @@ export async function POST() {
       },
     });
 
-    // Assign POV right away
+    // Assign POV right away (✅ one-arg call now)
     try {
-      await assignFastingPov(lobby.id, false);
+      await assignFastingPov(lobby.id);
     } catch {}
   }
 
