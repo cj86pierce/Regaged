@@ -73,32 +73,14 @@ export default function PlayerStrip(props: {
     setEvictSelected(userId);
   }
 
-  // ✅ exactly 15 columns worth of layout; no “16th slot”
-  // (If a game has fewer than 15 players, columns still exist but simply contain fewer cards.)
   return (
-    <div
-      style={{
-        border: "1px solid #cfd7df",
-        borderRadius: 10,
-        padding: "6px 8px",
-        background: "#eef7ff",
-        overflow: "hidden",
-      }}
-    >
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(15, minmax(0, 1fr))",
-          gap: 4,
-          alignItems: "start",
-        }}
-      >
+    <div style={{ border: "1px solid #cfd7df", borderRadius: 10, padding: "6px 8px", background: "#eef7ff", overflow: "hidden" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(15, minmax(0, 1fr))", gap: 4, alignItems: "start" }}>
         {players.map((p) => {
           const isPov = p.userId === povUserId;
           const mins = minutesSince(p.lastActiveAt);
           const place = p.eliminatedPlace;
 
-          // ✅ COMPLETED: only winner stays colored, everyone else grey
           const grayscale = isCompleted ? place !== 1 : p.status === "ELIMINATED";
 
           const canNominateThisPlayer =
@@ -110,14 +92,7 @@ export default function PlayerStrip(props: {
           const nomOn = nomSelected.includes(p.userId);
           const evictOn = evictSelected === p.userId;
 
-          // ✅ Indicator/action slot content (this is the key change)
-          // Priority:
-          // 1) placement
-          // 2) POV badge (always visible)
-          // 3) action buttons (Nominate/Evict) during live phases
-          // 4) ✅/❓ after vote lock
           let slot: React.ReactNode = null;
-
           if (place) {
             slot = <span style={{ fontWeight: 1000, fontSize: 11 }}>{suffix(place)}</span>;
           } else if (isPov) {
@@ -185,19 +160,21 @@ export default function PlayerStrip(props: {
 
           return (
             <div key={p.userId} style={{ minWidth: 0 }}>
-              <div style={{ display: "grid", placeItems: "center" }}>
+              {/* ✅ avatar clickable */}
+              <Link href={`/u/${encodeURIComponent(p.username)}`} style={{ display: "grid", placeItems: "center", textDecoration: "none" }}>
                 <Avatar config={p.avatar} width={64} grayscale={grayscale} />
-              </div>
+              </Link>
 
+              {/* ✅ name is black */}
               <Link
                 href={`/u/${encodeURIComponent(p.username)}`}
                 style={{
                   display: "block",
                   marginTop: 4,
                   fontSize: 10,
-                  fontWeight: 900,
-                  color: "#0b5ed7",
-                  textDecoration: "underline",
+                  fontWeight: 1000,
+                  color: "#111",
+                  textDecoration: "none",
                   textAlign: "center",
                   whiteSpace: "nowrap",
                   overflow: "hidden",
@@ -212,7 +189,6 @@ export default function PlayerStrip(props: {
                 {mins >= 60 ? "offline" : `${mins}m`}
               </div>
 
-              {/* ✅ unified indicator/action slot */}
               <div style={{ marginTop: 3, height: 18, display: "grid", placeItems: "center" }}>
                 {slot}
               </div>

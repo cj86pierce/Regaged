@@ -35,7 +35,7 @@ export default function Sidebar(props: {
   const box: React.CSSProperties = {
     border: "1px solid rgba(0,0,0,0.10)",
     borderRadius: 10,
-    padding: 12,
+    padding: 10,
     background: "#fff",
     maxHeight: 240,
     overflowY: "auto",
@@ -51,7 +51,7 @@ export default function Sidebar(props: {
     }));
 
   return (
-    <div style={{ display: "grid", gap: 8 }}>
+    <div style={{ display: "grid", gap: 6, alignContent: "start" }}>
       <div style={box}>
         <div style={{ fontWeight: 1000, marginBottom: 8 }}>
           {gameState === "ROUND_NOMINATE" ? "Confirm Nominations" : gameState === "ROUND_VOTE" ? "Confirm Vote" : "Round"}
@@ -140,16 +140,7 @@ export default function Sidebar(props: {
         ) : (
           <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
             {systemStory.map((m) => (
-              <div
-                key={m.id}
-                style={{
-                  fontSize: 12,
-                  background: "#fff3cd",
-                  border: "1px solid rgba(0,0,0,0.12)",
-                  borderRadius: 10,
-                  padding: 8,
-                }}
-              >
+              <div key={m.id} style={{ fontSize: 12, background: "#fff3cd", border: "1px solid rgba(0,0,0,0.12)", borderRadius: 10, padding: 8 }}>
                 <div style={{ fontWeight: 900, opacity: 0.8 }}>{new Date(m.createdAt).toLocaleString()}</div>
                 <div style={{ marginTop: 4 }}>{m.body}</div>
               </div>
