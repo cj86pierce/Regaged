@@ -3,7 +3,7 @@
 export type AvatarConfig = {
   bodyStyle: "body_m" | "body_f";
   shirtStyle: string; // shirt_01..shirt_06
-  eyesStyle: string;  // eyes_01..eyes_06 (IRIS ONLY)
+  eyesStyle: string;  // eyes_01..eyes_06
   mouthStyle: string; // mouth_01..mouth_06
   hairStyle: string;  // hair_m_01.. hair_f_03..
   accessoryStyle: string; // none | accessory_01
@@ -38,7 +38,7 @@ function MaskFill({ maskSrc, color, zIndex }: { maskSrc: string; color: string; 
   );
 }
 
-// Tints using mask, then overlays the grayscale PNG as multiply to preserve shading.
+// ✅ Preserves shading: tint fill + multiply grayscale overlay
 function TintedWithShading({ src, tint, zIndex }: { src: string; tint: string; zIndex: number }) {
   return (
     <div
@@ -98,8 +98,8 @@ export default function Avatar({
   const w = width;
   const h = Math.round(width * (230 / 200));
 
-  // ✅ hard defaults so missing API fields don't render grey/empty
-  const safe: AvatarConfig = {
+  // safe defaults so missing values never render grey/blank
+  const safe = {
     ...config,
     accessoryStyle: config.accessoryStyle ?? "none",
     mouthColor: config.mouthColor || "#E0AC69",
@@ -109,13 +109,12 @@ export default function Avatar({
   const bodySrc = `/avatars/body/${safe.bodyStyle}.png`;
   const shirtBase = `/avatars/shirts/${safe.shirtStyle}_base.png`;
 
-  // Only shirt_01 has highlight right now
   const hasHighlight = safe.shirtStyle === "shirt_01";
   const shirtHighlight = `/avatars/shirts/${safe.shirtStyle}_highlight.png`;
 
-  // Eyes: whites are a universal layer, iris is eyes_XX.png
-  const eyesWhite = `/avatars/eyes/eyes_white.png`;
-  const eyesIris = `/avatars/eyes/${safe.eyesStyle}.png`;
+  // ✅ per-style whites for eyes
+  const eyesWhite = `/avatars/eyes/${safe.eyesStyle}_white.png`;
+  const eyesIris = `/avatars/eyes/${safe.eyesStyle}.png`; // should be iris/outline only (transparent elsewhere)
 
   const mouthSrc = `/avatars/mouth/${safe.mouthStyle}.png`;
   const hairSrc = `/avatars/hair/${safe.hairStyle}.png`;
@@ -137,24 +136,25 @@ export default function Avatar({
       }}
     >
       {/* Bottom → Top */}
-      {/* BODY: flat mask tint (prevents muddy/grey skin) */}
+
+      {/* BODY: flat tint (best-looking skin) */}
       <MaskFill maskSrc={bodySrc} color={safe.bodyColor} zIndex={1} />
 
-      {/* SHIRT: tinted + shading */}
+      {/* SHIRT: preserve shading */}
       <TintedWithShading src={shirtBase} tint={safe.shirtColor} zIndex={2} />
       {hasHighlight && <LayerPlain src={shirtHighlight} zIndex={3} />}
 
-      {/* MOUTH: tinted + shading */}
+      {/* MOUTH: preserve shading */}
       <TintedWithShading src={mouthSrc} tint={safe.mouthColor} zIndex={4} />
 
       {/* EYES: whites plain + iris tinted */}
       <LayerPlain src={eyesWhite} zIndex={5} />
       <MaskFill maskSrc={eyesIris} color={safe.eyeColor} zIndex={6} />
 
-      {/* HAIR: tinted + shading */}
+      {/* HAIR: preserve shading */}
       <TintedWithShading src={hairSrc} tint={safe.hairColor} zIndex={7} />
 
-      {/* ACCESSORY: tinted + shading */}
+      {/* ACCESSORY: preserve shading */}
       {accessorySrc && <TintedWithShading src={accessorySrc} tint={safe.accessoryColor} zIndex={8} />}
     </div>
   );
