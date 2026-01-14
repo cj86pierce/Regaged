@@ -73,37 +73,118 @@ export default function PlayerStrip(props: {
     setEvictSelected(userId);
   }
 
-  const tileW = 64;
-
-  const list = isCompleted
-    ? [...players].sort((a, b) => (a.eliminatedPlace ?? 999) - (b.eliminatedPlace ?? 999))
-    : players;
-
+  // ✅ exactly 15 columns worth of layout; no “16th slot”
+  // (If a game has fewer than 15 players, columns still exist but simply contain fewer cards.)
   return (
-    <div style={{ border: "1px solid #cfd7df", borderRadius: 10, padding: "6px 8px", background: "#eef7ff", overflow: "hidden" }}>
-      <div style={{ display: "flex", gap: 4, flexWrap: "nowrap", justifyContent: "flex-start" }}>
-        {list.map((p) => {
+    <div
+      style={{
+        border: "1px solid #cfd7df",
+        borderRadius: 10,
+        padding: "6px 8px",
+        background: "#eef7ff",
+        overflow: "hidden",
+      }}
+    >
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(15, minmax(0, 1fr))",
+          gap: 4,
+          alignItems: "start",
+        }}
+      >
+        {players.map((p) => {
           const isPov = p.userId === povUserId;
           const mins = minutesSince(p.lastActiveAt);
           const place = p.eliminatedPlace;
 
-          // ✅ COMPLETED: only 1st stays colored
+          // ✅ COMPLETED: only winner stays colored, everyone else grey
           const grayscale = isCompleted ? place !== 1 : p.status === "ELIMINATED";
 
-          let indicatorText = "";
-          if (place) indicatorText = suffix(place);
-          else if (isPov) indicatorText = "POV";
-          else if (isVote && myVoteLockedIn) indicatorText = p.isNominee ? "❓" : "✅";
-          else if (isNominate && myNomLockedIn) indicatorText = "✅";
+          const canNominateThisPlayer =
+            isNominate && !myNomLockedIn && p.status === "ACTIVE" && !isPov;
 
-          const canNominateThisPlayer = isNominate && !myNomLockedIn && p.status === "ACTIVE" && !isPov;
-          const canEvictThisPlayer = isVote && !myVoteLockedIn && p.status === "ACTIVE" && p.isNominee;
+          const canEvictThisPlayer =
+            isVote && !myVoteLockedIn && p.status === "ACTIVE" && p.isNominee;
 
           const nomOn = nomSelected.includes(p.userId);
           const evictOn = evictSelected === p.userId;
 
+          // ✅ Indicator/action slot content (this is the key change)
+          // Priority:
+          // 1) placement
+          // 2) POV badge (always visible)
+          // 3) action buttons (Nominate/Evict) during live phases
+          // 4) ✅/❓ after vote lock
+          let slot: React.ReactNode = null;
+
+          if (place) {
+            slot = <span style={{ fontWeight: 1000, fontSize: 11 }}>{suffix(place)}</span>;
+          } else if (isPov) {
+            slot = (
+              <span
+                style={{
+                  display: "inline-block",
+                  padding: "2px 6px",
+                  borderRadius: 999,
+                  background: "#ffeb3b",
+                  border: "2px solid #ffffff",
+                  fontWeight: 1000,
+                  fontSize: 10,
+                  lineHeight: "12px",
+                }}
+              >
+                POV
+              </span>
+            );
+          } else if (canNominateThisPlayer) {
+            slot = (
+              <button
+                onClick={() => toggleNomPick(p.userId)}
+                style={{
+                  height: 18,
+                  width: "100%",
+                  borderRadius: 6,
+                  border: "1px solid rgba(0,0,0,0.25)",
+                  background: nomOn ? "#111" : "#fff",
+                  color: nomOn ? "#fff" : "#111",
+                  fontWeight: 1000,
+                  fontSize: 10,
+                  cursor: "pointer",
+                }}
+              >
+                Nominate
+              </button>
+            );
+          } else if (canEvictThisPlayer) {
+            slot = (
+              <button
+                onClick={() => setEvict(p.userId)}
+                style={{
+                  height: 18,
+                  width: "100%",
+                  borderRadius: 6,
+                  border: "1px solid rgba(0,0,0,0.25)",
+                  background: evictOn ? "#111" : "#fff",
+                  color: evictOn ? "#fff" : "#111",
+                  fontWeight: 1000,
+                  fontSize: 10,
+                  cursor: "pointer",
+                }}
+              >
+                Evict
+              </button>
+            );
+          } else if (isVote && myVoteLockedIn) {
+            slot = <span style={{ fontWeight: 1000, fontSize: 11 }}>{p.isNominee ? "❓" : "✅"}</span>;
+          } else if (isNominate && myNomLockedIn) {
+            slot = <span style={{ fontWeight: 1000, fontSize: 11 }}>✅</span>;
+          } else {
+            slot = <span style={{ fontSize: 10, opacity: 0.35 }}>•</span>;
+          }
+
           return (
-            <div key={p.userId} style={{ width: tileW }}>
+            <div key={p.userId} style={{ minWidth: 0 }}>
               <div style={{ display: "grid", placeItems: "center" }}>
                 <Avatar config={p.avatar} width={64} grayscale={grayscale} />
               </div>
@@ -128,51 +209,12 @@ export default function PlayerStrip(props: {
               </Link>
 
               <div style={{ fontSize: 10, opacity: 0.85, textAlign: "center", marginTop: 2 }}>
-                {mins >= 60 ? "offline" : `${mins} min`}
+                {mins >= 60 ? "offline" : `${mins}m`}
               </div>
 
-              <div style={{ height: 16, marginTop: 2, display: "grid", placeItems: "center", fontSize: 11, fontWeight: 1000 }}>
-                {indicatorText}
-              </div>
-
-              <div style={{ height: 20, marginTop: 2, display: "grid", placeItems: "center" }}>
-                {canNominateThisPlayer ? (
-                  <button
-                    onClick={() => toggleNomPick(p.userId)}
-                    style={{
-                      width: "100%",
-                      height: 18,
-                      borderRadius: 6,
-                      border: "1px solid rgba(0,0,0,0.25)",
-                      background: nomOn ? "#111" : "#fff",
-                      color: nomOn ? "#fff" : "#111",
-                      fontWeight: 1000,
-                      fontSize: 10,
-                      cursor: "pointer",
-                    }}
-                  >
-                    Nom
-                  </button>
-                ) : canEvictThisPlayer ? (
-                  <button
-                    onClick={() => setEvict(p.userId)}
-                    style={{
-                      width: "100%",
-                      height: 18,
-                      borderRadius: 6,
-                      border: "1px solid rgba(0,0,0,0.25)",
-                      background: evictOn ? "#111" : "#fff",
-                      color: evictOn ? "#fff" : "#111",
-                      fontWeight: 1000,
-                      fontSize: 10,
-                      cursor: "pointer",
-                    }}
-                  >
-                    Evict
-                  </button>
-                ) : (
-                  <div />
-                )}
+              {/* ✅ unified indicator/action slot */}
+              <div style={{ marginTop: 3, height: 18, display: "grid", placeItems: "center" }}>
+                {slot}
               </div>
             </div>
           );
