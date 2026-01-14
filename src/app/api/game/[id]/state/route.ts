@@ -52,6 +52,22 @@ async function maybeAdvanceGame(gameId: string) {
   }
 }
 
+const DEFAULT_AVATAR = {
+  bodyStyle: "body_m",
+  hairStyle: "hair_m_01",
+  eyesStyle: "eyes_01",
+  mouthStyle: "mouth_01",
+  shirtStyle: "shirt_01",
+  accessoryStyle: "none",
+
+  bodyColor: "#F1C27D",
+  hairColor: "#2B1B0E",
+  eyeColor: "#2E7DFF",
+  mouthColor: "#E0AC69",
+  shirtColor: "#E53935",
+  accessoryColor: "#111111",
+} as const;
+
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   const gameId = params.id;
 
@@ -81,16 +97,20 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         select: {
           username: true,
 
-          // ✅ avatar fields
+          // ✅ ALL avatar fields (including accessory + mouthColor)
           bodyStyle: true,
           hairStyle: true,
           eyesStyle: true,
           mouthStyle: true,
           shirtStyle: true,
+          accessoryStyle: true,
+
           bodyColor: true,
           hairColor: true,
           eyeColor: true,
+          mouthColor: true,
           shirtColor: true,
+          accessoryColor: true,
         },
       },
     },
@@ -152,26 +172,35 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     lobby,
     voteInfo,
     pagination: { page, pageSize, totalPages, totalCount },
-    players: playersRaw.map((p) => ({
-      userId: p.userId,
-      username: p.user.username,
-      status: p.status,
-      lastActiveAt: p.lastActiveAt,
-      eliminatedPlace: p.eliminatedPlace ?? null,
-      isNominee: !!(nomineeA && nomineeB && (p.userId === nomineeA || p.userId === nomineeB)),
+    players: playersRaw.map((p) => {
+      const u = p.user;
 
-      avatar: {
-        bodyStyle: p.user.bodyStyle,
-        hairStyle: p.user.hairStyle,
-        eyesStyle: p.user.eyesStyle,
-        mouthStyle: p.user.mouthStyle,
-        shirtStyle: p.user.shirtStyle,
-        bodyColor: p.user.bodyColor,
-        hairColor: p.user.hairColor,
-        eyeColor: p.user.eyeColor,
-        shirtColor: p.user.shirtColor,
-      },
-    })),
+      return {
+        userId: p.userId,
+        username: u.username,
+        status: p.status,
+        lastActiveAt: p.lastActiveAt,
+        eliminatedPlace: p.eliminatedPlace ?? null,
+        isNominee: !!(nomineeA && nomineeB && (p.userId === nomineeA || p.userId === nomineeB)),
+
+        // ✅ always return a complete avatar object with fallbacks
+        avatar: {
+          bodyStyle: (u.bodyStyle || DEFAULT_AVATAR.bodyStyle),
+          hairStyle: (u.hairStyle || DEFAULT_AVATAR.hairStyle),
+          eyesStyle: (u.eyesStyle || DEFAULT_AVATAR.eyesStyle),
+          mouthStyle: (u.mouthStyle || DEFAULT_AVATAR.mouthStyle),
+          shirtStyle: (u.shirtStyle || DEFAULT_AVATAR.shirtStyle),
+          accessoryStyle: (u.accessoryStyle || DEFAULT_AVATAR.accessoryStyle),
+
+          bodyColor: (u.bodyColor || DEFAULT_AVATAR.bodyColor),
+          hairColor: (u.hairColor || DEFAULT_AVATAR.hairColor),
+          eyeColor: (u.eyeColor || DEFAULT_AVATAR.eyeColor),
+          mouthColor: (u.mouthColor || DEFAULT_AVATAR.mouthColor),
+          shirtColor: (u.shirtColor || DEFAULT_AVATAR.shirtColor),
+          accessoryColor: (u.accessoryColor || DEFAULT_AVATAR.accessoryColor),
+        },
+      };
+    }),
     messages: messagesRaw.map((m) => {
       const plus = m.reactions.filter((r) => r.type === "PLUS").length;
       const minus = m.reactions.filter((r) => r.type === "MINUS").length;
