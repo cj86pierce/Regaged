@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 export type AvatarConfig = {
   bodyStyle: "body_m" | "body_f";
-  shirtStyle: string; // shirt_01..shirt_06
-  eyesStyle: string;  // eyes_01..eyes_06
-  mouthStyle: string; // mouth_01..mouth_06
-  hairStyle: string;  // hair_m_01.. hair_f_03..
-  accessoryStyle: string; // none | accessory_01
+  shirtStyle: string;
+  eyesStyle: string;
+  mouthStyle: string;
+  hairStyle: string;
+  accessoryStyle: string;
 
   bodyColor: string;
   shirtColor: string;
@@ -27,13 +27,13 @@ const DEFAULTS = {
 function hexToRgb(hex: string) {
   const h = hex.replace("#", "").trim();
   if (h.length !== 6) return { r: 0, g: 0, b: 0 };
-  const r = parseInt(h.slice(0, 2), 16);
-  const g = parseInt(h.slice(2, 4), 16);
-  const b = parseInt(h.slice(4, 6), 16);
-  return { r, g, b };
+  return {
+    r: parseInt(h.slice(0, 2), 16),
+    g: parseInt(h.slice(2, 4), 16),
+    b: parseInt(h.slice(4, 6), 16),
+  };
 }
 
-// Cache tinted outputs so we don’t re-render constantly
 const tintCache = new Map<string, string>();
 
 async function loadImage(src: string): Promise<HTMLImageElement> {
@@ -46,9 +46,10 @@ async function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-// Tint grayscale png -> colored png while preserving shading
-async function tintPng(src: string, colorHex: string): Promise<string> {
-  const key = `${src}@@${colorHex}`;
+// Normalize luminance so “main gray” becomes full color.
+// This fixes the “everything is dark” problem when your base PNGs are mid-gray.
+async function tintPngNormalized(src: string, colorHex: string): Promise<string> {
+  const key = `${src}@@${colorHex}@@norm1`;
   const cached = tintCache.get(key);
   if (cached) return cached;
 
@@ -67,26 +68,52 @@ async function tintPng(src: string, colorHex: string): Promise<string> {
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   const data = imageData.data;
 
-  const { r: cr, g: cg, b: cb } = hexToRgb(colorHex);
+  // 1) find min/max luminance for non-transparent pixels
+  let minL = 1;
+  let maxL = 0;
 
-  // For each pixel:
-  // intensity = grayscale value (0..1) from the pixel luminance
-  // output = chosenColor * intensity, alpha unchanged
   for (let i = 0; i < data.length; i += 4) {
     const a = data[i + 3];
     if (a === 0) continue;
 
-    const r = data[i];
-    const g = data[i + 1];
-    const b = data[i + 2];
+    const r = data[i] / 255;
+    const g = data[i + 1] / 255;
+    const b = data[i + 2] / 255;
 
-    // Luma (works even if “mostly grayscale”)
-    const intensity = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+    const l = 0.2126 * r + 0.7152 * g + 0.0722 * b; // 0..1
+    if (l < minL) minL = l;
+    if (l > maxL) maxL = l;
+  }
+
+  // Prevent divide by zero (flat image)
+  const range = Math.max(0.0001, maxL - minL);
+
+  const { r: cr, g: cg, b: cb } = hexToRgb(colorHex);
+
+  // 2) apply normalized tint
+  // lNorm = (l - minL) / range  -> 0..1
+  // Add slight gamma to keep highlights nicer
+  const gamma = 0.85;
+
+  for (let i = 0; i < data.length; i += 4) {
+    const a = data[i + 3];
+    if (a === 0) continue;
+
+    const r = data[i] / 255;
+    const g = data[i + 1] / 255;
+    const b = data[i + 2] / 255;
+
+    const l = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    let lNorm = (l - minL) / range;
+    if (lNorm < 0) lNorm = 0;
+    if (lNorm > 1) lNorm = 1;
+
+    // gamma curve to avoid “muddy” look
+    const intensity = Math.pow(lNorm, gamma);
 
     data[i]     = Math.round(cr * intensity);
     data[i + 1] = Math.round(cg * intensity);
     data[i + 2] = Math.round(cb * intensity);
-    // alpha unchanged
   }
 
   ctx.putImageData(imageData, 0, 0);
@@ -107,13 +134,9 @@ function useTint(src: string | null, color: string | null) {
       return;
     }
 
-    tintPng(src, color)
-      .then((url) => {
-        if (alive) setOut(url);
-      })
-      .catch(() => {
-        if (alive) setOut(null);
-      });
+    tintPngNormalized(src, color)
+      .then((url) => alive && setOut(url))
+      .catch(() => alive && setOut(null));
 
     return () => {
       alive = false;
@@ -150,14 +173,12 @@ export default function Avatar({
   const mouthSrc = `/avatars/mouth/${safe.mouthStyle}.png`;
   const hairSrc = `/avatars/hair/${safe.hairStyle}.png`;
 
-  // Eyes: per-style whites + per-style iris
   const eyesWhiteSrc = `/avatars/eyes/${safe.eyesStyle}_white.png`;
   const eyesIrisSrc = `/avatars/eyes/${safe.eyesStyle}.png`;
 
   const accessorySrc =
     safe.accessoryStyle !== "none" ? `/avatars/accessories/${safe.accessoryStyle}.png` : null;
 
-  // Canvas-tinted urls
   const bodyTinted = useTint(bodySrc, safe.bodyColor);
   const shirtTinted = useTint(shirtBaseSrc, safe.shirtColor);
   const mouthTinted = useTint(mouthSrc, safe.mouthColor);
@@ -193,7 +214,6 @@ export default function Avatar({
       {hasHighlight && <img src={shirtHighlightSrc} alt="" style={{ ...layer, zIndex: 3 }} />}
       <img src={mouthTinted ?? mouthSrc} alt="" style={{ ...layer, zIndex: 4 }} />
 
-      {/* Eyes: whites plain + iris tinted */}
       <img src={eyesWhiteSrc} alt="" style={{ ...layer, zIndex: 5 }} />
       <img src={eyesIrisTinted ?? eyesIrisSrc} alt="" style={{ ...layer, zIndex: 6 }} />
 
