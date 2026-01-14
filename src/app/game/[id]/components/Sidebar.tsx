@@ -16,7 +16,6 @@ export default function Sidebar(props: {
   onConfirmVote: () => Promise<void>;
   myVoteLockedIn: string | null;
 
-  // ✅ pass messages so Story can work
   messages?: Msg[];
 }) {
   const {
@@ -52,8 +51,7 @@ export default function Sidebar(props: {
     }));
 
   return (
-    <div style={{ display: "grid", gap: 14 }}>
-      {/* Confirm box */}
+    <div style={{ display: "grid", gap: 8 }}>
       <div style={box}>
         <div style={{ fontWeight: 1000, marginBottom: 8 }}>
           {gameState === "ROUND_NOMINATE" ? "Confirm Nominations" : gameState === "ROUND_VOTE" ? "Confirm Vote" : "Round"}
@@ -126,7 +124,6 @@ export default function Sidebar(props: {
         )}
       </div>
 
-      {/* Read this */}
       <div style={box}>
         <div style={{ fontWeight: 1000, color: "#b02a37" }}>Read this</div>
         <div style={{ fontSize: 12, marginTop: 8, lineHeight: 1.35 }}>
@@ -136,7 +133,6 @@ export default function Sidebar(props: {
         </div>
       </div>
 
-      {/* Story */}
       <div style={box}>
         <div style={{ fontWeight: 1000, color: "#b02a37" }}>Story</div>
         {systemStory.length === 0 ? (
@@ -144,7 +140,16 @@ export default function Sidebar(props: {
         ) : (
           <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
             {systemStory.map((m) => (
-              <div key={m.id} style={{ fontSize: 12, background: "#fff3cd", border: "1px solid rgba(0,0,0,0.12)", borderRadius: 10, padding: 8 }}>
+              <div
+                key={m.id}
+                style={{
+                  fontSize: 12,
+                  background: "#fff3cd",
+                  border: "1px solid rgba(0,0,0,0.12)",
+                  borderRadius: 10,
+                  padding: 8,
+                }}
+              >
                 <div style={{ fontWeight: 900, opacity: 0.8 }}>{new Date(m.createdAt).toLocaleString()}</div>
                 <div style={{ marginTop: 4 }}>{m.body}</div>
               </div>

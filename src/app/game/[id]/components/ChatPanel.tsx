@@ -31,9 +31,11 @@ export default function ChatPanel(props: {
   const { meUserId, messages, chatText, setChatText, onSend, onReact, page, totalPages, setPage } = props;
 
   const seenIdsRef = useRef<Set<string>>(new Set());
+  const initializedRef = useRef(false); // ✅ prevents “highlight everything on refresh”
   const [flashUntil, setFlashUntil] = useState<Record<string, number>>({});
 
   useEffect(() => {
+    // only highlight on newest page
     if (page !== 1) return;
 
     const now = Date.now();
@@ -42,9 +44,13 @@ export default function ChatPanel(props: {
     for (const m of messages) {
       if (!seenIdsRef.current.has(m.id)) {
         seenIdsRef.current.add(m.id);
-        newlySeen.push(m.id);
+        // Only highlight AFTER initial load
+        if (initializedRef.current) newlySeen.push(m.id);
       }
     }
+
+    // mark initialization after first pass
+    if (!initializedRef.current) initializedRef.current = true;
 
     if (newlySeen.length === 0) return;
 
@@ -75,7 +81,6 @@ export default function ChatPanel(props: {
 
   return (
     <div style={{ display: "grid", gap: 12 }}>
-      {/* Input at TOP */}
       <div style={{ border: "1px solid #d7d7d7", borderRadius: 10, background: "#fff", padding: 10 }}>
         <div style={{ display: "flex", gap: 8 }}>
           <input
@@ -100,7 +105,6 @@ export default function ChatPanel(props: {
         </div>
       </div>
 
-      {/* Pagination */}
       <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ fontSize: 12, opacity: 0.75 }}>
           Page <b>{page}</b> / {totalPages} (Page 1 = newest)
@@ -114,13 +118,10 @@ export default function ChatPanel(props: {
         </div>
       </div>
 
-      {/* Feed */}
       <div style={{ border: "1px solid #d7d7d7", borderRadius: 10, background: "#fff", padding: 6 }}>
         {messages.map((m) => {
           const isMine = !!meUserId && m.userId === meUserId;
           const alreadyReacted = m.myReaction !== null;
-
-          // ✅ reactions disabled if: own msg OR system msg OR already reacted
           const disableReact = isMine || m.isSystem || alreadyReacted;
 
           const net = m.plus - m.minus;
@@ -163,43 +164,13 @@ export default function ChatPanel(props: {
               </div>
 
               <div style={{ textAlign: "right" }}>
-                {/* ✅ single net score */}
                 <div style={{ fontSize: 12, fontWeight: 1000, opacity: 0.85 }}>
                   {net >= 0 ? `+${net}` : `${net}`}
                 </div>
 
                 <div style={{ marginTop: 6, display: "flex", justifyContent: "flex-end", gap: 6 }}>
-                  <button
-                    disabled={disableReact}
-                    onClick={() => onReact(m.id, "PLUS")}
-                    style={{
-                      width: 26,
-                      height: 22,
-                      borderRadius: 6,
-                      border: "1px solid rgba(0,0,0,0.18)",
-                      background: disableReact ? "#f3f6f9" : "#ffffff",
-                      cursor: disableReact ? "not-allowed" : "pointer",
-                    }}
-                    title={disableReact ? "Locked" : "✅ +1"}
-                  >
-                    ✅
-                  </button>
-
-                  <button
-                    disabled={disableReact}
-                    onClick={() => onReact(m.id, "MINUS")}
-                    style={{
-                      width: 26,
-                      height: 22,
-                      borderRadius: 6,
-                      border: "1px solid rgba(0,0,0,0.18)",
-                      background: disableReact ? "#f3f6f9" : "#ffffff",
-                      cursor: disableReact ? "not-allowed" : "pointer",
-                    }}
-                    title={disableReact ? "Locked" : "❌ -1"}
-                  >
-                    ❌
-                  </button>
+                  <button disabled={disableReact} onClick={() => onReact(m.id, "PLUS")} title={disableReact ? "Locked" : "✅ +1"}>✅</button>
+                  <button disabled={disableReact} onClick={() => onReact(m.id, "MINUS")} title={disableReact ? "Locked" : "❌ -1"}>❌</button>
                 </div>
               </div>
             </div>
