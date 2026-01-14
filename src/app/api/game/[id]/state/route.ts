@@ -16,7 +16,7 @@ async function maybeAdvanceGame(gameId: string) {
 
   if (g.state === "ROUND_NOMINATE" && !g.povUserId) {
     try {
-      await assignFastingPov(gameId, false);
+      await assignFastingPov(gameId); // ✅ one arg now
     } catch {}
   }
 
@@ -40,7 +40,7 @@ async function maybeAdvanceGame(gameId: string) {
     if (g2.state === "ROUND_NOMINATE") {
       if (!g2.povUserId) {
         try {
-          await assignFastingPov(gameId, false);
+          await assignFastingPov(gameId); // ✅ one arg now
         } catch {}
       }
       await resolveFastingNominations(gameId);
@@ -51,22 +51,6 @@ async function maybeAdvanceGame(gameId: string) {
     await prisma.$queryRaw`SELECT pg_advisory_unlock(hashtext(${gameId}))`;
   }
 }
-
-const DEFAULT_AVATAR = {
-  bodyStyle: "body_m",
-  hairStyle: "hair_m_01",
-  eyesStyle: "eyes_01",
-  mouthStyle: "mouth_01",
-  shirtStyle: "shirt_01",
-  accessoryStyle: "none",
-
-  bodyColor: "#F1C27D",
-  hairColor: "#2B1B0E",
-  eyeColor: "#2E7DFF",
-  mouthColor: "#E0AC69",
-  shirtColor: "#E53935",
-  accessoryColor: "#111111",
-} as const;
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   const gameId = params.id;
@@ -97,7 +81,6 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         select: {
           username: true,
 
-          // ✅ ALL avatar fields (including accessory + mouthColor)
           bodyStyle: true,
           hairStyle: true,
           eyesStyle: true,
@@ -174,7 +157,6 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     pagination: { page, pageSize, totalPages, totalCount },
     players: playersRaw.map((p) => {
       const u = p.user;
-
       return {
         userId: p.userId,
         username: u.username,
@@ -182,22 +164,19 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         lastActiveAt: p.lastActiveAt,
         eliminatedPlace: p.eliminatedPlace ?? null,
         isNominee: !!(nomineeA && nomineeB && (p.userId === nomineeA || p.userId === nomineeB)),
-
-        // ✅ always return a complete avatar object with fallbacks
         avatar: {
-          bodyStyle: (u.bodyStyle || DEFAULT_AVATAR.bodyStyle),
-          hairStyle: (u.hairStyle || DEFAULT_AVATAR.hairStyle),
-          eyesStyle: (u.eyesStyle || DEFAULT_AVATAR.eyesStyle),
-          mouthStyle: (u.mouthStyle || DEFAULT_AVATAR.mouthStyle),
-          shirtStyle: (u.shirtStyle || DEFAULT_AVATAR.shirtStyle),
-          accessoryStyle: (u.accessoryStyle || DEFAULT_AVATAR.accessoryStyle),
-
-          bodyColor: (u.bodyColor || DEFAULT_AVATAR.bodyColor),
-          hairColor: (u.hairColor || DEFAULT_AVATAR.hairColor),
-          eyeColor: (u.eyeColor || DEFAULT_AVATAR.eyeColor),
-          mouthColor: (u.mouthColor || DEFAULT_AVATAR.mouthColor),
-          shirtColor: (u.shirtColor || DEFAULT_AVATAR.shirtColor),
-          accessoryColor: (u.accessoryColor || DEFAULT_AVATAR.accessoryColor),
+          bodyStyle: u.bodyStyle,
+          hairStyle: u.hairStyle,
+          eyesStyle: u.eyesStyle,
+          mouthStyle: u.mouthStyle,
+          shirtStyle: u.shirtStyle,
+          accessoryStyle: u.accessoryStyle,
+          bodyColor: u.bodyColor,
+          hairColor: u.hairColor,
+          eyeColor: u.eyeColor,
+          mouthColor: u.mouthColor,
+          shirtColor: u.shirtColor,
+          accessoryColor: u.accessoryColor,
         },
       };
     }),
