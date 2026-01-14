@@ -4,11 +4,18 @@ import { useState } from "react";
 import Avatar, { AvatarConfig } from "@/components/Avatar";
 
 const palette = [
-  "#F1C27D", "#E0AC69", "#C68642", "#8D5524",
   "#111111", "#2B1B0E", "#6D4C41", "#B71C1C",
   "#E53935", "#FB8C00", "#FDD835", "#43A047",
   "#1E88E5", "#2E7DFF", "#8E24AA", "#00ACC1",
   "#FFFFFF", "#BDBDBD", "#616161", "#000000"
+];
+
+// ✅ curated skin tones (bring back the “good ones”)
+const skinPresets = [
+  "#F1C27D",
+  "#E0AC69",
+  "#C68642",
+  "#8D5524",
 ];
 
 export type AvatarEditorInitial = AvatarConfig & { username: string };
@@ -42,7 +49,7 @@ function StylePicker({
   );
 }
 
-function ColorPicker({
+function ColorWheel({
   label,
   value,
   onChange,
@@ -55,7 +62,6 @@ function ColorPicker({
     <div style={{ display: "grid", gap: 6 }}>
       <div style={{ fontWeight: 900 }}>{label}</div>
 
-      {/* Color wheel */}
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <input
           type="color"
@@ -66,7 +72,6 @@ function ColorPicker({
         <div style={{ fontSize: 12, opacity: 0.75 }}>{value}</div>
       </div>
 
-      {/* Quick palette */}
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 4 }}>
         {palette.map((c) => (
           <button
@@ -84,6 +89,38 @@ function ColorPicker({
           />
         ))}
       </div>
+    </div>
+  );
+}
+
+function SkinPicker({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div style={{ display: "grid", gap: 6 }}>
+      <div style={{ fontWeight: 900 }}>Skin tone</div>
+      <div style={{ display: "flex", gap: 8 }}>
+        {skinPresets.map((c) => (
+          <button
+            key={c}
+            onClick={() => onChange(c)}
+            title={c}
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 10,
+              border: c === value ? "3px solid #111" : "1px solid rgba(0,0,0,0.2)",
+              background: c,
+              cursor: "pointer",
+            }}
+          />
+        ))}
+      </div>
+      <div style={{ fontSize: 12, opacity: 0.75 }}>{value}</div>
     </div>
   );
 }
@@ -153,22 +190,22 @@ export default function AvatarEditor({ initial }: { initial: AvatarEditorInitial
         <div style={{ border: "1px solid rgba(0,0,0,0.10)", borderRadius: 14, padding: 12, background: "#fff" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
             <StylePicker label="Body" value={cfg.bodyStyle} options={["body_m", "body_f"]} onChange={(v) => setCfg({ ...cfg, bodyStyle: v as any })} />
-            <ColorPicker label="Body color" value={cfg.bodyColor} onChange={(v) => setCfg({ ...cfg, bodyColor: v })} />
+            <SkinPicker value={cfg.bodyColor} onChange={(v) => setCfg({ ...cfg, bodyColor: v })} />
 
             <StylePicker label="Shirt" value={cfg.shirtStyle} options={["shirt_01","shirt_02","shirt_03","shirt_04","shirt_05","shirt_06"]} onChange={(v) => setCfg({ ...cfg, shirtStyle: v })} />
-            <ColorPicker label="Shirt color" value={cfg.shirtColor} onChange={(v) => setCfg({ ...cfg, shirtColor: v })} />
+            <ColorWheel label="Shirt color" value={cfg.shirtColor} onChange={(v) => setCfg({ ...cfg, shirtColor: v })} />
 
             <StylePicker label="Eyes" value={cfg.eyesStyle} options={["eyes_01","eyes_02","eyes_03","eyes_04","eyes_05","eyes_06"]} onChange={(v) => setCfg({ ...cfg, eyesStyle: v })} />
-            <ColorPicker label="Eye color" value={cfg.eyeColor} onChange={(v) => setCfg({ ...cfg, eyeColor: v })} />
+            <ColorWheel label="Eye color" value={cfg.eyeColor} onChange={(v) => setCfg({ ...cfg, eyeColor: v })} />
 
             <StylePicker label="Mouth" value={cfg.mouthStyle} options={["mouth_01","mouth_02","mouth_03","mouth_04","mouth_05","mouth_06"]} onChange={(v) => setCfg({ ...cfg, mouthStyle: v })} />
-            <ColorPicker label="Mouth color" value={cfg.mouthColor} onChange={(v) => setCfg({ ...cfg, mouthColor: v })} />
+            <ColorWheel label="Mouth color" value={cfg.mouthColor} onChange={(v) => setCfg({ ...cfg, mouthColor: v })} />
 
             <StylePicker label="Hair" value={cfg.hairStyle} options={["hair_m_01","hair_m_02","hair_m_03","hair_f_01","hair_f_02","hair_f_03"]} onChange={(v) => setCfg({ ...cfg, hairStyle: v })} />
-            <ColorPicker label="Hair color" value={cfg.hairColor} onChange={(v) => setCfg({ ...cfg, hairColor: v })} />
+            <ColorWheel label="Hair color" value={cfg.hairColor} onChange={(v) => setCfg({ ...cfg, hairColor: v })} />
 
             <StylePicker label="Accessory" value={cfg.accessoryStyle} options={["none", "accessory_01"]} onChange={(v) => setCfg({ ...cfg, accessoryStyle: v })} />
-            <ColorPicker label="Accessory color" value={cfg.accessoryColor} onChange={(v) => setCfg({ ...cfg, accessoryColor: v })} />
+            <ColorWheel label="Accessory color" value={cfg.accessoryColor} onChange={(v) => setCfg({ ...cfg, accessoryColor: v })} />
           </div>
 
           <div style={{ marginTop: 12, fontSize: 12, opacity: 0.75 }}>
