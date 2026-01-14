@@ -19,18 +19,22 @@ export async function tryStartFastingGame(gameId: string) {
 
   if (count < FASTING_MAX) return { ok: true, skipped: true as const };
 
+  const now = new Date();
+
   // Start the game
   await prisma.game.update({
     where: { id: gameId },
     data: {
       state: "ROUND_NOMINATE",
       roundNumber: 1,
-      startsAt: new Date(),
-      stateEndsAt: new Date(Date.now() + FASTING_NOM_MS),
+      startsAt: now,
+      roundStartedAt: now, // ✅ NEW
+      stateEndsAt: new Date(now.getTime() + FASTING_NOM_MS),
+      povUserId: null,
     },
   });
 
-  // ✅ Assign POV immediately (signature is now 1 arg)
+  // Assign POV immediately (now 1-arg)
   try {
     await assignFastingPov(gameId);
   } catch {
