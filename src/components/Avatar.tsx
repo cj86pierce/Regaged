@@ -19,14 +19,27 @@ export type AvatarConfig = {
 };
 
 const DEFAULTS = {
+  bodyColor: "#F1C27D",
+  hairColor: "#2B1B0E",
+  eyeColor: "#2E7DFF",
   mouthColor: "#E0AC69",
+  shirtColor: "#E53935",
   accessoryStyle: "none",
   accessoryColor: "#111111",
 } as const;
 
+function isHex6(c: string) {
+  return /^#[0-9a-fA-F]{6}$/.test(c);
+}
+
+function normHex(c: string, fallback: string) {
+  if (!c) return fallback;
+  const v = c.startsWith("#") ? c : `#${c}`;
+  return isHex6(v) ? v : fallback;
+}
+
 function hexToRgb(hex: string) {
-  const h = hex.replace("#", "").trim();
-  if (h.length !== 6) return { r: 0, g: 0, b: 0 };
+  const h = hex.replace("#", "");
   return {
     r: parseInt(h.slice(0, 2), 16),
     g: parseInt(h.slice(2, 4), 16),
@@ -46,10 +59,18 @@ async function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-// Normalize luminance so “main gray” becomes full color.
-// This fixes the “everything is dark” problem when your base PNGs are mid-gray.
-async function tintPngNormalized(src: string, colorHex: string): Promise<string> {
-  const key = `${src}@@${colorHex}@@norm1`;
+/**
+ * Tint grayscale PNG -> colored PNG preserving shading.
+ *
+ * Key trick:
+ * - Assume your art "normal fill" is a light gray reference (like ~0.80).
+ * - intensity = luminance / refGray
+ *   so refGray becomes full color, darker becomes shadow, lighter becomes highlight.
+ *
+ * This avoids min/max normalization quirks and prevents everything going dark.
+ */
+async function tintPngWithReferenceGray(src: string, colorHex: string): Promise<string> {
+  const key = `${src}@@${colorHex}@@ref80`;
   const cached = tintCache.get(key);
   if (cached) return cached;
 
@@ -68,32 +89,12 @@ async function tintPngNormalized(src: string, colorHex: string): Promise<string>
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   const data = imageData.data;
 
-  // 1) find min/max luminance for non-transparent pixels
-  let minL = 1;
-  let maxL = 0;
-
-  for (let i = 0; i < data.length; i += 4) {
-    const a = data[i + 3];
-    if (a === 0) continue;
-
-    const r = data[i] / 255;
-    const g = data[i + 1] / 255;
-    const b = data[i + 2] / 255;
-
-    const l = 0.2126 * r + 0.7152 * g + 0.0722 * b; // 0..1
-    if (l < minL) minL = l;
-    if (l > maxL) maxL = l;
-  }
-
-  // Prevent divide by zero (flat image)
-  const range = Math.max(0.0001, maxL - minL);
-
   const { r: cr, g: cg, b: cb } = hexToRgb(colorHex);
 
-  // 2) apply normalized tint
-  // lNorm = (l - minL) / range  -> 0..1
-  // Add slight gamma to keep highlights nicer
-  const gamma = 0.85;
+  // Tune this if your “base gray” is different
+  const refGray = 0.80; // 80% gray -> full color
+  const minIntensity = 0.08; // never go fully black unless pixel is nearly black
+  const maxIntensity = 1.15; // allow slight brightening
 
   for (let i = 0; i < data.length; i += 4) {
     const a = data[i + 3];
@@ -103,15 +104,22 @@ async function tintPngNormalized(src: string, colorHex: string): Promise<string>
     const g = data[i + 1] / 255;
     const b = data[i + 2] / 255;
 
+    // luminance 0..1
     const l = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-    let lNorm = (l - minL) / range;
-    if (lNorm < 0) lNorm = 0;
-    if (lNorm > 1) lNorm = 1;
 
-    // gamma curve to avoid “muddy” look
-    const intensity = Math.pow(lNorm, gamma);
+    // If the pixel is very dark (outline), keep it dark instead of tinting
+    if (l < 0.10) {
+      data[i] = 20;
+      data[i + 1] = 20;
+      data[i + 2] = 20;
+      continue;
+    }
 
-    data[i]     = Math.round(cr * intensity);
+    let intensity = l / refGray;
+    if (intensity < minIntensity) intensity = minIntensity;
+    if (intensity > maxIntensity) intensity = maxIntensity;
+
+    data[i] = Math.round(cr * intensity);
     data[i + 1] = Math.round(cg * intensity);
     data[i + 2] = Math.round(cb * intensity);
   }
@@ -128,13 +136,12 @@ function useTint(src: string | null, color: string | null) {
 
   useEffect(() => {
     let alive = true;
-
     if (!src || !color) {
       setOut(null);
       return;
     }
 
-    tintPngNormalized(src, color)
+    tintPngWithReferenceGray(src, color)
       .then((url) => alive && setOut(url))
       .catch(() => alive && setOut(null));
 
@@ -158,11 +165,16 @@ export default function Avatar({
   const w = width;
   const h = Math.round(width * (230 / 200));
 
+  // ✅ enforce valid colors so we never tint to black accidentally
   const safe = {
     ...config,
-    mouthColor: config.mouthColor || DEFAULTS.mouthColor,
+    bodyColor: normHex(config.bodyColor, DEFAULTS.bodyColor),
+    hairColor: normHex(config.hairColor, DEFAULTS.hairColor),
+    eyeColor: normHex(config.eyeColor, DEFAULTS.eyeColor),
+    mouthColor: normHex(config.mouthColor, DEFAULTS.mouthColor),
+    shirtColor: normHex(config.shirtColor, DEFAULTS.shirtColor),
+    accessoryColor: normHex(config.accessoryColor, DEFAULTS.accessoryColor),
     accessoryStyle: config.accessoryStyle ?? DEFAULTS.accessoryStyle,
-    accessoryColor: config.accessoryColor || DEFAULTS.accessoryColor,
   };
 
   const bodySrc = `/avatars/body/${safe.bodyStyle}.png`;
@@ -208,10 +220,10 @@ export default function Avatar({
         filter: grayscale ? "grayscale(1)" : "none",
       }}
     >
-      {/* Bottom → Top */}
       <img src={bodyTinted ?? bodySrc} alt="" style={{ ...layer, zIndex: 1 }} />
       <img src={shirtTinted ?? shirtBaseSrc} alt="" style={{ ...layer, zIndex: 2 }} />
       {hasHighlight && <img src={shirtHighlightSrc} alt="" style={{ ...layer, zIndex: 3 }} />}
+
       <img src={mouthTinted ?? mouthSrc} alt="" style={{ ...layer, zIndex: 4 }} />
 
       <img src={eyesWhiteSrc} alt="" style={{ ...layer, zIndex: 5 }} />
