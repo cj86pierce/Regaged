@@ -5,6 +5,7 @@ import PlayerStrip from "./components/PlayerStrip";
 import ChatPanel from "./components/ChatPanel";
 import Sidebar from "./components/Sidebar";
 import Tabs from "./components/Tabs";
+import PmPanel from "./components/PmPanel";
 import type { AvatarConfig } from "@/components/Avatar";
 
 type Player = {
@@ -54,7 +55,6 @@ export default function GamePage({ params }: { params: { id: string } }) {
   const [nomSelected, setNomSelected] = useState<string[]>([]);
   const [evictSelected, setEvictSelected] = useState<string | null>(null);
 
-  // ✅ real-time clock for smooth countdown
   const [now, setNow] = useState<number>(() => Date.now());
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 250);
@@ -80,7 +80,6 @@ export default function GamePage({ params }: { params: { id: string } }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameId, page]);
 
-  // ✅ true countdown based on server endsAt and local clock
   const timeLeft = useMemo(() => {
     if (!data?.game.stateEndsAt) return null;
     const end = new Date(data.game.stateEndsAt).getTime();
@@ -198,6 +197,14 @@ export default function GamePage({ params }: { params: { id: string } }) {
               page={data.pagination.page}
               totalPages={data.pagination.totalPages}
               setPage={setPage}
+            />
+          )}
+
+          {tab === "private" && (
+            <PmPanel
+              gameId={gameId}
+              meUserId={data.meUserId}
+              players={data.players.map((p) => ({ userId: p.userId, username: p.username, status: p.status }))}
             />
           )}
 
