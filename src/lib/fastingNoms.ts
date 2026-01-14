@@ -2,30 +2,19 @@ import { prisma } from "@/lib/prisma";
 import { getSystemUserId } from "@/lib/systemUser";
 import { assignFastingPov } from "@/lib/fastingPov";
 
-const FASTING_VOTE_MS = 2 * 60 * 1000; // 2 minutes
-
-function activityScore(p: { chatCount: number; plusCount: number; minusCount: number }) {
-  return p.chatCount + 2 * p.plusCount - p.minusCount;
-}
-
-// Sort: more nominations first; ties -> LESS active gets nominated
-function nomineeSort(a: { count: number; activity: number }, b: { count: number; activity: number }) {
-  if (b.count !== a.count) return b.count - a.count;
-  return a.activity - b.activity;
-}
-
 export async function resolveFastingNominations(gameId: string) {
   const game = await prisma.game.findUnique({
     where: { id: gameId },
-    select: { id: true, gameType: true, state: true, roundNumber: true, povUserId: true },
+    select: { id: true, state: true, roundNumber: true, povUserId: true },
   });
-  if (!game) throw new Error("Game not found");
-  if (game.gameType !== "FASTING") throw new Error("Not a FASTING game");
-  if (game.state !== "ROUND_NOMINATE") throw new Error("Not in nomination phase");
+  if (!game) return;
+  if (game.state !== "ROUND_NOMINATE") return;
 
   // ✅ Ensure POV exists BEFORE selecting nominees
   if (!game.povUserId) {
-    await assignFastingPov(gameId, false);
+    try {
+      await assignFastingPov(gameId); // ✅ one arg now
+    } catch {}
   }
 
   const gameAfter = await prisma.game.findUnique({
@@ -34,68 +23,53 @@ export async function resolveFastingNominations(gameId: string) {
   });
   const povUserId = gameAfter?.povUserId ?? null;
 
-  const existing = await prisma.roundResult.findUnique({
-    where: { gameId_roundNumber: { gameId, roundNumber: game.roundNumber } },
-  });
-  if (existing) {
-    return { ok: true, alreadyResolved: true, nomineeA: existing.nomineeAUserId, nomineeB: existing.nomineeBUserId };
-  }
-
   const players = await prisma.gamePlayer.findMany({
     where: { gameId, status: "ACTIVE" },
-    include: { user: { select: { username: true } } },
-    orderBy: { joinedAt: "asc" },
+    select: { userId: true, chatCount: true, plusCount: true, minusCount: true },
   });
 
-  const activeIds = new Set(players.map((p) => p.userId));
+  const eligible = players.filter((p) => p.userId !== povUserId);
 
+  // Tally nominations
   const noms = await prisma.nomination.findMany({
     where: { gameId, roundNumber: game.roundNumber },
     select: { targetUserId: true },
   });
 
   const counts = new Map<string, number>();
-  for (const n of noms) {
-    if (!activeIds.has(n.targetUserId)) continue;
-    if (povUserId && n.targetUserId === povUserId) continue;
-    counts.set(n.targetUserId, (counts.get(n.targetUserId) ?? 0) + 1);
-  }
+  for (const n of noms) counts.set(n.targetUserId, (counts.get(n.targetUserId) ?? 0) + 1);
 
-  const candidates = players
-    .filter((p) => !povUserId || p.userId !== povUserId)
+  // Build ranked list
+  const ranked = eligible
     .map((p) => ({
       userId: p.userId,
-      username: p.user.username,
-      count: counts.get(p.userId) ?? 0,
-      activity: activityScore(p),
+      votes: counts.get(p.userId) ?? 0,
+      activity: p.chatCount + p.plusCount - p.minusCount,
     }))
-    .sort((a, b) => nomineeSort(a, b));
+    .sort((a, b) => {
+      if (b.votes !== a.votes) return b.votes - a.votes;
+      // tie-break: more activity survives; less activity gets nominated
+      return a.activity - b.activity;
+    });
 
-  if (candidates.length < 2) throw new Error("Not enough candidates");
-
-  const nomineeA = candidates[0];
-  const nomineeB = candidates[1];
-
-  // Build “everyone + counts” string, with nominees bracketed for UI inversion
-  const everyoneLine = candidates
-    .map((c) => {
-      const s = `${c.username}(${c.count})`;
-      if (c.userId === nomineeA.userId || c.userId === nomineeB.userId) {
-        return `[${s}]`; // bracketed = invert in UI
-      }
-      return s;
-    })
-    .join(" · ");
+  const nomineeA = ranked[0]?.userId ?? null;
+  const nomineeB = ranked[1]?.userId ?? null;
+  if (!nomineeA || !nomineeB) return;
 
   const systemUserId = await getSystemUserId();
 
   await prisma.$transaction(async (tx) => {
-    await tx.roundResult.create({
+    await tx.roundResult.upsert({
+      where: { gameId_roundNumber: { gameId, roundNumber: game.roundNumber } },
+      update: { nomineeAUserId: nomineeA, nomineeBUserId: nomineeB, evictedUserId: null },
+      create: { gameId, roundNumber: game.roundNumber, nomineeAUserId: nomineeA, nomineeBUserId: nomineeB, evictedUserId: null },
+    });
+
+    await tx.game.update({
+      where: { id: gameId },
       data: {
-        gameId,
-        roundNumber: game.roundNumber,
-        nomineeAUserId: nomineeA.userId,
-        nomineeBUserId: nomineeB.userId,
+        state: "ROUND_VOTE",
+        stateEndsAt: new Date(Date.now() + 2 * 60 * 1000),
       },
     });
 
@@ -104,15 +78,8 @@ export async function resolveFastingNominations(gameId: string) {
         gameId,
         userId: systemUserId,
         channel: "PUBLIC",
-        body: `[SYSTEM] Nomination votes: ${everyoneLine}`,
+        body: `[SYSTEM] Nominees: ${nomineeA} vs ${nomineeB}`,
       },
     });
-
-    await tx.game.update({
-      where: { id: gameId },
-      data: { state: "ROUND_VOTE", stateEndsAt: new Date(Date.now() + FASTING_VOTE_MS) },
-    });
   });
-
-  return { ok: true, nomineeA: nomineeA.userId, nomineeB: nomineeB.userId };
 }

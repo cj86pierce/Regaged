@@ -1,41 +1,41 @@
 import { prisma } from "@/lib/prisma";
 import { assignFastingPov } from "@/lib/fastingPov";
 
-const FASTING_MAX_PLAYERS = 15;
-const FASTING_NOM_MS = 2 * 60 * 1000; // 2 minutes
+const FASTING_MAX = 15;
+const FASTING_NOM_MS = 2 * 60 * 1000;
 
-export async function tryStartFastingGame() {
-  const enrollments = await prisma.enrollment.findMany({
-    where: { gameType: "FASTING" },
-    orderBy: { createdAt: "asc" },
-    take: FASTING_MAX_PLAYERS,
+export async function tryStartFastingGame(gameId: string) {
+  const game = await prisma.game.findUnique({
+    where: { id: gameId },
+    select: { id: true, gameType: true, state: true, roundNumber: true },
+  });
+  if (!game) return { ok: false, error: "Game not found" as const };
+  if (game.gameType !== "FASTING") return { ok: false, error: "Not fasting" as const };
+  if (game.state !== "ENROLLING") return { ok: true, skipped: true as const };
+
+  const count = await prisma.gamePlayer.count({
+    where: { gameId, status: "ACTIVE" },
   });
 
-  if (enrollments.length < FASTING_MAX_PLAYERS) return;
+  if (count < FASTING_MAX) return { ok: true, skipped: true as const };
 
-  const game = await prisma.game.create({
+  // Start the game
+  await prisma.game.update({
+    where: { id: gameId },
     data: {
-      gameType: "FASTING",
       state: "ROUND_NOMINATE",
       roundNumber: 1,
       startsAt: new Date(),
       stateEndsAt: new Date(Date.now() + FASTING_NOM_MS),
     },
-    select: { id: true },
   });
 
-  await prisma.gamePlayer.createMany({
-    data: enrollments.map((e) => ({ gameId: game.id, userId: e.userId })),
-  });
-
-  await prisma.enrollment.deleteMany({
-    where: { id: { in: enrollments.map((e) => e.id) } },
-  });
-
-  // ✅ Assign POV immediately so the round isn't "missing POV" even if tick is delayed
+  // ✅ Assign POV immediately (signature is now 1 arg)
   try {
-    await assignFastingPov(game.id, false);
+    await assignFastingPov(gameId);
   } catch {
-    // if it fails, cron tick will try again later
+    // cron/state route will retry later
   }
+
+  return { ok: true };
 }
