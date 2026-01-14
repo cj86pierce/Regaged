@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type Message = {
   id: string;
@@ -54,7 +54,7 @@ export default function ChatPanel(props: {
 }) {
   const { meUserId, messages, chatText, setChatText, onSend, onReact, page, totalPages, setPage } = props;
 
-  // determine gameId from URL for sessionStorage key
+  // highlight only truly new messages
   const gameKey = useMemo(() => {
     if (typeof window === "undefined") return "regaged:lastSeenMsg:unknown";
     const parts = window.location.pathname.split("/").filter(Boolean);
@@ -68,33 +68,28 @@ export default function ChatPanel(props: {
     if (page !== 1) return;
     if (!messages.length) return;
 
-    const topId = messages[0].id; // newest message id (you fetch desc)
+    const topId = messages[0].id;
     const prevTop = sessionStorage.getItem(gameKey);
 
-    // first time on this game page: store and do NOT flash
     if (!prevTop) {
       sessionStorage.setItem(gameKey, topId);
       return;
     }
-
     if (prevTop === topId) return;
 
-    // find all new message ids until we reach the old top
     const newIds: string[] = [];
     for (const m of messages) {
       if (m.id === prevTop) break;
       newIds.push(m.id);
     }
-
-    // update stored top id
     sessionStorage.setItem(gameKey, topId);
 
-    if (newIds.length === 0) return;
+    if (!newIds.length) return;
 
     const now = Date.now();
     setFlashUntil((cur) => {
       const next = { ...cur };
-      for (const id of newIds) next[id] = now + 1200;
+      for (const id of newIds) next[id] = now + 900;
       return next;
     });
 
@@ -105,7 +100,7 @@ export default function ChatPanel(props: {
         for (const [id, until] of Object.entries(cur)) if (until > now2) cleaned[id] = until;
         return cleaned;
       });
-    }, 900);
+    }, 700);
 
     return () => clearTimeout(t);
   }, [messages, page, gameKey]);
@@ -116,7 +111,8 @@ export default function ChatPanel(props: {
   };
 
   return (
-    <div style={{ display: "grid", gap: 12 }}>
+    <div style={{ display: "grid", gap: 10 }}>
+      {/* Input */}
       <div style={{ border: "1px solid #d7d7d7", borderRadius: 10, background: "#fff", padding: 10 }}>
         <div style={{ display: "flex", gap: 8 }}>
           <input
@@ -141,6 +137,7 @@ export default function ChatPanel(props: {
         </div>
       </div>
 
+      {/* Pagination */}
       <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ fontSize: 12, opacity: 0.75 }}>
           Page <b>{page}</b> / {totalPages} (Page 1 = newest)
@@ -154,49 +151,55 @@ export default function ChatPanel(props: {
         </div>
       </div>
 
+      {/* Feed */}
       <div style={{ border: "1px solid #d7d7d7", borderRadius: 10, background: "#fff", padding: 6 }}>
         {messages.map((m) => {
           const sys = m.isSystem;
           const sysParsed = sys ? parseSystemRows(m.body) : null;
 
-          // Only flash non-system messages (system messages are already yellow)
+          // System blocks are already yellow; normal new messages flash once.
           const bg = sys ? "#fff3cd" : isFlashing(m.id) ? "#fff3cd" : "#fff";
 
-          // System row-style rendering
+          // ✅ System vote blocks (compact + titled)
           if (sysParsed) {
+            const title = sysParsed.kind === "NOM" ? "Nomination votes" : "Eviction votes";
+
             return (
               <div
                 key={m.id}
                 style={{
-                  padding: 10,
+                  padding: 8,
                   marginBottom: 6,
                   border: "1px solid rgba(0,0,0,0.18)",
                   borderRadius: 10,
                   background: "#fff3cd",
                 }}
               >
-                <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 8 }}>
-                  {new Date(m.createdAt).toLocaleString()}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
+                  <div style={{ fontWeight: 1000, fontSize: 12 }}>{title}</div>
+                  <div style={{ fontSize: 11, opacity: 0.7 }}>{new Date(m.createdAt).toLocaleString()}</div>
                 </div>
 
-                <div style={{ display: "grid", gap: 6 }}>
+                <div style={{ display: "grid", gap: 4, marginTop: 6 }}>
                   {sysParsed.rows.map((r, idx) => (
                     <div
                       key={idx}
                       style={{
                         display: "grid",
-                        gridTemplateColumns: "1fr 70px 60px",
+                        gridTemplateColumns: "1fr 62px 52px",
                         alignItems: "center",
-                        gap: 10,
-                        padding: "6px 8px",
+                        gap: 8,
+                        padding: "4px 6px",
                         borderRadius: 8,
-                        background: "rgba(255,255,255,0.55)",
+                        background: "rgba(255,255,255,0.6)",
                       }}
                     >
-                      <div style={{ fontWeight: 900, color: "#0b5ed7" }}>{r.name}</div>
+                      <div style={{ fontWeight: 900, fontSize: 12, color: "#111" }}>
+                        {r.name}
+                      </div>
 
-                      <div style={{ justifySelf: "start", fontSize: 12 }}>
-                        <span style={{ fontWeight: 900 }}>{r.points}</span> points
+                      <div style={{ fontSize: 11 }}>
+                        <span style={{ fontWeight: 900 }}>{r.points}</span> pts
                       </div>
 
                       <div style={{ justifySelf: "end" }}>
@@ -204,7 +207,7 @@ export default function ChatPanel(props: {
                           <span
                             style={{
                               display: "inline-block",
-                              padding: "2px 6px",
+                              padding: "1px 6px",
                               borderRadius: 4,
                               background: "#111",
                               color: "#ffeb3b",
@@ -225,12 +228,15 @@ export default function ChatPanel(props: {
             );
           }
 
+          // Normal message rendering (includes POV system message as a normal yellow system message)
           const isMine = !!meUserId && m.userId === meUserId;
           const alreadyReacted = m.myReaction !== null;
           const disableReact = isMine || sys || alreadyReacted;
 
           const net = m.plus - m.minus;
-          const bodyText = m.body.replace(/^\[SYSTEM\]\s*/i, "");
+
+          // System messages look like normal chat but yellow + no reactions
+          const authorLabel = sys ? "SYSTEM" : m.username;
 
           return (
             <div
@@ -248,20 +254,19 @@ export default function ChatPanel(props: {
               }}
             >
               <div style={{ fontSize: 12 }}>
-                <Link
-                  href={`/u/${encodeURIComponent(m.username)}`}
-                  style={{
-                    color: "#0b5ed7",
-                    textDecoration: "underline",
-                    fontWeight: 900,
-                  }}
-                >
-                  {m.username.length > 16 ? m.username.slice(0, 16) + "…" : m.username}
-                </Link>
+                {sys ? (
+                  <div style={{ fontWeight: 1000, color: "#111" }}>{authorLabel}</div>
+                ) : (
+                  <Link href={`/u/${encodeURIComponent(m.username)}`} style={{ color: "#0b5ed7", textDecoration: "underline", fontWeight: 900 }}>
+                    {m.username.length > 16 ? m.username.slice(0, 16) + "…" : m.username}
+                  </Link>
+                )}
                 <div style={{ opacity: 0.6 }}>{new Date(m.createdAt).toLocaleString()}</div>
               </div>
 
-              <div style={{ fontSize: 14, color: "#111" }}>{bodyText}</div>
+              <div style={{ fontSize: 14, color: sys ? "#6c757d" : "#111" }}>
+                {m.body.replace(/^\[SYSTEM\]\s*/i, "")}
+              </div>
 
               <div style={{ textAlign: "right" }}>
                 <div style={{ fontSize: 12, fontWeight: 1000, opacity: 0.85 }}>

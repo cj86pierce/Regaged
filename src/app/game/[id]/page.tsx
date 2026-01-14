@@ -226,6 +226,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
           canConfirmVote={data.game.state === "ROUND_VOTE" && !myVoteLockedIn && !!evictSelected}
           onConfirmVote={confirmVote}
           myVoteLockedIn={myVoteLockedIn}
+          messages={data.messages}
         />
       </div>
     </div>
