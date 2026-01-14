@@ -6,49 +6,46 @@ import { assignFastingPov } from "@/lib/fastingPov";
 import { resolveFastingNominations } from "@/lib/fastingNoms";
 import { resolveFastingEviction } from "@/lib/fastingVotes";
 
-async function maybeAdvanceGame(gameId: string) {
-  const g = await prisma.game.findUnique({
-    where: { id: gameId },
-    select: { id: true, gameType: true, state: true, stateEndsAt: true, povUserId: true },
-  });
-  if (!g) return;
-  if (g.gameType !== "FASTING") return;
+async function tickDueFastings() {
+  const now = new Date();
 
-  if (g.state === "ROUND_NOMINATE" && !g.povUserId) {
+  // 1) Advance any due FASTING games
+  const due = await prisma.game.findMany({
+    where: {
+      gameType: "FASTING",
+      state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] },
+      stateEndsAt: { not: null, lte: now },
+    },
+    select: { id: true, state: true },
+  });
+
+  for (const g of due) {
     try {
-      await assignFastingPov(gameId); // ✅ one arg now
-    } catch {}
+      if (g.state === "ROUND_NOMINATE") {
+        await assignFastingPov(g.id);
+        await resolveFastingNominations(g.id);
+      } else if (g.state === "ROUND_VOTE") {
+        await resolveFastingEviction(g.id);
+      }
+    } catch {
+      // ignore so one bad game doesn't stop ticking
+    }
   }
 
-  if (!g.stateEndsAt) return;
-  if (g.state !== "ROUND_NOMINATE" && g.state !== "ROUND_VOTE") return;
-  if (g.stateEndsAt.getTime() > Date.now()) return;
+  // 2) Ensure POV exists for any nominate games missing it (even if not due yet)
+  const needPov = await prisma.game.findMany({
+    where: {
+      gameType: "FASTING",
+      state: "ROUND_NOMINATE",
+      povUserId: null,
+    },
+    select: { id: true },
+  });
 
-  const lockRows = await prisma.$queryRaw<{ locked: boolean }[]>`
-    SELECT pg_try_advisory_lock(hashtext(${gameId})) as locked
-  `;
-  if (!lockRows?.[0]?.locked) return;
-
-  try {
-    const g2 = await prisma.game.findUnique({
-      where: { id: gameId },
-      select: { state: true, stateEndsAt: true, povUserId: true },
-    });
-    if (!g2?.stateEndsAt) return;
-    if (g2.stateEndsAt.getTime() > Date.now()) return;
-
-    if (g2.state === "ROUND_NOMINATE") {
-      if (!g2.povUserId) {
-        try {
-          await assignFastingPov(gameId); // ✅ one arg now
-        } catch {}
-      }
-      await resolveFastingNominations(gameId);
-    } else if (g2.state === "ROUND_VOTE") {
-      await resolveFastingEviction(gameId);
-    }
-  } finally {
-    await prisma.$queryRaw`SELECT pg_advisory_unlock(hashtext(${gameId}))`;
+  for (const g of needPov) {
+    try {
+      await assignFastingPov(g.id);
+    } catch {}
   }
 }
 
@@ -58,10 +55,9 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   const session = await getServerSession(authOptions);
   const meUserId = (session?.user as any)?.id as string | undefined;
 
-  const gForAdvance = await prisma.game.findUnique({ where: { id: gameId }, select: { state: true } });
-  if (gForAdvance && gForAdvance.state !== "ENROLLING") {
-    await maybeAdvanceGame(gameId);
-  }
+  // ✅ Hobby-friendly “background progression”
+  // Any viewer advances all due games.
+  await tickDueFastings();
 
   const url = new URL(req.url);
   const page = Math.max(1, Number(url.searchParams.get("page") ?? "1") || 1);
@@ -70,7 +66,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
   const game = await prisma.game.findUnique({
     where: { id: gameId },
-    select: { id: true, number: true, state: true, roundNumber: true, stateEndsAt: true, povUserId: true },
+    select: { id: true, number: true, gameType: true, state: true, roundNumber: true, stateEndsAt: true, povUserId: true },
   });
   if (!game) return NextResponse.json({ error: "Game not found" }, { status: 404 });
 
@@ -151,7 +147,14 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     ok: true,
     meUserId: meUserId ?? null,
     myNomLocked,
-    game,
+    game: {
+      id: game.id,
+      number: game.number,
+      state: game.state,
+      roundNumber: game.roundNumber,
+      povUserId: game.povUserId,
+      stateEndsAt: game.stateEndsAt,
+    },
     lobby,
     voteInfo,
     pagination: { page, pageSize, totalPages, totalCount },
