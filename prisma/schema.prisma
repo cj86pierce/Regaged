@@ -46,9 +46,6 @@ model User {
 
   lastSeenAt   DateTime @default(now())
 
-  // =========================
-  // AVATAR (PNG PARTS + COLORS)
-  // =========================
   bodyStyle        String @default("body_m")
   hairStyle        String @default("hair_m_01")
   eyesStyle        String @default("eyes_01")
@@ -62,7 +59,6 @@ model User {
   mouthColor       String @default("#E0AC69")
   shirtColor       String @default("#E53935")
   accessoryColor   String @default("#111111")
-  // =========================
 
   enrollments  Enrollment[]
   gamePlayers  GamePlayer[]
@@ -108,22 +104,20 @@ model Enrollment {
 }
 
 model Game {
-  id            String    @id @default(cuid())
-  number        Int       @unique @default(autoincrement())
+  id             String    @id @default(cuid())
+  number         Int       @unique @default(autoincrement())
 
-  gameType      GameType
-  state         GameState @default(ENROLLING)
-  roundNumber   Int       @default(0)
+  gameType       GameType
+  state          GameState @default(ENROLLING)
+  roundNumber    Int       @default(0)
 
-  startsAt      DateTime?
-  stateEndsAt   DateTime?
-
-  // ✅ NEW: used to scope POV odds + activity to “this round only”
+  startsAt       DateTime?
+  stateEndsAt    DateTime?
   roundStartedAt DateTime?
 
-  povUserId     String?
-  createdAt     DateTime  @default(now())
-  completedAt   DateTime?
+  povUserId      String?
+  createdAt      DateTime  @default(now())
+  completedAt    DateTime?
 
   players       GamePlayer[]
   nominations   Nomination[]
@@ -153,11 +147,16 @@ model GamePlayer {
 
   lastHadPovRound Int?
 
+  // ✅ NEW: permanent seat for fixed tile order (1–15)
+  seatIndex       Int?
+
   game            Game         @relation(fields: [gameId], references: [id], onDelete: Cascade)
   user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([gameId, userId])
+  @@unique([gameId, seatIndex])
   @@index([gameId, status])
+  @@index([gameId, seatIndex])
 }
 
 model Nomination {

@@ -93,7 +93,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         },
       },
     },
-    orderBy: { joinedAt: "asc" },
+    orderBy: [{ seatIndex: "asc" }, { joinedAt: "asc" }],
   });
 
   const activeCount = playersRaw.filter((p) => p.status === "ACTIVE").length;
