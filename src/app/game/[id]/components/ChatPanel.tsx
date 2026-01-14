@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type Message = {
   id: string;
@@ -14,6 +14,30 @@ type Message = {
   myReaction: "PLUS" | "MINUS" | null;
   isSystem: boolean;
 };
+
+type SysRow = { name: string; points: number; tag: string };
+
+function parseSystemRows(body: string): { kind: "NOM" | "EVICT"; rows: SysRow[] } | null {
+  if (body.startsWith("[SYSTEM:NOM_VOTES]")) {
+    const lines = body.split("\n").slice(1).filter(Boolean);
+    const rows = lines.map((ln) => {
+      const [name, pts, tag] = ln.split("|");
+      return { name: name ?? "?", points: Number(pts ?? "0"), tag: tag ?? "" };
+    });
+    return { kind: "NOM", rows };
+  }
+
+  if (body.startsWith("[SYSTEM:EVICT_VOTES]")) {
+    const lines = body.split("\n").slice(1).filter(Boolean);
+    const rows = lines.map((ln) => {
+      const [name, pts, tag] = ln.split("|");
+      return { name: name ?? "?", points: Number(pts ?? "0"), tag: tag ?? "" };
+    });
+    return { kind: "EVICT", rows };
+  }
+
+  return null;
+}
 
 export default function ChatPanel(props: {
   meUserId: string | null;
@@ -30,33 +54,47 @@ export default function ChatPanel(props: {
 }) {
   const { meUserId, messages, chatText, setChatText, onSend, onReact, page, totalPages, setPage } = props;
 
-  const seenIdsRef = useRef<Set<string>>(new Set());
-  const initializedRef = useRef(false); // ✅ prevents “highlight everything on refresh”
+  // determine gameId from URL for sessionStorage key
+  const gameKey = useMemo(() => {
+    if (typeof window === "undefined") return "regaged:lastSeenMsg:unknown";
+    const parts = window.location.pathname.split("/").filter(Boolean);
+    const id = parts[0] === "game" && parts[1] ? parts[1] : "unknown";
+    return `regaged:lastSeenMsg:${id}`;
+  }, []);
+
   const [flashUntil, setFlashUntil] = useState<Record<string, number>>({});
 
   useEffect(() => {
-    // only highlight on newest page
     if (page !== 1) return;
+    if (!messages.length) return;
 
-    const now = Date.now();
-    const newlySeen: string[] = [];
+    const topId = messages[0].id; // newest message id (you fetch desc)
+    const prevTop = sessionStorage.getItem(gameKey);
 
-    for (const m of messages) {
-      if (!seenIdsRef.current.has(m.id)) {
-        seenIdsRef.current.add(m.id);
-        // Only highlight AFTER initial load
-        if (initializedRef.current) newlySeen.push(m.id);
-      }
+    // first time on this game page: store and do NOT flash
+    if (!prevTop) {
+      sessionStorage.setItem(gameKey, topId);
+      return;
     }
 
-    // mark initialization after first pass
-    if (!initializedRef.current) initializedRef.current = true;
+    if (prevTop === topId) return;
 
-    if (newlySeen.length === 0) return;
+    // find all new message ids until we reach the old top
+    const newIds: string[] = [];
+    for (const m of messages) {
+      if (m.id === prevTop) break;
+      newIds.push(m.id);
+    }
 
+    // update stored top id
+    sessionStorage.setItem(gameKey, topId);
+
+    if (newIds.length === 0) return;
+
+    const now = Date.now();
     setFlashUntil((cur) => {
       const next = { ...cur };
-      for (const id of newlySeen) next[id] = now + 1200;
+      for (const id of newIds) next[id] = now + 1200;
       return next;
     });
 
@@ -64,15 +102,13 @@ export default function ChatPanel(props: {
       setFlashUntil((cur) => {
         const cleaned: Record<string, number> = {};
         const now2 = Date.now();
-        for (const [id, until] of Object.entries(cur)) {
-          if (until > now2) cleaned[id] = until;
-        }
+        for (const [id, until] of Object.entries(cur)) if (until > now2) cleaned[id] = until;
         return cleaned;
       });
-    }, 700);
+    }, 900);
 
     return () => clearTimeout(t);
-  }, [messages, page]);
+  }, [messages, page, gameKey]);
 
   const isFlashing = (id: string) => {
     const until = flashUntil[id];
@@ -120,13 +156,81 @@ export default function ChatPanel(props: {
 
       <div style={{ border: "1px solid #d7d7d7", borderRadius: 10, background: "#fff", padding: 6 }}>
         {messages.map((m) => {
+          const sys = m.isSystem;
+          const sysParsed = sys ? parseSystemRows(m.body) : null;
+
+          // Only flash non-system messages (system messages are already yellow)
+          const bg = sys ? "#fff3cd" : isFlashing(m.id) ? "#fff3cd" : "#fff";
+
+          // System row-style rendering
+          if (sysParsed) {
+            return (
+              <div
+                key={m.id}
+                style={{
+                  padding: 10,
+                  marginBottom: 6,
+                  border: "1px solid rgba(0,0,0,0.18)",
+                  borderRadius: 10,
+                  background: "#fff3cd",
+                }}
+              >
+                <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 8 }}>
+                  {new Date(m.createdAt).toLocaleString()}
+                </div>
+
+                <div style={{ display: "grid", gap: 6 }}>
+                  {sysParsed.rows.map((r, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 70px 60px",
+                        alignItems: "center",
+                        gap: 10,
+                        padding: "6px 8px",
+                        borderRadius: 8,
+                        background: "rgba(255,255,255,0.55)",
+                      }}
+                    >
+                      <div style={{ fontWeight: 900, color: "#0b5ed7" }}>{r.name}</div>
+
+                      <div style={{ justifySelf: "start", fontSize: 12 }}>
+                        <span style={{ fontWeight: 900 }}>{r.points}</span> points
+                      </div>
+
+                      <div style={{ justifySelf: "end" }}>
+                        {r.tag ? (
+                          <span
+                            style={{
+                              display: "inline-block",
+                              padding: "2px 6px",
+                              borderRadius: 4,
+                              background: "#111",
+                              color: "#ffeb3b",
+                              fontWeight: 1000,
+                              fontSize: 11,
+                            }}
+                          >
+                            {r.tag}
+                          </span>
+                        ) : (
+                          <span />
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          }
+
           const isMine = !!meUserId && m.userId === meUserId;
           const alreadyReacted = m.myReaction !== null;
-          const disableReact = isMine || m.isSystem || alreadyReacted;
+          const disableReact = isMine || sys || alreadyReacted;
 
           const net = m.plus - m.minus;
           const bodyText = m.body.replace(/^\[SYSTEM\]\s*/i, "");
-          const bg = m.isSystem ? "#fff3cd" : isFlashing(m.id) ? "#fff3cd" : "#fff";
 
           return (
             <div
@@ -150,8 +254,6 @@ export default function ChatPanel(props: {
                     color: "#0b5ed7",
                     textDecoration: "underline",
                     fontWeight: 900,
-                    pointerEvents: m.isSystem ? "none" : "auto",
-                    opacity: m.isSystem ? 0.7 : 1,
                   }}
                 >
                   {m.username.length > 16 ? m.username.slice(0, 16) + "…" : m.username}
@@ -159,9 +261,7 @@ export default function ChatPanel(props: {
                 <div style={{ opacity: 0.6 }}>{new Date(m.createdAt).toLocaleString()}</div>
               </div>
 
-              <div style={{ fontSize: 14, color: m.isSystem ? "#6c757d" : "#111" }}>
-                {bodyText}
-              </div>
+              <div style={{ fontSize: 14, color: "#111" }}>{bodyText}</div>
 
               <div style={{ textAlign: "right" }}>
                 <div style={{ fontSize: 12, fontWeight: 1000, opacity: 0.85 }}>
@@ -169,8 +269,12 @@ export default function ChatPanel(props: {
                 </div>
 
                 <div style={{ marginTop: 6, display: "flex", justifyContent: "flex-end", gap: 6 }}>
-                  <button disabled={disableReact} onClick={() => onReact(m.id, "PLUS")} title={disableReact ? "Locked" : "✅ +1"}>✅</button>
-                  <button disabled={disableReact} onClick={() => onReact(m.id, "MINUS")} title={disableReact ? "Locked" : "❌ -1"}>❌</button>
+                  <button disabled={disableReact} onClick={() => onReact(m.id, "PLUS")} title={disableReact ? "Locked" : "✅ +1"}>
+                    ✅
+                  </button>
+                  <button disabled={disableReact} onClick={() => onReact(m.id, "MINUS")} title={disableReact ? "Locked" : "❌ -1"}>
+                    ❌
+                  </button>
                 </div>
               </div>
             </div>

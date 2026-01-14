@@ -40,7 +40,6 @@ export async function resolveFastingEviction(gameId: string) {
     const systemUserId = await getSystemUserId();
     const now = new Date();
 
-    // eliminate + stamp place
     const result = await prisma.$transaction(async (tx) => {
       await tx.roundResult.update({
         where: { gameId_roundNumber: { gameId, roundNumber: game.roundNumber } },
@@ -52,12 +51,10 @@ export async function resolveFastingEviction(gameId: string) {
         data: { status: "ELIMINATED", eliminatedAt: now },
       });
 
-      // count remaining after elimination
       const remainingActive = await tx.gamePlayer.count({
         where: { gameId, status: "ACTIVE" },
       });
 
-      // if 14 remain → evicted is 15th, if 3 remain → evicted is 4th, etc.
       const place = remainingActive + 1;
 
       await tx.gamePlayer.update({
@@ -65,22 +62,24 @@ export async function resolveFastingEviction(gameId: string) {
         data: { eliminatedPlace: place },
       });
 
+      // get usernames
       const users = await tx.user.findMany({
         where: { id: { in: [nomineeA, nomineeB, evictedUserId] } },
         select: { id: true, username: true },
       });
       const nameOf = (id: string) => users.find((u) => u.id === id)?.username ?? id;
 
+      const lines = [
+        `${nameOf(nomineeA)}|${votesA}|${evictedUserId === nomineeA ? "OUT" : ""}`,
+        `${nameOf(nomineeB)}|${votesB}|${evictedUserId === nomineeB ? "OUT" : ""}`,
+      ];
+
       await tx.gameMessage.create({
         data: {
           gameId,
           userId: systemUserId,
           channel: "PUBLIC",
-          body:
-            `[SYSTEM] Eviction results:\n` +
-            `- ${nameOf(nomineeA)}: ${votesA}\n` +
-            `- ${nameOf(nomineeB)}: ${votesB}\n` +
-            `[SYSTEM] Evicted: ${nameOf(evictedUserId)}`,
+          body: `[SYSTEM:EVICT_VOTES]\n${lines.join("\n")}`,
         },
       });
 
@@ -92,7 +91,6 @@ export async function resolveFastingEviction(gameId: string) {
       return { ok: true, finished: true as const };
     }
 
-    // next round
     const nextRound = game.roundNumber + 1;
     const now2 = new Date();
 
@@ -126,7 +124,6 @@ async function finishFastingGame(gameId: string) {
     include: { user: { select: { id: true, username: true } } },
   });
 
-  // Rank remaining by povWins -> net reactions -> chatCount
   const ranked = [...actives].sort((a, b) => {
     if (b.povWins !== a.povWins) return b.povWins - a.povWins;
     const aNet = a.plusCount - a.minusCount;
@@ -138,12 +135,11 @@ async function finishFastingGame(gameId: string) {
   const winners = ranked.slice(0, 3);
 
   await prisma.$transaction(async (tx) => {
-    // stamp 1st/2nd/3rd for remaining active players
     for (let i = 0; i < ranked.length; i++) {
       await tx.gamePlayer.update({
         where: { gameId_userId: { gameId, userId: ranked[i].userId } },
         data: {
-          eliminatedPlace: i + 1,      // 1..3 (and maybe 1..N if you ever finish early)
+          eliminatedPlace: i + 1,
           status: "ELIMINATED",
           eliminatedAt: now,
         },
@@ -161,15 +157,11 @@ async function finishFastingGame(gameId: string) {
         userId: systemUserId,
         channel: "PUBLIC",
         body:
-          `[SYSTEM] Game finished!\n` +
-          `- 1st: ${winners[0]?.user.username ?? "?"}\n` +
-          `- 2nd: ${winners[1]?.user.username ?? "?"}\n` +
-          `- 3rd: ${winners[2]?.user.username ?? "?"}`,
+          `[SYSTEM] Game finished! - 1st: ${winners[0]?.user.username ?? "?"} - 2nd: ${winners[1]?.user.username ?? "?"} - 3rd: ${winners[2]?.user.username ?? "?"}`,
       },
     });
   });
 
-  // payout (your values)
   const payout = [
     { idx: 0, karma: 12, t: 12 },
     { idx: 1, karma: 5, t: 10 },
