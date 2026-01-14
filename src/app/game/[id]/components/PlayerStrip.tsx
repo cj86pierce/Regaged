@@ -18,7 +18,8 @@ function trunc(name: string, max = 10) {
 }
 
 function suffix(n: number) {
-  const j = n % 10, k = n % 100;
+  const j = n % 10,
+    k = n % 100;
   if (j === 1 && k !== 11) return `${n}st`;
   if (j === 2 && k !== 12) return `${n}nd`;
   if (j === 3 && k !== 13) return `${n}rd`;
@@ -73,35 +74,47 @@ export default function PlayerStrip(props: {
     setEvictSelected(evictSelected === userId ? null : userId);
   }
 
-  const tileW = 64;
+  const tileW = 92;
 
   return (
     <div
       style={{
         border: "1px solid #cfd7df",
         borderRadius: 10,
-        padding: "6px 8px",
+        padding: "8px 10px",
         background: "#eef7ff",
-        overflow: "hidden",
+        overflowX: "auto",
+        whiteSpace: "nowrap",
       }}
     >
-      <div style={{ display: "flex", gap: 4, flexWrap: "nowrap", justifyContent: "flex-start" }}>
+      <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
         {players.map((p) => {
           const isPov = p.userId === povUserId;
           const mins = minutesSince(p.lastActiveAt);
           const place = p.eliminatedPlace;
 
-          const endGrey = isCompleted && (place === 2 || place === 3);
-          const grayscale = p.status === "ELIMINATED" || endGrey;
+          const grayscale =
+            p.status === "ELIMINATED" || (isCompleted && (place === 2 || place === 3));
 
-          const showNomBox = isNominate && !myNomLockedIn && p.status !== "ELIMINATED" && !isPov;
-          const showVoteBox = isVote && !myVoteLockedIn && p.status !== "ELIMINATED" && p.isNominee;
-
+          // show placement/check/? text
           let indicatorText = "";
           if (isCompleted && (place === 1 || place === 2 || place === 3)) indicatorText = suffix(place);
           else if (p.status === "ELIMINATED" && place) indicatorText = suffix(place);
           else if (isVote && myVoteLockedIn) indicatorText = p.isNominee ? "❓" : (isPov ? "POV" : "✅");
           else if (isNominate && myNomLockedIn) indicatorText = isPov ? "POV" : "✅";
+
+          // Button visibility rules
+          const canNominateThisPlayer =
+            isNominate &&
+            !myNomLockedIn &&
+            p.status === "ACTIVE" &&
+            !isPov; // can't nominate POV
+
+          const canEvictThisPlayer =
+            isVote &&
+            !myVoteLockedIn &&
+            p.status === "ACTIVE" &&
+            p.isNominee;
 
           const nomOn = nomSelected.includes(p.userId);
           const evictOn = evictSelected === p.userId;
@@ -109,16 +122,15 @@ export default function PlayerStrip(props: {
           return (
             <div key={p.userId} style={{ width: tileW }}>
               <div style={{ display: "grid", placeItems: "center" }}>
-                {/* ✅ width, not size */}
-                <Avatar config={p.avatar} width={64} grayscale={grayscale} />
+                <Avatar config={p.avatar} width={92} grayscale={grayscale} />
               </div>
 
               <Link
                 href={`/u/${encodeURIComponent(p.username)}`}
                 style={{
                   display: "block",
-                  marginTop: 4,
-                  fontSize: 10,
+                  marginTop: 6,
+                  fontSize: 12,
                   fontWeight: 900,
                   color: "#0b5ed7",
                   textDecoration: "underline",
@@ -129,45 +141,57 @@ export default function PlayerStrip(props: {
                 }}
                 title={p.username}
               >
-                {trunc(p.username, 10)}
+                {trunc(p.username, 12)}
               </Link>
 
-              <div style={{ fontSize: 10, opacity: 0.85, textAlign: "center", marginTop: 2 }}>
-                {mins >= 60 ? "offline" : `${mins} min`}
+              <div style={{ fontSize: 11, opacity: 0.85, textAlign: "center", marginTop: 2 }}>
+                {mins >= 60 ? "offline" : `${mins}m`}
               </div>
 
-              <div style={{ height: 16, marginTop: 2, display: "grid", placeItems: "center", fontSize: 11, fontWeight: 1000 }}>
+              <div style={{ height: 16, marginTop: 3, display: "grid", placeItems: "center", fontSize: 11, fontWeight: 1000 }}>
                 {indicatorText}
               </div>
 
-              <div style={{ height: 20, marginTop: 2, display: "grid", placeItems: "center" }}>
-                {showNomBox ? (
+              {/* ✅ Clear action buttons */}
+              <div style={{ marginTop: 6, display: "grid", gap: 6 }}>
+                {canNominateThisPlayer && (
                   <button
                     onClick={() => toggleNomPick(p.userId)}
                     style={{
-                      width: 18,
-                      height: 18,
-                      borderRadius: 4,
-                      border: "1px solid rgba(0,0,0,0.35)",
+                      width: "100%",
+                      padding: "6px 6px",
+                      borderRadius: 10,
+                      border: "1px solid rgba(0,0,0,0.20)",
                       background: nomOn ? "#111" : "#fff",
+                      color: nomOn ? "#fff" : "#111",
+                      fontWeight: 1000,
                       cursor: "pointer",
                     }}
-                  />
-                ) : showVoteBox ? (
+                  >
+                    Nominate
+                  </button>
+                )}
+
+                {canEvictThisPlayer && (
                   <button
                     onClick={() => toggleEvictPick(p.userId)}
                     style={{
-                      width: 18,
-                      height: 18,
-                      borderRadius: 4,
-                      border: "1px solid rgba(0,0,0,0.35)",
+                      width: "100%",
+                      padding: "6px 6px",
+                      borderRadius: 10,
+                      border: "1px solid rgba(0,0,0,0.20)",
                       background: evictOn ? "#111" : "#fff",
+                      color: evictOn ? "#fff" : "#111",
+                      fontWeight: 1000,
                       cursor: "pointer",
                     }}
-                  />
-                ) : (
-                  <div />
+                  >
+                    Evict
+                  </button>
                 )}
+
+                {/* Spacer so tiles line up */}
+                {!canNominateThisPlayer && !canEvictThisPlayer && <div style={{ height: 32 }} />}
               </div>
             </div>
           );
