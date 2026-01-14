@@ -12,7 +12,6 @@ export async function resolveFastingNominations(gameId: string) {
   if (!game) return;
   if (game.state !== "ROUND_NOMINATE") return;
 
-  // Ensure POV exists BEFORE selecting nominees
   if (!game.povUserId) {
     try {
       await assignFastingPov(gameId);
@@ -25,7 +24,6 @@ export async function resolveFastingNominations(gameId: string) {
   });
   const povUserId = gameAfter?.povUserId ?? null;
 
-  // Active players
   const players = await prisma.gamePlayer.findMany({
     where: { gameId, status: "ACTIVE" },
     include: { user: { select: { username: true } } },
@@ -33,7 +31,6 @@ export async function resolveFastingNominations(gameId: string) {
 
   const eligible = players.filter((p) => p.userId !== povUserId);
 
-  // Tally nominations
   const noms = await prisma.nomination.findMany({
     where: { gameId, roundNumber: game.roundNumber },
     select: { targetUserId: true },
@@ -42,7 +39,6 @@ export async function resolveFastingNominations(gameId: string) {
   const counts = new Map<string, number>();
   for (const n of noms) counts.set(n.targetUserId, (counts.get(n.targetUserId) ?? 0) + 1);
 
-  // Rank by votes (desc), tie-break by activity (asc means less active is worse → gets nominated)
   const ranked = eligible
     .map((p) => ({
       userId: p.userId,
@@ -52,7 +48,7 @@ export async function resolveFastingNominations(gameId: string) {
     }))
     .sort((a, b) => {
       if (b.votes !== a.votes) return b.votes - a.votes;
-      return a.activity - b.activity;
+      return a.activity - b.activity; // less active loses ties
     });
 
   const nomineeA = ranked[0]?.userId ?? null;
@@ -61,6 +57,14 @@ export async function resolveFastingNominations(gameId: string) {
 
   const nameA = ranked[0]?.username ?? nomineeA;
   const nameB = ranked[1]?.username ?? nomineeB;
+
+  // Build tally lines (strategy readable)
+  const tallyLines = ranked
+    .map((p) => {
+      const tag = p.userId === nomineeA || p.userId === nomineeB ? " (NOM)" : "";
+      return `- ${p.username}: ${p.votes}${tag}`;
+    })
+    .join("\n");
 
   const systemUserId = await getSystemUserId();
 
@@ -79,13 +83,12 @@ export async function resolveFastingNominations(gameId: string) {
       },
     });
 
-    // ✅ readable nominee message (names not ids)
     await tx.gameMessage.create({
       data: {
         gameId,
         userId: systemUserId,
         channel: "PUBLIC",
-        body: `[SYSTEM] Nominees: ${nameA} vs ${nameB}`,
+        body: `[SYSTEM] Nominees: ${nameA} vs ${nameB}\n[SYSTEM] Nomination votes:\n${tallyLines}`,
       },
     });
   });

@@ -1,5 +1,7 @@
 "use client";
 
+type Msg = { id: string; body: string; createdAt: string; isSystem: boolean };
+
 export default function Sidebar(props: {
   gameState: string;
   roundNumber: number;
@@ -13,6 +15,9 @@ export default function Sidebar(props: {
   canConfirmVote: boolean;
   onConfirmVote: () => Promise<void>;
   myVoteLockedIn: string | null;
+
+  // ✅ pass messages so Story can work
+  messages?: Msg[];
 }) {
   const {
     gameState,
@@ -25,20 +30,31 @@ export default function Sidebar(props: {
     canConfirmVote,
     onConfirmVote,
     myVoteLockedIn,
+    messages = [],
   } = props;
 
-  const boxBase: React.CSSProperties = {
+  const box: React.CSSProperties = {
     border: "1px solid rgba(0,0,0,0.10)",
     borderRadius: 10,
     padding: 12,
     background: "#fff",
-    overflow: "hidden",
+    maxHeight: 240,
+    overflowY: "auto",
     wordBreak: "break-word",
   };
 
+  const systemStory = messages
+    .filter((m) => m.isSystem)
+    .slice(0, 12)
+    .map((m) => ({
+      ...m,
+      body: m.body.replace(/^\[SYSTEM\]\s*/i, ""),
+    }));
+
   return (
     <div style={{ display: "grid", gap: 14 }}>
-      <div style={boxBase}>
+      {/* Confirm box */}
+      <div style={box}>
         <div style={{ fontWeight: 1000, marginBottom: 8 }}>
           {gameState === "ROUND_NOMINATE" ? "Confirm Nominations" : gameState === "ROUND_VOTE" ? "Confirm Vote" : "Round"}
         </div>
@@ -110,7 +126,8 @@ export default function Sidebar(props: {
         )}
       </div>
 
-      <div style={boxBase}>
+      {/* Read this */}
+      <div style={box}>
         <div style={{ fontWeight: 1000, color: "#b02a37" }}>Read this</div>
         <div style={{ fontSize: 12, marginTop: 8, lineHeight: 1.35 }}>
           <b>Fasting:</b> POV is awarded first (immune). Pick 2 nominees. Then vote to evict one nominee.
@@ -119,12 +136,21 @@ export default function Sidebar(props: {
         </div>
       </div>
 
-      {/* Keep story space reserved so it never "disappears" */}
-      <div style={{ ...boxBase, maxHeight: 240, overflowY: "auto" }}>
-        <div style={{ fontWeight: 1000, color: "#b02a37" }}>Game Story</div>
-        <div style={{ fontSize: 12, marginTop: 8, opacity: 0.75 }}>
-          (Story will populate from system messages.)
-        </div>
+      {/* Story */}
+      <div style={box}>
+        <div style={{ fontWeight: 1000, color: "#b02a37" }}>Story</div>
+        {systemStory.length === 0 ? (
+          <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>No story yet.</div>
+        ) : (
+          <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
+            {systemStory.map((m) => (
+              <div key={m.id} style={{ fontSize: 12, background: "#fff3cd", border: "1px solid rgba(0,0,0,0.12)", borderRadius: 10, padding: 8 }}>
+                <div style={{ fontWeight: 900, opacity: 0.8 }}>{new Date(m.createdAt).toLocaleString()}</div>
+                <div style={{ marginTop: 4 }}>{m.body}</div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

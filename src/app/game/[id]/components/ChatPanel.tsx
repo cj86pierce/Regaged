@@ -50,7 +50,7 @@ export default function ChatPanel(props: {
 
     setFlashUntil((cur) => {
       const next = { ...cur };
-      for (const id of newlySeen) next[id] = now + 1500;
+      for (const id of newlySeen) next[id] = now + 1200;
       return next;
     });
 
@@ -63,7 +63,7 @@ export default function ChatPanel(props: {
         }
         return cleaned;
       });
-    }, 600);
+    }, 700);
 
     return () => clearTimeout(t);
   }, [messages, page]);
@@ -117,11 +117,13 @@ export default function ChatPanel(props: {
       {/* Feed */}
       <div style={{ border: "1px solid #d7d7d7", borderRadius: 10, background: "#fff", padding: 6 }}>
         {messages.map((m) => {
-          const isMine = meUserId && m.userId === meUserId;
+          const isMine = !!meUserId && m.userId === meUserId;
           const alreadyReacted = m.myReaction !== null;
+
+          // ✅ reactions disabled if: own msg OR system msg OR already reacted
           const disableReact = isMine || m.isSystem || alreadyReacted;
 
-          const points = m.plus - m.minus;
+          const net = m.plus - m.minus;
           const bodyText = m.body.replace(/^\[SYSTEM\]\s*/i, "");
           const bg = m.isSystem ? "#fff3cd" : isFlashing(m.id) ? "#fff3cd" : "#fff";
 
@@ -130,7 +132,7 @@ export default function ChatPanel(props: {
               key={m.id}
               style={{
                 display: "grid",
-                gridTemplateColumns: "160px 1fr 120px",
+                gridTemplateColumns: "170px 1fr 90px",
                 gap: 10,
                 padding: 10,
                 marginBottom: 6,
@@ -161,7 +163,10 @@ export default function ChatPanel(props: {
               </div>
 
               <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: 12, opacity: 0.8 }}>+{points} points</div>
+                {/* ✅ single net score */}
+                <div style={{ fontSize: 12, fontWeight: 1000, opacity: 0.85 }}>
+                  {net >= 0 ? `+${net}` : `${net}`}
+                </div>
 
                 <div style={{ marginTop: 6, display: "flex", justifyContent: "flex-end", gap: 6 }}>
                   <button
@@ -175,6 +180,7 @@ export default function ChatPanel(props: {
                       background: disableReact ? "#f3f6f9" : "#ffffff",
                       cursor: disableReact ? "not-allowed" : "pointer",
                     }}
+                    title={disableReact ? "Locked" : "✅ +1"}
                   >
                     ✅
                   </button>
@@ -190,13 +196,10 @@ export default function ChatPanel(props: {
                       background: disableReact ? "#f3f6f9" : "#ffffff",
                       cursor: disableReact ? "not-allowed" : "pointer",
                     }}
+                    title={disableReact ? "Locked" : "❌ -1"}
                   >
                     ❌
                   </button>
-                </div>
-
-                <div style={{ fontSize: 11, marginTop: 6, opacity: 0.75 }}>
-                  ✅ {m.plus} · ❌ {m.minus}
                 </div>
               </div>
             </div>
