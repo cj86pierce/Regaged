@@ -3,7 +3,7 @@
 export type AvatarConfig = {
   bodyStyle: "body_m" | "body_f";
   shirtStyle: string; // shirt_01..shirt_06
-  eyesStyle: string;  // eyes_01..eyes_06
+  eyesStyle: string;  // eyes_01..eyes_06 (IRIS ONLY)
   mouthStyle: string; // mouth_01..mouth_06
   hairStyle: string;  // hair_m_01.. hair_f_03..
   accessoryStyle: string; // none | accessory_01
@@ -16,16 +16,30 @@ export type AvatarConfig = {
   accessoryColor: string;
 };
 
-// ✅ Tints the shape AND preserves shading from the grayscale PNG
-function TintedLayer({
-  src,
-  tint,
-  zIndex,
-}: {
-  src: string;
-  tint: string;
-  zIndex: number;
-}) {
+function MaskFill({ maskSrc, color, zIndex }: { maskSrc: string; color: string; zIndex: number }) {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        zIndex,
+        backgroundColor: color,
+        pointerEvents: "none",
+        WebkitMaskImage: `url(${maskSrc})`,
+        WebkitMaskRepeat: "no-repeat",
+        WebkitMaskPosition: "center",
+        WebkitMaskSize: "contain",
+        maskImage: `url(${maskSrc})`,
+        maskRepeat: "no-repeat",
+        maskPosition: "center",
+        maskSize: "contain",
+      }}
+    />
+  );
+}
+
+// Tints using mask, then overlays the grayscale PNG as multiply to preserve shading.
+function TintedWithShading({ src, tint, zIndex }: { src: string; tint: string; zIndex: number }) {
   return (
     <div
       style={{
@@ -33,30 +47,10 @@ function TintedLayer({
         inset: 0,
         zIndex,
         pointerEvents: "none",
-        // critical: prevents blend modes from affecting layers outside this group
         isolation: "isolate",
       }}
     >
-      {/* color fill masked to the shape */}
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          backgroundColor: tint,
-
-          WebkitMaskImage: `url(${src})`,
-          WebkitMaskRepeat: "no-repeat",
-          WebkitMaskPosition: "center",
-          WebkitMaskSize: "contain",
-
-          maskImage: `url(${src})`,
-          maskRepeat: "no-repeat",
-          maskPosition: "center",
-          maskSize: "contain",
-        }}
-      />
-
-      {/* grayscale PNG on top multiplies shading into the tint */}
+      <MaskFill maskSrc={src} color={tint} zIndex={1} />
       <img
         src={src}
         alt=""
@@ -104,19 +98,30 @@ export default function Avatar({
   const w = width;
   const h = Math.round(width * (230 / 200));
 
-  const bodySrc = `/avatars/body/${config.bodyStyle}.png`;
-  const shirtBase = `/avatars/shirts/${config.shirtStyle}_base.png`;
-  const shirtHighlight = `/avatars/shirts/${config.shirtStyle}_highlight.png`;
-  const eyesSrc = `/avatars/eyes/${config.eyesStyle}.png`;
-  const mouthSrc = `/avatars/mouth/${config.mouthStyle}.png`;
-  const hairSrc = `/avatars/hair/${config.hairStyle}.png`;
+  // ✅ hard defaults so missing API fields don't render grey/empty
+  const safe: AvatarConfig = {
+    ...config,
+    accessoryStyle: config.accessoryStyle ?? "none",
+    mouthColor: config.mouthColor || "#E0AC69",
+    accessoryColor: config.accessoryColor || "#111111",
+  };
+
+  const bodySrc = `/avatars/body/${safe.bodyStyle}.png`;
+  const shirtBase = `/avatars/shirts/${safe.shirtStyle}_base.png`;
+
+  // Only shirt_01 has highlight right now
+  const hasHighlight = safe.shirtStyle === "shirt_01";
+  const shirtHighlight = `/avatars/shirts/${safe.shirtStyle}_highlight.png`;
+
+  // Eyes: whites are a universal layer, iris is eyes_XX.png
+  const eyesWhite = `/avatars/eyes/eyes_white.png`;
+  const eyesIris = `/avatars/eyes/${safe.eyesStyle}.png`;
+
+  const mouthSrc = `/avatars/mouth/${safe.mouthStyle}.png`;
+  const hairSrc = `/avatars/hair/${safe.hairStyle}.png`;
 
   const accessorySrc =
-    config.accessoryStyle && config.accessoryStyle !== "none"
-      ? `/avatars/accessories/${config.accessoryStyle}.png`
-      : null;
-
-  const hasHighlight = config.shirtStyle === "shirt_01";
+    safe.accessoryStyle !== "none" ? `/avatars/accessories/${safe.accessoryStyle}.png` : null;
 
   return (
     <div
@@ -132,13 +137,25 @@ export default function Avatar({
       }}
     >
       {/* Bottom → Top */}
-      <TintedLayer src={bodySrc} tint={config.bodyColor} zIndex={1} />
-      <TintedLayer src={shirtBase} tint={config.shirtColor} zIndex={2} />
+      {/* BODY: flat mask tint (prevents muddy/grey skin) */}
+      <MaskFill maskSrc={bodySrc} color={safe.bodyColor} zIndex={1} />
+
+      {/* SHIRT: tinted + shading */}
+      <TintedWithShading src={shirtBase} tint={safe.shirtColor} zIndex={2} />
       {hasHighlight && <LayerPlain src={shirtHighlight} zIndex={3} />}
-      <TintedLayer src={mouthSrc} tint={config.mouthColor} zIndex={4} />
-      <TintedLayer src={eyesSrc} tint={config.eyeColor} zIndex={5} />
-      <TintedLayer src={hairSrc} tint={config.hairColor} zIndex={6} />
-      {accessorySrc && <TintedLayer src={accessorySrc} tint={config.accessoryColor} zIndex={7} />}
+
+      {/* MOUTH: tinted + shading */}
+      <TintedWithShading src={mouthSrc} tint={safe.mouthColor} zIndex={4} />
+
+      {/* EYES: whites plain + iris tinted */}
+      <LayerPlain src={eyesWhite} zIndex={5} />
+      <MaskFill maskSrc={eyesIris} color={safe.eyeColor} zIndex={6} />
+
+      {/* HAIR: tinted + shading */}
+      <TintedWithShading src={hairSrc} tint={safe.hairColor} zIndex={7} />
+
+      {/* ACCESSORY: tinted + shading */}
+      {accessorySrc && <TintedWithShading src={accessorySrc} tint={safe.accessoryColor} zIndex={8} />}
     </div>
   );
 }
