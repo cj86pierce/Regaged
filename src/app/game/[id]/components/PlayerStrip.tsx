@@ -75,45 +75,29 @@ export default function PlayerStrip(props: {
 
   const tileW = 64;
 
+  const list = isCompleted
+    ? [...players].sort((a, b) => (a.eliminatedPlace ?? 999) - (b.eliminatedPlace ?? 999))
+    : players;
+
   return (
-    <div
-      style={{
-        border: "1px solid #cfd7df",
-        borderRadius: 10,
-        padding: "6px 8px",
-        background: "#eef7ff",
-        overflow: "hidden",
-      }}
-    >
+    <div style={{ border: "1px solid #cfd7df", borderRadius: 10, padding: "6px 8px", background: "#eef7ff", overflow: "hidden" }}>
       <div style={{ display: "flex", gap: 4, flexWrap: "nowrap", justifyContent: "flex-start" }}>
-        {players.map((p) => {
+        {list.map((p) => {
           const isPov = p.userId === povUserId;
           const mins = minutesSince(p.lastActiveAt);
           const place = p.eliminatedPlace;
 
-          const endGrey = isCompleted && (place === 2 || place === 3);
-          const grayscale = p.status === "ELIMINATED" || endGrey;
+          // ✅ COMPLETED: only 1st stays colored
+          const grayscale = isCompleted ? place !== 1 : p.status === "ELIMINATED";
 
-          // ✅ indicatorText ALWAYS shows POV for the POV player (unless eliminated/placement)
           let indicatorText = "";
+          if (place) indicatorText = suffix(place);
+          else if (isPov) indicatorText = "POV";
+          else if (isVote && myVoteLockedIn) indicatorText = p.isNominee ? "❓" : "✅";
+          else if (isNominate && myNomLockedIn) indicatorText = "✅";
 
-          if (isCompleted && (place === 1 || place === 2 || place === 3)) {
-            indicatorText = suffix(place);
-          } else if (p.status === "ELIMINATED" && place) {
-            indicatorText = suffix(place);
-          } else if (isPov) {
-            indicatorText = "POV";
-          } else if (isVote && myVoteLockedIn) {
-            indicatorText = p.isNominee ? "❓" : "✅";
-          } else if (isNominate && myNomLockedIn) {
-            indicatorText = "✅";
-          }
-
-          const canNominateThisPlayer =
-            isNominate && !myNomLockedIn && p.status === "ACTIVE" && !isPov;
-
-          const canEvictThisPlayer =
-            isVote && !myVoteLockedIn && p.status === "ACTIVE" && p.isNominee;
+          const canNominateThisPlayer = isNominate && !myNomLockedIn && p.status === "ACTIVE" && !isPov;
+          const canEvictThisPlayer = isVote && !myVoteLockedIn && p.status === "ACTIVE" && p.isNominee;
 
           const nomOn = nomSelected.includes(p.userId);
           const evictOn = evictSelected === p.userId;
