@@ -69,7 +69,6 @@ export default function PlayerStrip(props: {
     setNomSelected([...nomSelected, userId]);
   }
 
-  // For evict: set selection (don’t toggle off easily)
   function setEvict(userId: string) {
     setEvictSelected(userId);
   }
@@ -83,7 +82,7 @@ export default function PlayerStrip(props: {
         borderRadius: 10,
         padding: "6px 8px",
         background: "#eef7ff",
-        overflow: "hidden", // ✅ no scrollbars
+        overflow: "hidden",
       }}
     >
       <div style={{ display: "flex", gap: 4, flexWrap: "nowrap", justifyContent: "flex-start" }}>
@@ -95,25 +94,26 @@ export default function PlayerStrip(props: {
           const endGrey = isCompleted && (place === 2 || place === 3);
           const grayscale = p.status === "ELIMINATED" || endGrey;
 
-          // indicators (unchanged)
+          // ✅ indicatorText ALWAYS shows POV for the POV player (unless eliminated/placement)
           let indicatorText = "";
-          if (isCompleted && (place === 1 || place === 2 || place === 3)) indicatorText = suffix(place);
-          else if (p.status === "ELIMINATED" && place) indicatorText = suffix(place);
-          else if (isVote && myVoteLockedIn) indicatorText = p.isNominee ? "❓" : (isPov ? "POV" : "✅");
-          else if (isNominate && myNomLockedIn) indicatorText = isPov ? "POV" : "✅";
 
-          // show buttons only when actionable
+          if (isCompleted && (place === 1 || place === 2 || place === 3)) {
+            indicatorText = suffix(place);
+          } else if (p.status === "ELIMINATED" && place) {
+            indicatorText = suffix(place);
+          } else if (isPov) {
+            indicatorText = "POV";
+          } else if (isVote && myVoteLockedIn) {
+            indicatorText = p.isNominee ? "❓" : "✅";
+          } else if (isNominate && myNomLockedIn) {
+            indicatorText = "✅";
+          }
+
           const canNominateThisPlayer =
-            isNominate &&
-            !myNomLockedIn &&
-            p.status === "ACTIVE" &&
-            !isPov; // can't nominate POV
+            isNominate && !myNomLockedIn && p.status === "ACTIVE" && !isPov;
 
           const canEvictThisPlayer =
-            isVote &&
-            !myVoteLockedIn &&
-            p.status === "ACTIVE" &&
-            p.isNominee;
+            isVote && !myVoteLockedIn && p.status === "ACTIVE" && p.isNominee;
 
           const nomOn = nomSelected.includes(p.userId);
           const evictOn = evictSelected === p.userId;
@@ -151,7 +151,6 @@ export default function PlayerStrip(props: {
                 {indicatorText}
               </div>
 
-              {/* Small clear action buttons */}
               <div style={{ height: 20, marginTop: 2, display: "grid", placeItems: "center" }}>
                 {canNominateThisPlayer ? (
                   <button
