@@ -95,7 +95,7 @@ function Bubble({ g }: { g: ProfileGameBubble }) {
   const isActiveGame = g.state !== "COMPLETED" && g.yourStatus === "ACTIVE";
   const isFilling = g.state === "ENROLLING" && g.yourStatus === "ACTIVE";
 
-  const labelTop = g.gameType.toLowerCase(); // "fasting"
+  const labelTop = g.gameType.toLowerCase();
   const labelBottom = isActiveGame
     ? isFilling
       ? "filling"
@@ -183,10 +183,10 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
   return (
     <main style={{ padding: 8 }}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 14 }}>
-        {/* LEFT */}
         <Card title="Profile">
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-            <Avatar config={data.avatar} size={84} />
+            {/* ✅ width prop for PNG Avatar */}
+            <Avatar config={data.avatar} width={84} />
 
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 24, fontWeight: 1000, letterSpacing: -0.2 }}>{data.username}</div>
@@ -216,7 +216,6 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
             </div>
           </div>
 
-          {/* Tabs */}
           <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
             {tabBtn("overview", "Overview")}
             {tabBtn("games", "Games")}
@@ -224,7 +223,6 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
             {tabBtn("social", "Social")}
           </div>
 
-          {/* Content */}
           <div style={{ marginTop: 14 }}>
             {tab === "overview" && (
               <div style={{ display: "grid", gap: 14 }}>
@@ -286,7 +284,6 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
           </div>
         </Card>
 
-        {/* RIGHT: Enroll + Customize Avatar + Stats */}
         <div style={{ display: "grid", gap: 14 }}>
           <Card title="Participate!">
             <div style={{ display: "grid", gap: 10 }}>
