@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Providers } from "@/app/providers";
 import NavBar from "@/components/NavBar";
+import "@/styles/colorLevels.css";
 
 export const metadata: Metadata = {
   title: "Tengaged (Remake)",

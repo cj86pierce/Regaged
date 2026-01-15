@@ -42,7 +42,7 @@ export default function NavBar() {
           <Link href="/" style={{ color: "#123", textDecoration: "none", fontWeight: 700, fontSize: 13 }}>
             Groups
           </Link>
-          <Link href="/enroll" style={{ color: "#123", textDecoration: "none", fontWeight: 700, fontSize: 13 }}>
+          <Link href="/" style={{ color: "#123", textDecoration: "none", fontWeight: 700, fontSize: 13 }}>
             Games
           </Link>
           <Link href="/" style={{ color: "#123", textDecoration: "none", fontWeight: 700, fontSize: 13 }}>

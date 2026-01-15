@@ -217,16 +217,10 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
             {/* ✅ swatch less wide, no buy button */}
             <div style={{ display: "grid", justifyItems: "end" }}>
               <div
-                title={data.colorName}
-                style={{
-                  width: 86, // less wide
-                  height: 44,
-                  borderRadius: 10,
-                  background: swatch,
-                  border: "1px solid rgba(0,0,0,0.85)",
-                  boxShadow: "0 6px 18px rgba(0,0,0,0.18)",
-                }}
-              />
+            title={data.colorName}
+             className={`lvlSwatch ${data.colorAnimated ? "animated" : "static"}`}
+            style={{ ["--lvl" as any]: swatch }}
+            />
             </div>
           </div>
 

@@ -1,0 +1,50 @@
+/* ===== Color Level Swatches ===== */
+
+.lvlSwatch {
+  width: 88px;
+  height: 42px;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,0.85);
+  background: #000;
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+}
+
+/* Static (non-animated) color */
+.lvlSwatch.static {
+  background: var(--lvl, #fff);
+}
+
+/* Animated color levels */
+.lvlSwatch.animated::before {
+  content: "";
+  position: absolute;
+  top: -25%;
+  bottom: -25%;
+  width: 45%;
+  left: -60%;
+
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--lvl) 70%, white),
+    var(--lvl),
+    color-mix(in srgb, var(--lvl) 70%, white),
+    transparent
+  );
+
+  filter: blur(2px);
+  opacity: 0.95;
+
+  box-shadow:
+    0 0 10px var(--lvl),
+    0 0 18px color-mix(in srgb, var(--lvl) 60%, white);
+
+  animation: lvlSweep 1.8s linear infinite;
+}
+
+@keyframes lvlSweep {
+  from { transform: translateX(0); }
+  to   { transform: translateX(320%); }
+}
