@@ -24,7 +24,6 @@ export type ProfileTabsData = {
   colorAnimated: boolean;
   lastSeenAt: string;
 
-  // ✅ NEW
   bio: string;
 
   avatar: AvatarConfig;
@@ -61,24 +60,6 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
   );
 }
 
-function Pill({ children }: { children: React.ReactNode }) {
-  return (
-    <span
-      style={{
-        padding: "6px 10px",
-        borderRadius: 10,
-        border: "1px solid rgba(0,0,0,0.10)",
-        background: "#fff",
-        fontWeight: 1000,
-        fontSize: 12,
-        display: "inline-block",
-      }}
-    >
-      {children}
-    </span>
-  );
-}
-
 function suffix(n: number) {
   const j = n % 10,
     k = n % 100;
@@ -92,11 +73,10 @@ function onlineLabel(lastSeenAtIso: string) {
   const ms = Date.now() - new Date(lastSeenAtIso).getTime();
   const mins = Math.floor(ms / 60000);
   if (mins <= 2) return { text: "online", style: { background: "#d1e7dd" as const } };
-  if (mins <= 60) return { text: `${mins} min`, style: { background: "#fff3cd" as const } };
+  if (mins <= 60) return { text: `${mins} min ago`, style: { background: "#fff3cd" as const } };
   return { text: "offline", style: { background: "#f8d7da" as const } };
 }
 
-// Rough swatches (you can tune later). Fallback is white.
 const COLOR_SWATCH: Record<string, string> = {
   white: "#ffffff",
   yellow: "#ffeb3b",
@@ -118,6 +98,28 @@ const COLOR_SWATCH: Record<string, string> = {
 function colorToSwatch(name: string) {
   const key = name.trim().toLowerCase();
   return COLOR_SWATCH[key] ?? "#ffffff";
+}
+
+function StatRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "90px 1fr", alignItems: "center", gap: 8 }}>
+      <div style={{ fontSize: 12, opacity: 0.75 }}>{label}</div>
+      <div
+        style={{
+          display: "inline-block",
+          width: "fit-content",
+          padding: "6px 10px",
+          borderRadius: 8,
+          border: "1px solid rgba(0,0,0,0.12)",
+          background: "#fff",
+          fontWeight: 1000,
+          fontSize: 13,
+        }}
+      >
+        {value}
+      </div>
+    </div>
+  );
 }
 
 function Bubble({ g }: { g: ProfileGameBubble }) {
@@ -203,51 +205,20 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
   return (
     <main style={{ padding: 8 }}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 14 }}>
-        {/* LEFT */}
         <Card title="Profile">
+          {/* Header */}
           <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: 14, alignItems: "start" }}>
             <div style={{ display: "grid", placeItems: "start" }}>
               <Avatar config={data.avatar} width={200} />
             </div>
 
             <div>
-              <div style={{ fontSize: 28, fontWeight: 1000, letterSpacing: -0.4, lineHeight: 1.05 }}>
-                {data.username}
-              </div>
-
-              {/* light bar under name */}
-              <div
-                style={{
-                  marginTop: 8,
-                  padding: "8px 10px",
-                  borderRadius: 10,
-                  border: "1px solid rgba(0,0,0,0.10)",
-                  background: "#f3f6f9",
-                  display: "flex",
-                  gap: 10,
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
-              >
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                  <Pill>Karma: {data.karma}</Pill>
-                  {data.isOwnProfile && <Pill>Money: {data.tMoney} T$</Pill>}
-                  <Pill>Played: {data.stats.gamesPlayed}</Pill>
-                  <span
-                    style={{
-                      padding: "6px 10px",
-                      borderRadius: 10,
-                      border: "1px solid rgba(0,0,0,0.10)",
-                      fontWeight: 1000,
-                      fontSize: 12,
-                      ...presence.style,
-                    }}
-                  >
-                    {presence.text}
-                  </span>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "flex-start" }}>
+                <div style={{ fontSize: 28, fontWeight: 1000, letterSpacing: -0.4, lineHeight: 1.05 }}>
+                  {data.username}
                 </div>
 
-                {/* color swatch only */}
+                {/* Color swatch anchored top-right */}
                 <div
                   title={data.colorName}
                   style={{
@@ -258,7 +229,41 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
                     border: "1px solid rgba(0,0,0,0.85)",
                     boxShadow: "0 1px 2px rgba(0,0,0,0.15)",
                     flex: "0 0 auto",
+                    marginTop: 2,
                   }}
+                />
+              </div>
+
+              {/* Stat box (stacked vertically) */}
+              <div
+                style={{
+                  marginTop: 10,
+                  padding: 10,
+                  borderRadius: 10,
+                  border: "1px solid rgba(0,0,0,0.10)",
+                  background: "#f3f6f9",
+                  display: "grid",
+                  gap: 8,
+                  maxWidth: 340,
+                }}
+              >
+                <StatRow label="Karma:" value={data.karma} />
+                {data.isOwnProfile && <StatRow label="Money:" value={`${data.tMoney} T$`} />}
+                <StatRow label="Played:" value={`${data.stats.gamesPlayed} times`} />
+                <StatRow
+                  label="Status:"
+                  value={
+                    <span
+                      style={{
+                        padding: "2px 8px",
+                        borderRadius: 999,
+                        border: "1px solid rgba(0,0,0,0.12)",
+                        ...presence.style,
+                      }}
+                    >
+                      {presence.text}
+                    </span>
+                  }
                 />
               </div>
 
@@ -266,7 +271,7 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
             </div>
           </div>
 
-          {/* ✅ BIO BOX (Tengaged-style yellow) */}
+          {/* Bio */}
           <div
             style={{
               marginTop: 14,
@@ -334,10 +339,7 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
                     {bioSaving ? "Saving..." : "Save"}
                   </button>
 
-                  <div style={{ fontSize: 12, opacity: 0.75 }}>
-                    {bioDraft.length}/1000
-                  </div>
-
+                  <div style={{ fontSize: 12, opacity: 0.75 }}>{bioDraft.length}/1000</div>
                   {bioMsg && <div style={{ fontSize: 12, fontWeight: 1000 }}>{bioMsg}</div>}
                 </div>
               </div>
@@ -348,7 +350,7 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
             )}
           </div>
 
-          {/* Recent Games always visible */}
+          {/* My Games */}
           <div style={{ marginTop: 14 }}>
             <Card title="My Games">
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-start" }}>
