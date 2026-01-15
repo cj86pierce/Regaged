@@ -40,7 +40,7 @@
     0 0 14px color-mix(in srgb, var(--lvl) 75%, white),
     0 0 26px var(--lvl);
 
-  animation: lvlSweep 0.85s linear infinite; /* ✅ faster */
+  animation: lvlSweep 0.70s linear infinite; /* ✅ faster */
 }
 
 .lvlSwatch.tvstar.animated::before {
@@ -63,5 +63,5 @@
 
 @keyframes lvlSweep {
   from { transform: translateX(0); }
-  to   { transform: translateX(380%); }
+  to   { transform: translateX(520%); }
 }
