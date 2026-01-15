@@ -75,6 +75,7 @@ function onlineLabel(lastSeenAtIso: string) {
   return { text: "offline", style: { background: "#f8d7da" as const } };
 }
 
+// swatches (fallback white)
 const COLOR_SWATCH: Record<string, string> = {
   white: "#ffffff",
   yellow: "#ffeb3b",
@@ -98,7 +99,7 @@ function colorToSwatch(name: string) {
   return COLOR_SWATCH[key] ?? "#ffffff";
 }
 
-function StatPill({ label, value }: { label: string; value: React.ReactNode }) {
+function StatRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "92px 1fr", gap: 8, alignItems: "center" }}>
       <div style={{ fontSize: 12, opacity: 0.75 }}>{label}</div>
@@ -166,7 +167,7 @@ function Bubble({ g }: { g: ProfileGameBubble }) {
         </div>
       </Link>
 
-      <div style={{ marginTop: 14, fontSize: 11, opacity: 0.75 }}>#{g.gameNumber}</div>
+      {/* ✅ removed #gameNumber display to declutter */}
     </div>
   );
 }
@@ -191,10 +192,7 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
     });
     const json = await res.json().catch(() => ({}));
     setBioSaving(false);
-    if (!res.ok) {
-      setBioMsg(json?.error ?? "Save failed");
-      return;
-    }
+    if (!res.ok) return setBioMsg(json?.error ?? "Save failed");
     setBioMsg("Saved!");
     setEditingBio(false);
   }
@@ -209,45 +207,51 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
             </div>
 
             <div>
-              {/* Name row */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
-                <div style={{ fontSize: 28, fontWeight: 1000, letterSpacing: -0.4, lineHeight: 1.05 }}>
-                  {data.username}
+              {/* username row with swatch */}
+              <div style={{ position: "relative" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                  <div style={{ fontSize: 28, fontWeight: 1000, letterSpacing: -0.4, lineHeight: 1.05 }}>
+                    {data.username}
+                  </div>
+
+                  {/* ✅ taller, less wide swatch */}
+                  <div
+                    title={data.colorName}
+                    style={{
+                      width: 44,
+                      height: 20,
+                      borderRadius: 6,
+                      background: swatch,
+                      border: "1px solid rgba(0,0,0,0.85)",
+                      boxShadow: "0 1px 2px rgba(0,0,0,0.12)",
+                      marginTop: 6,
+                      flex: "0 0 auto",
+                    }}
+                  />
                 </div>
 
-                {/* Wider color level swatch */}
+                {/* ✅ bar is under the name + swatch (layered “under”) */}
                 <div
-                  title={data.colorName}
                   style={{
-                    width: 70,
-                    height: 16,
-                    borderRadius: 6,
-                    background: swatch,
-                    border: "1px solid rgba(0,0,0,0.85)",
-                    boxShadow: "0 1px 2px rgba(0,0,0,0.12)",
-                    marginTop: 6,
-                    flex: "0 0 auto",
+                    position: "absolute",
+                    left: 0,
+                    right: 0,
+                    top: 34,
+                    height: 10,
+                    borderRadius: 999,
+                    background: "#f3f6f9",
+                    border: "1px solid rgba(0,0,0,0.08)",
+                    zIndex: -1,
                   }}
                 />
               </div>
 
-              {/* Thin bar under name all the way across to swatch */}
-              <div
-                style={{
-                  marginTop: 6,
-                  height: 10,
-                  borderRadius: 999,
-                  background: "#f3f6f9",
-                  border: "1px solid rgba(0,0,0,0.08)",
-                }}
-              />
-
-              {/* Stacked stats (no colored container) */}
-              <div style={{ marginTop: 12, display: "grid", gap: 8, maxWidth: 360 }}>
-                <StatPill label="Karma:" value={data.karma} />
-                {data.isOwnProfile && <StatPill label="Money:" value={`${data.tMoney} T$`} />}
-                <StatPill label="Played:" value={`${data.stats.gamesPlayed} times`} />
-                <StatPill
+              {/* ✅ stats immediately under Karma area, not in a colored container */}
+              <div style={{ marginTop: 18, display: "grid", gap: 8, maxWidth: 360 }}>
+                <StatRow label="Karma:" value={data.karma} />
+                {data.isOwnProfile && <StatRow label="Money:" value={`${data.tMoney} T$`} />}
+                <StatRow label="Played:" value={`${data.stats.gamesPlayed} times`} />
+                <StatRow
                   label="Status:"
                   value={
                     <span
