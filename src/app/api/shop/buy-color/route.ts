@@ -3,6 +3,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
 
+const me = await prisma.user.findUnique({ where: { id: userId }, select: { phoneVerifiedAt: true } });
+if (!me?.phoneVerifiedAt) return NextResponse.json({ error: "Phone verification required", redirect: "/verify-phone" }, { status: 403 });
+
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
   const userId = (session?.user as any)?.id as string | undefined;

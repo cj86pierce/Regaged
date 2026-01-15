@@ -3,6 +3,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
 
+const me = await prisma.user.findUnique({ where: { id: meUserId }, select: { phoneVerifiedAt: true } });
+if (!me?.phoneVerifiedAt) return NextResponse.json({ error: "Phone verification required", redirect: "/verify-phone" }, { status: 403 });
+
 function bad(msg: string, status = 400) {
   return NextResponse.json({ error: msg }, { status });
 }

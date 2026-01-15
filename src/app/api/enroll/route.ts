@@ -4,6 +4,9 @@ import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
 import { tryStartFastingGame } from "@/lib/gameEngine";
 
+const me = await prisma.user.findUnique({ where: { id: userId }, select: { phoneVerifiedAt: true } });
+if (!me?.phoneVerifiedAt) return NextResponse.json({ error: "Phone verification required", redirect: "/verify-phone" }, { status: 403 });
+
 const FASTING_MAX = 15;
 
 function pickRandomOpenSeat(taken: Set<number>) {
