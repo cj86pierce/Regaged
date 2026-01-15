@@ -216,13 +216,13 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
 
             {/* ✅ swatch less wide, no buy button */}
             <div style={{ display: "grid", justifyItems: "end" }}>
-              <div
-            title={data.colorName}
-             className={`lvlSwatch ${data.colorAnimated ? "animated" : "static"}`}
+             <div
+  title={data.colorName}
+  className={`lvlSwatch ${data.colorName.toLowerCase() === "tv star" ? "tvstar" : ""} ${
+    data.colorAnimated || data.colorName.toLowerCase() === "tv star" ? "animated" : "static"
+  }`}
             style={{ ["--lvl" as any]: swatch }}
-            className={`lvlSwatch ${data.colorName.toLowerCase() === "tv star" ? "tvstar" : ""} ${data.colorAnimated || data.colorName.toLowerCase() === "tv star" ? "animated" : "static"}`}
-            style={{ ["--lvl" as any]: swatch }}
-            />
+             />
             </div>
           </div>
 
