@@ -2,9 +2,19 @@ import { prisma } from "@/lib/prisma";
 import { getSystemUserId } from "@/lib/systemUser";
 
 const TOP3_WEIGHTS = [18, 16, 12] as const;
+const CHAOS_PCT = 0.35; // ✅ 35% chaos, 65% top-3
 
-// score weights for "most active" ranking (round-scoped)
+type Stat = {
+  userId: string;
+  username: string;
+  chats: number;
+  plus: number;
+  minus: number;
+  score: number;
+};
+
 function score(chats: number, plus: number, minus: number) {
+  // round-scoped activity score (simple & fair)
   return chats + plus - minus;
 }
 
@@ -27,7 +37,7 @@ function pickWeighted<T extends { weight: number }>(items: T[]): T {
 }
 
 export async function assignFastingPov(gameId: string) {
-  // 🔒 prevent concurrent POV assignment (state route + tick route, etc.)
+  // 🔒 prevent concurrent POV assignment
   const lockRows = await prisma.$queryRaw<{ locked: boolean }[]>`
     SELECT pg_try_advisory_lock(hashtext(${gameId})) as locked
   `;
@@ -53,18 +63,18 @@ export async function assignFastingPov(gameId: string) {
     if (game.gameType !== "FASTING") return { ok: true, skipped: true, reason: "not_fasting" as const };
     if (game.state !== "ROUND_NOMINATE") return { ok: true, skipped: true, reason: "wrong_state" as const };
 
-    // ✅ guard: POV already exists this round
+    // ✅ POV already set = do nothing
     if (game.povUserId) return { ok: true, skipped: true, reason: "already_set" as const };
 
-    // Determine this round window
+    // Round window
     const windowStart = game.roundStartedAt ?? game.startsAt ?? new Date(Date.now() - 10 * 60 * 1000);
     const windowEnd = new Date();
 
+    // Active players
     const players = await prisma.gamePlayer.findMany({
       where: { gameId, status: "ACTIVE" },
       include: { user: { select: { username: true } } },
     });
-
     if (players.length === 0) return { ok: false, error: "No players" as const };
 
     // No back-to-back POV
@@ -74,7 +84,7 @@ export async function assignFastingPov(gameId: string) {
 
     const eligibleIds = eligible.map((p) => p.userId);
 
-    // ✅ Round-scoped chat counts (only messages created in this round window)
+    // Round-scoped chat count (messages created this round)
     const chatCounts = await prisma.gameMessage.groupBy({
       by: ["userId"],
       where: {
@@ -88,8 +98,7 @@ export async function assignFastingPov(gameId: string) {
     const chatMap = new Map<string, number>();
     for (const r of chatCounts) chatMap.set(r.userId, r._count._all);
 
-    // ✅ Round-scoped reactions, but ONLY if the message is also from this round window
-    // This prevents reacting to old messages to influence this round.
+    // Round-scoped reactions, only on round-scoped messages
     const reactions = await prisma.messageReaction.findMany({
       where: {
         createdAt: { gte: windowStart, lte: windowEnd },
@@ -100,10 +109,7 @@ export async function assignFastingPov(gameId: string) {
           userId: { in: eligibleIds },
         },
       },
-      select: {
-        type: true,
-        message: { select: { userId: true } },
-      },
+      select: { type: true, message: { select: { userId: true } } },
     });
 
     const plusMap = new Map<string, number>();
@@ -115,8 +121,7 @@ export async function assignFastingPov(gameId: string) {
       else minusMap.set(targetId, (minusMap.get(targetId) ?? 0) + 1);
     }
 
-    // Build round stats for eligible players
-    const stats = eligible.map((p) => {
+    const stats: Stat[] = eligible.map((p) => {
       const chats = chatMap.get(p.userId) ?? 0;
       const plus = plusMap.get(p.userId) ?? 0;
       const minus = minusMap.get(p.userId) ?? 0;
@@ -130,11 +135,7 @@ export async function assignFastingPov(gameId: string) {
       };
     });
 
-    // Rank for top3:
-    // 1) score desc
-    // 2) fewer minus better
-    // 3) more plus better
-    // 4) random
+    // Rank top3: score desc, fewer minus better, more plus better, then random
     const ranked = shuffle([...stats]).sort((a, b) => {
       if (b.score !== a.score) return b.score - a.score;
       if (a.minus !== b.minus) return a.minus - b.minus;
@@ -142,24 +143,27 @@ export async function assignFastingPov(gameId: string) {
       return 0;
     });
 
-    const r = Math.random();
     let winner: { userId: string; username: string };
 
     if (ranked.length <= 3) {
-      // If 3 or fewer players, just do a weighted pick based on rank weights (still feels fair)
+      // use 18/16/12 weighting even with small pools
       const weighted = ranked.map((p, idx) => ({ ...p, weight: TOP3_WEIGHTS[idx] ?? 12 }));
       const w = pickWeighted(weighted);
       winner = { userId: w.userId, username: w.username };
-    } else if (r < 0.40) {
-      // 40%: pure random among all eligible
-      const idx = (Math.random() * ranked.length) | 0;
-      winner = { userId: ranked[idx].userId, username: ranked[idx].username };
     } else {
-      // 60%: top 3 weighted 18/16/12
-      const top3 = ranked.slice(0, 3);
-      const weightedTop = top3.map((p, idx) => ({ ...p, weight: TOP3_WEIGHTS[idx] }));
-      const w = pickWeighted(weightedTop);
-      winner = { userId: w.userId, username: w.username };
+      const r = Math.random();
+
+      if (r < CHAOS_PCT) {
+        // 35% chaos: equal odds among all eligible
+        const idx = (Math.random() * ranked.length) | 0;
+        winner = { userId: ranked[idx].userId, username: ranked[idx].username };
+      } else {
+        // 65% top 3 with fixed weights
+        const top3 = ranked.slice(0, 3);
+        const weightedTop = top3.map((p, idx) => ({ ...p, weight: TOP3_WEIGHTS[idx] }));
+        const w = pickWeighted(weightedTop);
+        winner = { userId: w.userId, username: w.username };
+      }
     }
 
     const systemUserId = await getSystemUserId();
@@ -188,7 +192,7 @@ export async function assignFastingPov(gameId: string) {
       });
     });
 
-    return { ok: true, povUserId: winner.userId };
+    return { ok: true, povUserId: winner.userId, chaosPct: CHAOS_PCT };
   } finally {
     await prisma.$queryRaw`SELECT pg_advisory_unlock(hashtext(${gameId}))`;
   }
