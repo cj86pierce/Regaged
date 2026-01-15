@@ -27,6 +27,7 @@ export default async function PublicProfilePage({
       tMoney: true,
       createdAt: true,
       lastSeenAt: true,
+      bio: true,
 
       bodyStyle: true,
       hairStyle: true,
@@ -145,6 +146,7 @@ export default async function PublicProfilePage({
       totalPlus: gpAgg._sum.plusCount ?? 0,
       totalMinus: gpAgg._sum.minusCount ?? 0,
       totalPov: gpAgg._sum.povWins ?? 0,
+      bio: user.bio ?? ""
     },
     recentGames,
     recentGamesPage: page,

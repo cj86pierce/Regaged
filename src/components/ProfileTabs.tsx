@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Avatar, { AvatarConfig } from "@/components/Avatar";
 
 export type ProfileGameBubble = {
@@ -23,6 +23,9 @@ export type ProfileTabsData = {
   colorName: string;
   colorAnimated: boolean;
   lastSeenAt: string;
+
+  // ✅ NEW
+  bio: string;
 
   avatar: AvatarConfig;
 
@@ -172,8 +175,30 @@ function Bubble({ g }: { g: ProfileGameBubble }) {
 export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
   const joinedLabel = useMemo(() => new Date(data.joinedAt).toLocaleDateString(), [data.joinedAt]);
   const presence = useMemo(() => onlineLabel(data.lastSeenAt), [data.lastSeenAt]);
-
   const swatch = colorToSwatch(data.colorName);
+
+  const [editingBio, setEditingBio] = useState(false);
+  const [bioDraft, setBioDraft] = useState(data.bio ?? "");
+  const [bioSaving, setBioSaving] = useState(false);
+  const [bioMsg, setBioMsg] = useState<string | null>(null);
+
+  async function saveBio() {
+    setBioSaving(true);
+    setBioMsg(null);
+    const res = await fetch("/api/profile/bio", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ bio: bioDraft }),
+    });
+    const json = await res.json().catch(() => ({}));
+    setBioSaving(false);
+    if (!res.ok) {
+      setBioMsg(json?.error ?? "Save failed");
+      return;
+    }
+    setBioMsg("Saved!");
+    setEditingBio(false);
+  }
 
   return (
     <main style={{ padding: 8 }}>
@@ -190,7 +215,7 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
                 {data.username}
               </div>
 
-              {/* ✅ light bar under name, swatch at end */}
+              {/* light bar under name */}
               <div
                 style={{
                   marginTop: 8,
@@ -222,7 +247,7 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
                   </span>
                 </div>
 
-                {/* ✅ color level swatch only */}
+                {/* color swatch only */}
                 <div
                   title={data.colorName}
                   style={{
@@ -241,9 +266,91 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
             </div>
           </div>
 
-          {/* ✅ Recent Games always visible */}
+          {/* ✅ BIO BOX (Tengaged-style yellow) */}
+          <div
+            style={{
+              marginTop: 14,
+              border: "1px solid rgba(0,0,0,0.18)",
+              borderRadius: 10,
+              background: "#fff9b8",
+              padding: 12,
+              minHeight: 120,
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+              <div style={{ fontWeight: 1000 }}>Bio</div>
+
+              {data.isOwnProfile && (
+                <button
+                  onClick={() => {
+                    setBioDraft(data.bio ?? "");
+                    setBioMsg(null);
+                    setEditingBio((v) => !v);
+                  }}
+                  style={{
+                    padding: "6px 10px",
+                    borderRadius: 10,
+                    border: "1px solid rgba(0,0,0,0.20)",
+                    background: "#fff",
+                    fontWeight: 1000,
+                    cursor: "pointer",
+                  }}
+                >
+                  {editingBio ? "Cancel" : "Edit"}
+                </button>
+              )}
+            </div>
+
+            {editingBio && data.isOwnProfile ? (
+              <div style={{ marginTop: 10, display: "grid", gap: 8 }}>
+                <textarea
+                  value={bioDraft}
+                  onChange={(e) => setBioDraft(e.target.value)}
+                  rows={6}
+                  style={{
+                    width: "100%",
+                    padding: 10,
+                    borderRadius: 10,
+                    border: "1px solid rgba(0,0,0,0.25)",
+                    resize: "vertical",
+                    fontFamily: "inherit",
+                  }}
+                  placeholder="Write your bio…"
+                />
+                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                  <button
+                    onClick={saveBio}
+                    disabled={bioSaving}
+                    style={{
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      border: "1px solid rgba(0,0,0,0.18)",
+                      background: bioSaving ? "#f3f6f9" : "#111",
+                      color: bioSaving ? "#111" : "#fff",
+                      fontWeight: 1000,
+                      cursor: bioSaving ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    {bioSaving ? "Saving..." : "Save"}
+                  </button>
+
+                  <div style={{ fontSize: 12, opacity: 0.75 }}>
+                    {bioDraft.length}/1000
+                  </div>
+
+                  {bioMsg && <div style={{ fontSize: 12, fontWeight: 1000 }}>{bioMsg}</div>}
+                </div>
+              </div>
+            ) : (
+              <div style={{ marginTop: 10, whiteSpace: "pre-wrap", fontSize: 13, lineHeight: 1.35 }}>
+                {data.bio?.trim().length ? data.bio : <span style={{ opacity: 0.6 }}>No bio yet.</span>}
+              </div>
+            )}
+          </div>
+
+          {/* Recent Games always visible */}
           <div style={{ marginTop: 14 }}>
-            <Card title="Recent Games">
+            <Card title="My Games">
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-start" }}>
                 {data.recentGames.map((g) => (
                   <Bubble key={g.gameId} g={g} />

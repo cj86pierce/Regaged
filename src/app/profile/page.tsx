@@ -36,6 +36,8 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
       username: true,
       karma: true,
       tMoney: true,
+      bio: true, // ✅
+
       createdAt: true,
       lastSeenAt: true,
 
@@ -84,22 +86,15 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
     },
   });
 
-  const all: ProfileGameBubble[] = raw
-    .map((r) => ({
-      gameId: r.gameId,
-      gameNumber: r.game.number,
-      gameType: r.game.gameType,
-      state: r.game.state,
-      joinedAt: r.joinedAt.toISOString(),
-      yourStatus: r.status,
-      eliminatedPlace: r.eliminatedPlace ?? null,
-    }))
-    .sort((a, b) => {
-      const aActive = a.state !== "COMPLETED" && a.yourStatus === "ACTIVE";
-      const bActive = b.state !== "COMPLETED" && b.yourStatus === "ACTIVE";
-      if (aActive !== bActive) return aActive ? -1 : 1;
-      return new Date(b.joinedAt).getTime() - new Date(a.joinedAt).getTime();
-    });
+  const all: ProfileGameBubble[] = raw.map((r) => ({
+    gameId: r.gameId,
+    gameNumber: r.game.number,
+    gameType: r.game.gameType,
+    state: r.game.state,
+    joinedAt: r.joinedAt.toISOString(),
+    yourStatus: r.status,
+    eliminatedPlace: r.eliminatedPlace ?? null,
+  }));
 
   const page = Math.max(1, Number(searchParams?.page ?? "1") || 1);
   const pageSize = 7;
@@ -107,18 +102,13 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
   const start = (page - 1) * pageSize;
   const recentGames = all.slice(start, start + pageSize);
 
-  // ✅ sanitize avatar config for TS + runtime safety
   const avatar: AvatarConfig = {
     bodyStyle: oneOf(user.bodyStyle, ["body_m", "body_f"], "body_m") as "body_m" | "body_f",
-    hairStyle: oneOf(
-      user.hairStyle,
-      ["hair_m_01", "hair_m_02", "hair_m_03", "hair_f_01", "hair_f_02", "hair_f_03"],
-      "hair_m_01"
-    ),
-    eyesStyle: oneOf(user.eyesStyle, ["eyes_01", "eyes_02", "eyes_03", "eyes_04", "eyes_05", "eyes_06"], "eyes_01"),
-    mouthStyle: oneOf(user.mouthStyle, ["mouth_01", "mouth_02", "mouth_03", "mouth_04", "mouth_05", "mouth_06"], "mouth_01"),
-    shirtStyle: oneOf(user.shirtStyle, ["shirt_01", "shirt_02", "shirt_03", "shirt_04", "shirt_05", "shirt_06"], "shirt_01"),
-    accessoryStyle: oneOf(user.accessoryStyle, ["none", "accessory_01"], "none"),
+    hairStyle: oneOf(user.hairStyle, ["hair_m_01","hair_m_02","hair_m_03","hair_f_01","hair_f_02","hair_f_03"], "hair_m_01"),
+    eyesStyle: oneOf(user.eyesStyle, ["eyes_01","eyes_02","eyes_03","eyes_04","eyes_05","eyes_06"], "eyes_01"),
+    mouthStyle: oneOf(user.mouthStyle, ["mouth_01","mouth_02","mouth_03","mouth_04","mouth_05","mouth_06"], "mouth_01"),
+    shirtStyle: oneOf(user.shirtStyle, ["shirt_01","shirt_02","shirt_03","shirt_04","shirt_05","shirt_06"], "shirt_01"),
+    accessoryStyle: oneOf(user.accessoryStyle, ["none","accessory_01"], "none"),
 
     bodyColor: user.bodyColor,
     hairColor: user.hairColor,
@@ -134,6 +124,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
     joinedAt: user.createdAt.toISOString(),
     karma: user.karma,
     tMoney: user.tMoney,
+    bio: user.bio ?? "", // ✅
     colorName: highestColor?.name ?? "White",
     colorAnimated: highestColor?.isAnimated ?? false,
     lastSeenAt: user.lastSeenAt.toISOString(),
