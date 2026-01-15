@@ -24,21 +24,14 @@ export async function POST(req: Request) {
   });
   if (already) return NextResponse.json({ error: "Already owned" }, { status: 409 });
 
-  const me = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { karma: true, tMoney: true },
-  });
-  if (!me) return NextResponse.json({ error: "User not found" }, { status: 404 });
-
-  if (me.karma < level.karmaNeeded) return NextResponse.json({ error: "Not enough Karma" }, { status: 400 });
-  if (me.tMoney < level.priceT) return NextResponse.json({ error: "Not enough T$" }, { status: 400 });
-
   await prisma.$transaction(async (tx) => {
-    // re-check inside transaction
-    const me2 = await tx.user.findUnique({ where: { id: userId }, select: { tMoney: true, karma: true } });
-    if (!me2) throw new Error("User not found");
-    if (me2.karma < level.karmaNeeded) throw new Error("Not enough Karma");
-    if (me2.tMoney < level.priceT) throw new Error("Not enough T$");
+    const me = await tx.user.findUnique({
+      where: { id: userId },
+      select: { karma: true, tMoney: true },
+    });
+    if (!me) throw new Error("User not found");
+    if (me.karma < level.karmaNeeded) throw new Error("Not enough karma");
+    if (me.tMoney < level.priceT) throw new Error("Not enough T$");
 
     await tx.user.update({
       where: { id: userId },
@@ -50,5 +43,5 @@ export async function POST(req: Request) {
     });
   });
 
-  return NextResponse.json({ ok: true, colorId, name: level.name });
+  return NextResponse.json({ ok: true, colorId: level.id, name: level.name });
 }

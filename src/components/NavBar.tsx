@@ -31,7 +31,7 @@ export default function NavBar() {
       >
         <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
           <div style={{ fontWeight: 1000, fontSize: 22, letterSpacing: -0.3 }}>
-            Tengaged<span style={{ opacity: 0.7 }}>🎞️</span>
+            Regaged<span style={{ opacity: 0.7 }}>🎞️</span>
           </div>
         </Link>
 
