@@ -63,11 +63,12 @@ function Pill({ children }: { children: React.ReactNode }) {
     <span
       style={{
         padding: "6px 10px",
-        borderRadius: 999,
+        borderRadius: 10,
         border: "1px solid rgba(0,0,0,0.10)",
         background: "#fff",
         fontWeight: 1000,
         fontSize: 12,
+        display: "inline-block",
       }}
     >
       {children}
@@ -117,7 +118,6 @@ function Bubble({ g }: { g: ProfileGameBubble }) {
           }}
         >
           <div style={{ fontSize: 12, opacity: 0.95, textTransform: "uppercase" }}>{labelTop}</div>
-
           <div
             style={{
               position: "absolute",
@@ -140,7 +140,6 @@ function Bubble({ g }: { g: ProfileGameBubble }) {
         </div>
       </Link>
 
-      {/* Keep game number for now; we can remove later if you want */}
       <div style={{ marginTop: 14, fontSize: 11, opacity: 0.75 }}>#{g.gameNumber}</div>
     </div>
   );
@@ -176,50 +175,41 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 14 }}>
         {/* LEFT */}
         <Card title="Profile">
-          {/* BIG HEADER */}
-          <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 14, alignItems: "start" }}>
+          {/* Header */}
+          <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: 14, alignItems: "start" }}>
+            {/* ✅ smaller avatar */}
             <div style={{ display: "grid", placeItems: "start" }}>
-              {/* ✅ MUCH bigger avatar */}
-              <Avatar config={data.avatar} width={260} />
+              <Avatar config={data.avatar} width={200} />
             </div>
 
             <div>
-              <div style={{ fontSize: 30, fontWeight: 1000, letterSpacing: -0.4, lineHeight: 1.05 }}>
+              <div style={{ fontSize: 28, fontWeight: 1000, letterSpacing: -0.4, lineHeight: 1.05 }}>
                 {data.username}
               </div>
 
               <div style={{ fontSize: 12, opacity: 0.7, marginTop: 6 }}>Joined {joinedLabel}</div>
 
-              <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+              {/* ✅ vertical stats under name */}
+              <div style={{ marginTop: 10, display: "grid", gap: 8, maxWidth: 260 }}>
                 <Pill>Karma: {data.karma}</Pill>
 
-                {/* ✅ Hide T$ for other people */}
-                {data.isOwnProfile && <Pill>T$: {data.tMoney}</Pill>}
+                {data.isOwnProfile && <Pill>Money: {data.tMoney} T$</Pill>}
 
-                <Pill>Played: {data.stats.gamesPlayed}</Pill>
+                <Pill>Games played: {data.stats.gamesPlayed}</Pill>
 
                 <span
                   style={{
                     padding: "6px 10px",
-                    borderRadius: 999,
+                    borderRadius: 10,
                     border: "1px solid rgba(0,0,0,0.10)",
                     fontWeight: 1000,
                     fontSize: 12,
+                    width: "fit-content",
                     ...presence.style,
                   }}
                 >
                   {presence.text}
                 </span>
-              </div>
-
-              <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                <Pill>
-                  {data.colorName}
-                  {data.colorAnimated ? " (animated)" : ""}
-                </Pill>
-                <Pill>POVs: {data.stats.totalPov}</Pill>
-                <Pill>✅: {data.stats.totalPlus}</Pill>
-                <Pill>❌: {data.stats.totalMinus}</Pill>
               </div>
 
               <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -336,6 +326,7 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
             </div>
           </Card>
 
+          {/* ✅ keep this panel as your “real” stats box */}
           <Card title="Stats">
             <div style={{ display: "grid", gap: 10 }}>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
