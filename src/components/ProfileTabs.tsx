@@ -335,6 +335,26 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
               </Link>
 
               {data.isOwnProfile && (
+  <Link
+    href="/profile/edit"
+    style={{
+      display: "block",
+      textAlign: "center",
+      textDecoration: "none",
+      fontWeight: 1000,
+      padding: "10px 12px",
+      borderRadius: 10,
+      background: "linear-gradient(#fff9b8, #ffe28a)",
+      color: "#3a2b00",
+      border: "1px solid rgba(0,0,0,0.12)",
+    }}
+  >
+    Edit Profile
+  </Link>
+)}
+
+
+              {data.isOwnProfile && (
                 <Link
                   href="/profile/avatar"
                   style={{
