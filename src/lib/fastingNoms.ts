@@ -39,7 +39,6 @@ export async function resolveFastingNominations(gameId: string) {
   const counts = new Map<string, number>();
   for (const n of noms) counts.set(n.targetUserId, (counts.get(n.targetUserId) ?? 0) + 1);
 
-  // rank by nomination votes, tie-break by activity (less active loses)
   const ranked = eligible
     .map((p) => ({
       userId: p.userId,
@@ -58,15 +57,16 @@ export async function resolveFastingNominations(gameId: string) {
 
   const systemUserId = await getSystemUserId();
 
-  // structured rows like: username|votes|NOM
-  const lines = ranked.map((p) => {
+  // ✅ Only show players with at least 1 nomination vote
+  // But ALWAYS include the nominees even if they somehow have 0 (edge-case safety)
+  const filtered = ranked.filter((p) => p.votes >= 1 || p.userId === nomineeA || p.userId === nomineeB);
+
+  const lines = filtered.map((p) => {
     const tag = p.userId === nomineeA || p.userId === nomineeB ? "NOM" : "";
     return `${p.username}|${p.votes}|${tag}`;
   });
 
-  const body =
-    `[SYSTEM:NOM_VOTES]\n` +
-    lines.join("\n");
+  const body = `[SYSTEM:NOM_VOTES]\n${lines.join("\n")}`;
 
   await prisma.$transaction(async (tx) => {
     await tx.roundResult.upsert({
