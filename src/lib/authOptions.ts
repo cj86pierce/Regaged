@@ -20,9 +20,6 @@ export const authOptions: NextAuthOptions = {
 
         const usernameLower = usernameRaw.toLowerCase();
 
-        // ✅ migration-safe:
-        // - prefer new normalized column
-        // - fallback to case-insensitive username for old rows
         const user = await prisma.user.findFirst({
           where: {
             OR: [
@@ -50,8 +47,12 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     async session({ session, token }) {
+      // ✅ make TS happy + safe at runtime
+      if (!session.user) session.user = {} as any;
+
       (session.user as any).id = token.id;
-      session.user.name = token.name as string;
+      (session.user as any).name = token.name as string;
+
       return session;
     },
   },

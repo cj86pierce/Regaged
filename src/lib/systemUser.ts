@@ -1,23 +1,24 @@
 import { prisma } from "@/lib/prisma";
+import bcrypt from "bcryptjs";
 
-const SYSTEM_USERNAME = "__system__";
+const SYSTEM_USERNAME_DISPLAY = "__system__";
+const SYSTEM_USERNAME_LOWER = "__system__";
 
-/**
- * Ensures a dedicated SYSTEM user exists and returns its userId.
- * We never log in as this user. It only authors system messages.
- */
 export async function getSystemUserId(): Promise<string> {
   const existing = await prisma.user.findUnique({
-    where: { username: SYSTEM_USERNAME },
+    where: { usernameLower: SYSTEM_USERNAME_LOWER },
     select: { id: true },
   });
 
   if (existing) return existing.id;
 
+  const passwordHash = await bcrypt.hash("system-user-not-for-login", 10);
+
   const created = await prisma.user.create({
     data: {
-      username: SYSTEM_USERNAME,
-      passwordHash: "SYSTEM_ACCOUNT_DO_NOT_USE",
+      username: SYSTEM_USERNAME_DISPLAY,
+      usernameLower: SYSTEM_USERNAME_LOWER,
+      passwordHash,
       karma: 0,
       tMoney: 0,
     },
@@ -27,10 +28,7 @@ export async function getSystemUserId(): Promise<string> {
   return created.id;
 }
 
-export async function isSystemUser(userId: string): Promise<boolean> {
-  const u = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { username: true },
-  });
-  return u?.username === SYSTEM_USERNAME;
+// ✅ helper used by reaction route etc.
+export function isSystemUser(username: string) {
+  return (username ?? "").toLowerCase() === SYSTEM_USERNAME_LOWER;
 }
