@@ -8,21 +8,21 @@ export type ProfileGameBubble = {
   gameId: string;
   gameNumber: number;
   gameType: string;
-  state: string; // ENROLLING/ROUND_NOMINATE/ROUND_VOTE/FINAL3/COMPLETED
-  joinedAt: string; // ISO
+  state: string;
+  joinedAt: string;
   yourStatus: "ACTIVE" | "ELIMINATED";
-  eliminatedPlace: number | null; // 1,2,3,15...
+  eliminatedPlace: number | null;
 };
 
 export type ProfileTabsData = {
   isOwnProfile: boolean;
   username: string;
-  joinedAt: string; // ISO
+  joinedAt: string;
   karma: number;
   tMoney: number;
   colorName: string;
   colorAnimated: boolean;
-  lastSeenAt: string; // ISO
+  lastSeenAt: string;
 
   avatar: AvatarConfig;
 
@@ -64,9 +64,9 @@ function Pill({ children }: { children: React.ReactNode }) {
       style={{
         padding: "6px 10px",
         borderRadius: 999,
-        border: "1px solid rgba(0,0,0,0.08)",
+        border: "1px solid rgba(0,0,0,0.10)",
         background: "#fff",
-        fontWeight: 900,
+        fontWeight: 1000,
         fontSize: 12,
       }}
     >
@@ -76,7 +76,8 @@ function Pill({ children }: { children: React.ReactNode }) {
 }
 
 function suffix(n: number) {
-  const j = n % 10, k = n % 100;
+  const j = n % 10,
+    k = n % 100;
   if (j === 1 && k !== 11) return `${n}st`;
   if (j === 2 && k !== 12) return `${n}nd`;
   if (j === 3 && k !== 13) return `${n}rd`;
@@ -96,21 +97,11 @@ function Bubble({ g }: { g: ProfileGameBubble }) {
   const isFilling = g.state === "ENROLLING" && g.yourStatus === "ACTIVE";
 
   const labelTop = g.gameType.toLowerCase();
-  const labelBottom = isActiveGame
-    ? isFilling
-      ? "filling"
-      : "enter"
-    : g.eliminatedPlace
-    ? suffix(g.eliminatedPlace)
-    : "—";
+  const labelBottom = isActiveGame ? (isFilling ? "filling" : "enter") : g.eliminatedPlace ? suffix(g.eliminatedPlace) : "—";
 
   return (
     <div style={{ textAlign: "center", width: 92 }}>
-      <Link
-        href={`/game/${g.gameId}`}
-        style={{ textDecoration: "none", color: "inherit" }}
-        title={`Game #${g.gameNumber} · ${g.gameType} · ${g.state}`}
-      >
+      <Link href={`/game/${g.gameId}`} style={{ textDecoration: "none", color: "inherit" }}>
         <div
           style={{
             width: 72,
@@ -149,6 +140,7 @@ function Bubble({ g }: { g: ProfileGameBubble }) {
         </div>
       </Link>
 
+      {/* Keep game number for now; we can remove later if you want */}
       <div style={{ marginTop: 14, fontSize: 11, opacity: 0.75 }}>#{g.gameNumber}</div>
     </div>
   );
@@ -156,7 +148,6 @@ function Bubble({ g }: { g: ProfileGameBubble }) {
 
 export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
   const [tab, setTab] = useState<"overview" | "games" | "blog" | "social">("overview");
-
   const joinedLabel = useMemo(() => new Date(data.joinedAt).toLocaleDateString(), [data.joinedAt]);
   const presence = useMemo(() => onlineLabel(data.lastSeenAt), [data.lastSeenAt]);
 
@@ -183,28 +174,35 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
   return (
     <main style={{ padding: 8 }}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 14 }}>
+        {/* LEFT */}
         <Card title="Profile">
-          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-            {/* ✅ width prop for PNG Avatar */}
-            <Avatar config={data.avatar} width={84} />
+          {/* BIG HEADER */}
+          <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 14, alignItems: "start" }}>
+            <div style={{ display: "grid", placeItems: "start" }}>
+              {/* ✅ MUCH bigger avatar */}
+              <Avatar config={data.avatar} width={260} />
+            </div>
 
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 24, fontWeight: 1000, letterSpacing: -0.2 }}>{data.username}</div>
-              <div style={{ fontSize: 12, opacity: 0.7, marginTop: 2 }}>Joined {joinedLabel}</div>
+            <div>
+              <div style={{ fontSize: 30, fontWeight: 1000, letterSpacing: -0.4, lineHeight: 1.05 }}>
+                {data.username}
+              </div>
+
+              <div style={{ fontSize: 12, opacity: 0.7, marginTop: 6 }}>Joined {joinedLabel}</div>
 
               <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
                 <Pill>Karma: {data.karma}</Pill>
-                <Pill>T$: {data.tMoney}</Pill>
-                <Pill>
-                  {data.colorName}
-                  {data.colorAnimated ? " (animated)" : ""}
-                </Pill>
+
+                {/* ✅ Hide T$ for other people */}
+                {data.isOwnProfile && <Pill>T$: {data.tMoney}</Pill>}
+
+                <Pill>Played: {data.stats.gamesPlayed}</Pill>
 
                 <span
                   style={{
                     padding: "6px 10px",
                     borderRadius: 999,
-                    border: "1px solid rgba(0,0,0,0.08)",
+                    border: "1px solid rgba(0,0,0,0.10)",
                     fontWeight: 1000,
                     fontSize: 12,
                     ...presence.style,
@@ -213,16 +211,27 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
                   {presence.text}
                 </span>
               </div>
+
+              <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <Pill>
+                  {data.colorName}
+                  {data.colorAnimated ? " (animated)" : ""}
+                </Pill>
+                <Pill>POVs: {data.stats.totalPov}</Pill>
+                <Pill>✅: {data.stats.totalPlus}</Pill>
+                <Pill>❌: {data.stats.totalMinus}</Pill>
+              </div>
+
+              <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                {tabBtn("overview", "Overview")}
+                {tabBtn("games", "Games")}
+                {tabBtn("blog", "Blog")}
+                {tabBtn("social", "Social")}
+              </div>
             </div>
           </div>
 
-          <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
-            {tabBtn("overview", "Overview")}
-            {tabBtn("games", "Games")}
-            {tabBtn("blog", "Blog")}
-            {tabBtn("social", "Social")}
-          </div>
-
+          {/* Content */}
           <div style={{ marginTop: 14 }}>
             {tab === "overview" && (
               <div style={{ display: "grid", gap: 14 }}>
@@ -284,6 +293,7 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
           </div>
         </Card>
 
+        {/* RIGHT */}
         <div style={{ display: "grid", gap: 14 }}>
           <Card title="Participate!">
             <div style={{ display: "grid", gap: 10 }}>
