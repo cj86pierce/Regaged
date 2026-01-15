@@ -16,18 +16,19 @@ export default async function PublicProfilePage({
   params: { username: string };
   searchParams: { page?: string };
 }) {
-  const username = decodeURIComponent(params.username).toLowerCase();
+  const usernameParam = decodeURIComponent(params.username).toLowerCase();
 
   const user = await prisma.user.findUnique({
-    where: { username },
+    where: { username: usernameParam },
     select: {
       id: true,
       username: true,
       karma: true,
       tMoney: true,
+      bio: true, // ✅ bio lives here
+
       createdAt: true,
       lastSeenAt: true,
-      bio: true,
 
       bodyStyle: true,
       hairStyle: true,
@@ -86,22 +87,15 @@ export default async function PublicProfilePage({
     },
   });
 
-  const all: ProfileGameBubble[] = raw
-    .map((r) => ({
-      gameId: r.gameId,
-      gameNumber: r.game.number,
-      gameType: r.game.gameType,
-      state: r.game.state,
-      joinedAt: r.joinedAt.toISOString(),
-      yourStatus: r.status,
-      eliminatedPlace: r.eliminatedPlace ?? null,
-    }))
-    .sort((a, b) => {
-      const aActive = a.state !== "COMPLETED" && a.yourStatus === "ACTIVE";
-      const bActive = b.state !== "COMPLETED" && b.yourStatus === "ACTIVE";
-      if (aActive !== bActive) return aActive ? -1 : 1;
-      return new Date(b.joinedAt).getTime() - new Date(a.joinedAt).getTime();
-    });
+  const all: ProfileGameBubble[] = raw.map((r) => ({
+    gameId: r.gameId,
+    gameNumber: r.game.number,
+    gameType: r.game.gameType,
+    state: r.game.state,
+    joinedAt: r.joinedAt.toISOString(),
+    yourStatus: r.status,
+    eliminatedPlace: r.eliminatedPlace ?? null,
+  }));
 
   const page = Math.max(1, Number(searchParams?.page ?? "1") || 1);
   const pageSize = 7;
@@ -109,7 +103,7 @@ export default async function PublicProfilePage({
   const start = (page - 1) * pageSize;
   const recentGames = all.slice(start, start + pageSize);
 
-  // ✅ sanitize avatar config for TS + runtime safety
+  // ✅ sanitize avatar fields for TS
   const avatar: AvatarConfig = {
     bodyStyle: oneOf(user.bodyStyle, ["body_m", "body_f"], "body_m") as "body_m" | "body_f",
     hairStyle: oneOf(
@@ -135,19 +129,23 @@ export default async function PublicProfilePage({
     username: user.username,
     joinedAt: user.createdAt.toISOString(),
     karma: user.karma,
-    tMoney: user.tMoney,
+    tMoney: user.tMoney, // ProfileTabs hides this when isOwnProfile=false
+    bio: user.bio ?? "",
+
     colorName: highestColor?.name ?? "White",
     colorAnimated: highestColor?.isAnimated ?? false,
     lastSeenAt: user.lastSeenAt.toISOString(),
+
     avatar,
+
     stats: {
       gamesPlayed: gpAgg._count._all ?? 0,
       totalChats: gpAgg._sum.chatCount ?? 0,
       totalPlus: gpAgg._sum.plusCount ?? 0,
       totalMinus: gpAgg._sum.minusCount ?? 0,
       totalPov: gpAgg._sum.povWins ?? 0,
-      bio: user.bio ?? ""
     },
+
     recentGames,
     recentGamesPage: page,
     recentGamesTotalPages: totalPages,
