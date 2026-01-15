@@ -36,21 +36,24 @@ enum ReactionType {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  username     String   @unique
-  passwordHash String
-  createdAt    DateTime @default(now())
-  bio          String   @default("")
+  id            String   @id @default(cuid())
 
+  // ✅ display username (caps preserved)
+  username      String
 
-  karma        Int      @default(0)
-  tMoney       Int      @default(0)
+  // ✅ unique normalized username for lookups
+  usernameLower String   @unique
 
-  lastSeenAt   DateTime @default(now())
+  passwordHash  String
+  createdAt     DateTime @default(now())
 
-  // =========================
-  // AVATAR (PNG PARTS + COLORS)
-  // =========================
+  karma         Int      @default(0)
+  tMoney        Int      @default(0)
+  lastSeenAt    DateTime @default(now())
+
+  bio           String   @default("")
+
+  // AVATAR
   bodyStyle        String @default("body_m")
   hairStyle        String @default("hair_m_01")
   eyesStyle        String @default("eyes_01")
@@ -64,7 +67,6 @@ model User {
   mouthColor       String @default("#E0AC69")
   shirtColor       String @default("#E53935")
   accessoryColor   String @default("#111111")
-  // =========================
 
   enrollments  Enrollment[]
   gamePlayers  GamePlayer[]
@@ -72,9 +74,10 @@ model User {
   reactions    MessageReaction[]
   colorBuys    UserColor[]
 
-  // ✅ in-game whispers
   pmSent       GamePmMessage[] @relation("PmSender")
   pmReceived   GamePmMessage[] @relation("PmRecipient")
+
+  @@index([usernameLower])
 }
 
 model ColorLevel {
@@ -134,8 +137,6 @@ model Game {
   evictionVotes EvictionVote[]
   messages      GameMessage[]
   roundResults  RoundResult[]
-
-  // ✅ in-game whispers
   pmMessages    GamePmMessage[]
 
   @@index([state, stateEndsAt])
@@ -160,7 +161,6 @@ model GamePlayer {
 
   lastHadPovRound Int?
 
-  // ✅ NEW: permanent seat for fixed tile order (1–15)
   seatIndex       Int?
 
   game            Game         @relation(fields: [gameId], references: [id], onDelete: Cascade)
@@ -243,16 +243,13 @@ model MessageReaction {
   @@index([messageId, type])
 }
 
-//
-// ✅ In-game PM whispers (dropdown recipient, only sender+recipient can see)
-//
 model GamePmMessage {
   id              String   @id @default(cuid())
-  gameId          String
-  senderUserId    String
-  recipientUserId String
-  body            String
-  createdAt       DateTime @default(now())
+  gameId           String
+  senderUserId     String
+  recipientUserId  String
+  body             String
+  createdAt        DateTime @default(now())
 
   game      Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
   sender    User @relation("PmSender", fields: [senderUserId], references: [id], onDelete: Cascade)

@@ -1,7 +1,7 @@
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import bcrypt from "bcryptjs";
 
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
@@ -13,35 +13,45 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        const username = (credentials?.username ?? "").toString().trim().toLowerCase();
+        const usernameRaw = (credentials?.username ?? "").toString().trim();
         const password = (credentials?.password ?? "").toString();
 
-        if (!username || !password) return null;
+        if (!usernameRaw || !password) return null;
 
-        const user = await prisma.user.findUnique({ where: { username } });
+        const usernameLower = usernameRaw.toLowerCase();
+
+        // ✅ migration-safe:
+        // - prefer new normalized column
+        // - fallback to case-insensitive username for old rows
+        const user = await prisma.user.findFirst({
+          where: {
+            OR: [
+              { usernameLower },
+              { username: { equals: usernameRaw, mode: "insensitive" } },
+            ],
+          },
+        });
+
         if (!user) return null;
 
         const ok = await bcrypt.compare(password, user.passwordHash);
         if (!ok) return null;
 
-        // ✅ mark site-wide activity on login
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { lastSeenAt: new Date() },
-        });
-
         return { id: user.id, name: user.username };
       },
     }),
   ],
-  pages: { signIn: "/login" },
   callbacks: {
     async jwt({ token, user }) {
-      if (user?.id) (token as any).uid = user.id;
+      if (user) {
+        token.id = (user as any).id;
+        token.name = (user as any).name;
+      }
       return token;
     },
     async session({ session, token }) {
-      (session.user as any).id = (token as any).uid;
+      (session.user as any).id = token.id;
+      session.user.name = token.name as string;
       return session;
     },
   },

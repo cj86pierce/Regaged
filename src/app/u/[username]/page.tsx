@@ -16,17 +16,17 @@ export default async function PublicProfilePage({
   params: { username: string };
   searchParams: { page?: string };
 }) {
-  const usernameParam = decodeURIComponent(params.username).toLowerCase();
+  const usernameLower = decodeURIComponent(params.username).toLowerCase();
 
   const user = await prisma.user.findUnique({
-    where: { username: usernameParam },
+    where: { usernameLower },
     select: {
       id: true,
       username: true,
+      usernameLower: true,
       karma: true,
       tMoney: true,
-      bio: true, // ✅ bio lives here
-
+      bio: true,
       createdAt: true,
       lastSeenAt: true,
 
@@ -103,19 +103,13 @@ export default async function PublicProfilePage({
   const start = (page - 1) * pageSize;
   const recentGames = all.slice(start, start + pageSize);
 
-  // ✅ sanitize avatar fields for TS
   const avatar: AvatarConfig = {
     bodyStyle: oneOf(user.bodyStyle, ["body_m", "body_f"], "body_m") as "body_m" | "body_f",
-    hairStyle: oneOf(
-      user.hairStyle,
-      ["hair_m_01", "hair_m_02", "hair_m_03", "hair_f_01", "hair_f_02", "hair_f_03"],
-      "hair_m_01"
-    ),
-    eyesStyle: oneOf(user.eyesStyle, ["eyes_01", "eyes_02", "eyes_03", "eyes_04", "eyes_05", "eyes_06"], "eyes_01"),
-    mouthStyle: oneOf(user.mouthStyle, ["mouth_01", "mouth_02", "mouth_03", "mouth_04", "mouth_05", "mouth_06"], "mouth_01"),
-    shirtStyle: oneOf(user.shirtStyle, ["shirt_01", "shirt_02", "shirt_03", "shirt_04", "shirt_05", "shirt_06"], "shirt_01"),
-    accessoryStyle: oneOf(user.accessoryStyle, ["none", "accessory_01"], "none"),
-
+    hairStyle: oneOf(user.hairStyle, ["hair_m_01","hair_m_02","hair_m_03","hair_f_01","hair_f_02","hair_f_03"], "hair_m_01"),
+    eyesStyle: oneOf(user.eyesStyle, ["eyes_01","eyes_02","eyes_03","eyes_04","eyes_05","eyes_06"], "eyes_01"),
+    mouthStyle: oneOf(user.mouthStyle, ["mouth_01","mouth_02","mouth_03","mouth_04","mouth_05","mouth_06"], "mouth_01"),
+    shirtStyle: oneOf(user.shirtStyle, ["shirt_01","shirt_02","shirt_03","shirt_04","shirt_05","shirt_06"], "shirt_01"),
+    accessoryStyle: oneOf(user.accessoryStyle, ["none","accessory_01"], "none"),
     bodyColor: user.bodyColor,
     hairColor: user.hairColor,
     eyeColor: user.eyeColor,
@@ -129,15 +123,12 @@ export default async function PublicProfilePage({
     username: user.username,
     joinedAt: user.createdAt.toISOString(),
     karma: user.karma,
-    tMoney: user.tMoney, // ProfileTabs hides this when isOwnProfile=false
+    tMoney: user.tMoney,
     bio: user.bio ?? "",
-
     colorName: highestColor?.name ?? "White",
     colorAnimated: highestColor?.isAnimated ?? false,
     lastSeenAt: user.lastSeenAt.toISOString(),
-
     avatar,
-
     stats: {
       gamesPlayed: gpAgg._count._all ?? 0,
       totalChats: gpAgg._sum.chatCount ?? 0,
@@ -145,7 +136,6 @@ export default async function PublicProfilePage({
       totalMinus: gpAgg._sum.minusCount ?? 0,
       totalPov: gpAgg._sum.povWins ?? 0,
     },
-
     recentGames,
     recentGamesPage: page,
     recentGamesTotalPages: totalPages,

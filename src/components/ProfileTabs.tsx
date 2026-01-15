@@ -24,7 +24,9 @@ export type ProfileTabsData = {
   colorAnimated: boolean;
   lastSeenAt: string;
   bio: string;
+
   avatar: AvatarConfig;
+
   stats: {
     gamesPlayed: number;
     totalChats: number;
@@ -32,6 +34,7 @@ export type ProfileTabsData = {
     totalMinus: number;
     totalPov: number;
   };
+
   recentGames: ProfileGameBubble[];
   recentGamesPage: number;
   recentGamesTotalPages: number;
@@ -39,8 +42,18 @@ export type ProfileTabsData = {
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div style={{ border: "1px solid rgba(0,0,0,0.08)", borderRadius: 14, background: "#fff", boxShadow: "0 8px 24px rgba(0,0,0,0.06)", overflow: "hidden" }}>
-      <div style={{ padding: "12px 14px", borderBottom: "1px solid rgba(0,0,0,0.06)", fontWeight: 1000 }}>{title}</div>
+    <div
+      style={{
+        border: "1px solid rgba(0,0,0,0.08)",
+        borderRadius: 14,
+        background: "#fff",
+        boxShadow: "0 8px 24px rgba(0,0,0,0.06)",
+        overflow: "hidden",
+      }}
+    >
+      <div style={{ padding: "12px 14px", borderBottom: "1px solid rgba(0,0,0,0.06)", fontWeight: 1000 }}>
+        {title}
+      </div>
       <div style={{ padding: 14 }}>{children}</div>
     </div>
   );
@@ -87,12 +100,12 @@ function colorToSwatch(name: string) {
 
 function StatLine({ label, value, suffixText }: { label: string; value: React.ReactNode; suffixText?: string }) {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "90px auto 1fr", alignItems: "center", gap: 10, marginTop: 10 }}>
-      <div style={{ fontSize: 26, color: "#666" }}>{label}</div>
-      <div style={{ padding: "6px 10px", background: "#e6e6e6", borderRadius: 4, fontSize: 30, fontWeight: 1000, lineHeight: 1 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "80px auto 1fr", alignItems: "center", gap: 10, marginTop: 8 }}>
+      <div style={{ fontSize: 22, color: "#666" }}>{label}</div>
+      <div style={{ padding: "6px 10px", background: "#e6e6e6", borderRadius: 4, fontSize: 26, fontWeight: 1000, lineHeight: 1 }}>
         {value}
       </div>
-      {suffixText ? <div style={{ fontSize: 26, color: "#666" }}>{suffixText}</div> : <div />}
+      {suffixText ? <div style={{ fontSize: 22, color: "#666" }}>{suffixText}</div> : <div />}
     </div>
   );
 }
@@ -107,9 +120,38 @@ function Bubble({ g }: { g: ProfileGameBubble }) {
   return (
     <div style={{ textAlign: "center", width: 92 }}>
       <Link href={`/game/${g.gameId}`} style={{ textDecoration: "none", color: "inherit" }}>
-        <div style={{ width: 72, height: 72, borderRadius: 999, border: "2px solid rgba(0,0,0,0.25)", background: isActiveGame ? "linear-gradient(#eaf2ff, #d6e6ff)" : "linear-gradient(#f3f6f9, #fff)", margin: "0 auto", display: "grid", placeItems: "center", fontWeight: 1000, position: "relative" }}>
+        <div
+          style={{
+            width: 72,
+            height: 72,
+            borderRadius: 999,
+            border: "2px solid rgba(0,0,0,0.25)",
+            background: isActiveGame ? "linear-gradient(#eaf2ff, #d6e6ff)" : "linear-gradient(#f3f6f9, #fff)",
+            margin: "0 auto",
+            display: "grid",
+            placeItems: "center",
+            fontWeight: 1000,
+            position: "relative",
+          }}
+        >
           <div style={{ fontSize: 12, opacity: 0.95, textTransform: "uppercase" }}>{labelTop}</div>
-          <div style={{ position: "absolute", bottom: -9, left: "50%", transform: "translateX(-50%)", padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 1000, border: "1px solid rgba(0,0,0,0.20)", background: isActiveGame ? "#111" : "#fff", color: isActiveGame ? "#fff" : "#111", minWidth: 56, textAlign: "center" }}>
+          <div
+            style={{
+              position: "absolute",
+              bottom: -9,
+              left: "50%",
+              transform: "translateX(-50%)",
+              padding: "2px 8px",
+              borderRadius: 999,
+              fontSize: 11,
+              fontWeight: 1000,
+              border: "1px solid rgba(0,0,0,0.20)",
+              background: isActiveGame ? "#111" : "#fff",
+              color: isActiveGame ? "#fff" : "#111",
+              minWidth: 56,
+              textAlign: "center",
+            }}
+          >
             {labelBottom}
           </div>
         </div>
@@ -119,8 +161,9 @@ function Bubble({ g }: { g: ProfileGameBubble }) {
 }
 
 export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
-  const swatch = colorToSwatch(data.colorName);
+  const joinedLabel = useMemo(() => new Date(data.joinedAt).toLocaleDateString(), [data.joinedAt]);
   const last = useMemo(() => onlineLabel(data.lastSeenAt), [data.lastSeenAt]);
+  const swatch = colorToSwatch(data.colorName);
 
   const [editingBio, setEditingBio] = useState(false);
   const [bioDraft, setBioDraft] = useState(data.bio ?? "");
@@ -146,50 +189,60 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
     <main style={{ padding: 8 }}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 14 }}>
         <Card title="Profile">
-          {/* ✅ HEADER LIKE YOUR SCREENSHOT */}
-          <div style={{ display: "grid", gridTemplateColumns: "240px 1fr 170px", gap: 14, alignItems: "start" }}>
+          {/* Header */}
+          <div style={{ display: "grid", gridTemplateColumns: "220px 1fr 110px", gap: 14, alignItems: "start" }}>
             <div style={{ display: "grid", placeItems: "start" }}>
-              <Avatar config={data.avatar} width={220} />
+              {/* ✅ slightly smaller */}
+              <Avatar config={data.avatar} width={190} />
             </div>
 
             <div>
-              <div style={{ fontSize: 44, fontWeight: 1000, color: "#2b83c6", lineHeight: 1 }}>{data.username}</div>
+              <div style={{ fontSize: 38, fontWeight: 1000, color: "#2b83c6", lineHeight: 1 }}>
+                {data.username}
+              </div>
+
+              {/* thin bar under name */}
+              <div style={{ marginTop: 8, height: 10, borderRadius: 999, background: "#f3f6f9", border: "1px solid rgba(0,0,0,0.08)" }} />
 
               <StatLine label="Karma:" value={data.karma} />
               {data.isOwnProfile && <StatLine label="Money:" value={data.tMoney} suffixText="T$" />}
               <StatLine label="Played:" value={data.stats.gamesPlayed} suffixText="times" />
-              <div style={{ marginTop: 10, fontSize: 14, color: "#666" }}>Last Activity: <b>{last}</b></div>
+              <div style={{ marginTop: 8, fontSize: 14, color: "#666" }}>
+                Last Activity: <b>{last}</b>
+              </div>
+
+              <div style={{ marginTop: 6, fontSize: 12, color: "#777" }}>Joined {joinedLabel}</div>
             </div>
 
-            <div style={{ display: "grid", gap: 10, justifyItems: "end" }}>
-              {/* color swatch */}
-              <div title={data.colorName} style={{ width: 110, height: 44, borderRadius: 10, background: swatch, boxShadow: "0 6px 18px rgba(0,0,0,0.18)" }} />
-              {data.isOwnProfile && (
-                <button
-                  onClick={() => alert("Buy T$ later")}
-                  style={{
-                    width: 120,
-                    padding: "10px 12px",
-                    borderRadius: 10,
-                    border: "1px solid rgba(0,0,0,0.18)",
-                    background: "linear-gradient(#ffe28a,#ffd24d)",
-                    fontWeight: 1000,
-                    cursor: "pointer",
-                  }}
-                >
-                  Buy T$
-                </button>
-              )}
+            {/* ✅ swatch less wide, no buy button */}
+            <div style={{ display: "grid", justifyItems: "end" }}>
+              <div
+                title={data.colorName}
+                style={{
+                  width: 86, // less wide
+                  height: 44,
+                  borderRadius: 10,
+                  background: swatch,
+                  border: "1px solid rgba(0,0,0,0.85)",
+                  boxShadow: "0 6px 18px rgba(0,0,0,0.18)",
+                }}
+              />
             </div>
           </div>
 
-          {/* BIO */}
+          {/* Bio */}
           <div style={{ marginTop: 14, border: "1px solid rgba(0,0,0,0.18)", borderRadius: 10, background: "#fff9b8", padding: 12, minHeight: 120 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
               <div style={{ fontWeight: 1000 }}>Bio</div>
               {data.isOwnProfile && (
-                <button onClick={() => { setBioDraft(data.bio ?? ""); setBioMsg(null); setEditingBio(v => !v); }}
-                  style={{ padding: "6px 10px", borderRadius: 10, border: "1px solid rgba(0,0,0,0.20)", background: "#fff", fontWeight: 1000, cursor: "pointer" }}>
+                <button
+                  onClick={() => {
+                    setBioDraft(data.bio ?? "");
+                    setBioMsg(null);
+                    setEditingBio((v) => !v);
+                  }}
+                  style={{ padding: "6px 10px", borderRadius: 10, border: "1px solid rgba(0,0,0,0.20)", background: "#fff", fontWeight: 1000, cursor: "pointer" }}
+                >
                   {editingBio ? "Cancel" : "Edit"}
                 </button>
               )}
@@ -197,12 +250,27 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
 
             {editingBio && data.isOwnProfile ? (
               <div style={{ marginTop: 10, display: "grid", gap: 8 }}>
-                <textarea value={bioDraft} onChange={(e) => setBioDraft(e.target.value)} rows={6}
+                <textarea
+                  value={bioDraft}
+                  onChange={(e) => setBioDraft(e.target.value)}
+                  rows={6}
                   style={{ width: "100%", padding: 10, borderRadius: 10, border: "1px solid rgba(0,0,0,0.25)", resize: "vertical", fontFamily: "inherit" }}
-                  placeholder="Write your bio…" />
+                  placeholder="Write your bio…"
+                />
                 <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                  <button onClick={saveBio} disabled={bioSaving}
-                    style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid rgba(0,0,0,0.18)", background: bioSaving ? "#f3f6f9" : "#111", color: bioSaving ? "#111" : "#fff", fontWeight: 1000, cursor: bioSaving ? "not-allowed" : "pointer" }}>
+                  <button
+                    onClick={saveBio}
+                    disabled={bioSaving}
+                    style={{
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      border: "1px solid rgba(0,0,0,0.18)",
+                      background: bioSaving ? "#f3f6f9" : "#111",
+                      color: bioSaving ? "#111" : "#fff",
+                      fontWeight: 1000,
+                      cursor: bioSaving ? "not-allowed" : "pointer",
+                    }}
+                  >
                     {bioSaving ? "Saving..." : "Save"}
                   </button>
                   <div style={{ fontSize: 12, opacity: 0.75 }}>{bioDraft.length}/1000</div>
@@ -216,11 +284,13 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
             )}
           </div>
 
-          {/* MY GAMES */}
+          {/* My Games */}
           <div style={{ marginTop: 14 }}>
             <Card title="My Games">
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-start" }}>
-                {data.recentGames.map((g) => (<Bubble key={g.gameId} g={g} />))}
+                {data.recentGames.map((g) => (
+                  <Bubble key={g.gameId} g={g} />
+                ))}
               </div>
             </Card>
           </div>
@@ -230,11 +300,39 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
         <div style={{ display: "grid", gap: 14 }}>
           <Card title="Participate!">
             <div style={{ display: "grid", gap: 10 }}>
-              <Link href="/enroll" style={{ display: "block", textAlign: "center", textDecoration: "none", fontWeight: 1000, padding: "10px 12px", borderRadius: 10, background: "linear-gradient(#ffd85a, #ffb703)", color: "#3a2b00", border: "1px solid rgba(0,0,0,0.12)", boxShadow: "0 8px 18px rgba(255, 183, 3, 0.25)" }}>
+              <Link
+                href="/enroll"
+                style={{
+                  display: "block",
+                  textAlign: "center",
+                  textDecoration: "none",
+                  fontWeight: 1000,
+                  padding: "10px 12px",
+                  borderRadius: 10,
+                  background: "linear-gradient(#ffd85a, #ffb703)",
+                  color: "#3a2b00",
+                  border: "1px solid rgba(0,0,0,0.12)",
+                  boxShadow: "0 8px 18px rgba(255, 183, 3, 0.25)",
+                }}
+              >
                 Enroll now ▶
               </Link>
+
               {data.isOwnProfile && (
-                <Link href="/profile/avatar" style={{ display: "block", textAlign: "center", textDecoration: "none", fontWeight: 1000, padding: "10px 12px", borderRadius: 10, background: "linear-gradient(#eaf2ff, #d6e6ff)", color: "#0b2b66", border: "1px solid rgba(0,0,0,0.12)" }}>
+                <Link
+                  href="/profile/avatar"
+                  style={{
+                    display: "block",
+                    textAlign: "center",
+                    textDecoration: "none",
+                    fontWeight: 1000,
+                    padding: "10px 12px",
+                    borderRadius: 10,
+                    background: "linear-gradient(#eaf2ff, #d6e6ff)",
+                    color: "#0b2b66",
+                    border: "1px solid rgba(0,0,0,0.12)",
+                  }}
+                >
                   Customize Avatar
                 </Link>
               )}

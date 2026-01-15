@@ -1,36 +1,55 @@
 import { NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import bcrypt from "bcryptjs";
+
+function okJson(data: any) {
+  return NextResponse.json(data);
+}
+function errJson(msg: string, status = 400) {
+  return NextResponse.json({ error: msg }, { status });
+}
+
+function isValidUsername(u: string) {
+  // no emojis, no spaces, no underscores for now
+  return /^[A-Za-z0-9]{3,20}$/.test(u);
+}
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
-  const usernameRaw = (body?.username ?? "").toString().trim().toLowerCase();
+  const usernameRaw = (body?.username ?? "").toString().trim();
   const password = (body?.password ?? "").toString();
 
-  if (usernameRaw.length < 3 || usernameRaw.length > 20) {
-    return NextResponse.json({ error: "Username must be 3–20 chars." }, { status: 400 });
+  if (!isValidUsername(usernameRaw)) {
+    return errJson("Username must be 3–20 characters (letters + numbers only).");
   }
-  if (!/^[a-z0-9_]+$/.test(usernameRaw)) {
-    return NextResponse.json({ error: "Username can only use a-z, 0-9, underscore." }, { status: 400 });
-  }
-  if (password.length < 6) {
-    return NextResponse.json({ error: "Password must be at least 6 chars." }, { status: 400 });
-  }
+  if (password.length < 4) return errJson("Password too short.");
 
-  const existing = await prisma.user.findUnique({ where: { username: usernameRaw } });
-  if (existing) return NextResponse.json({ error: "Username already taken." }, { status: 409 });
+  const usernameLower = usernameRaw.toLowerCase();
+
+  // ✅ migration-safe uniqueness check:
+  // - match new rows by usernameLower
+  // - also match old rows by username case-insensitive
+  const existing = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { usernameLower },
+        { username: { equals: usernameRaw, mode: "insensitive" } },
+      ],
+    },
+    select: { id: true },
+  });
+
+  if (existing) return errJson("Username already taken.", 409);
 
   const passwordHash = await bcrypt.hash(password, 10);
 
-  const user = await prisma.user.create({
+  await prisma.user.create({
     data: {
-      username: usernameRaw,
+      username: usernameRaw,     // ✅ preserve caps
+      usernameLower,             // ✅ normalized lookup
       passwordHash,
-      karma: 0,
-      tMoney: 0,
     },
-    select: { id: true, username: true },
   });
 
-  return NextResponse.json({ ok: true, user });
+  return okJson({ ok: true });
 }
