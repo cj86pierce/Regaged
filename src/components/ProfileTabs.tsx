@@ -185,28 +185,50 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
     setEditingBio(false);
   }
 
+  const isTvStar = data.colorName.trim().toLowerCase() === "tv star";
+  const swatchClass = `lvlSwatch ${isTvStar ? "tvstar" : ""} ${(data.colorAnimated || isTvStar) ? "animated" : "static"}`;
+
   return (
     <main style={{ padding: 8 }}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 14 }}>
         <Card title="Profile">
-          {/* Header */}
           <div style={{ display: "grid", gridTemplateColumns: "220px 1fr 110px", gap: 14, alignItems: "start" }}>
             <div style={{ display: "grid", placeItems: "start" }}>
-              {/* ✅ slightly smaller */}
               <Avatar config={data.avatar} width={190} />
             </div>
 
             <div>
-              <div style={{ fontSize: 38, fontWeight: 1000, color: "#2b83c6", lineHeight: 1 }}>
-                {data.username}
-              </div>
+              {/* ✅ Wrap name + bar so bar spans under swatch too */}
+              <div style={{ position: "relative" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                  <div style={{ fontSize: 38, fontWeight: 1000, color: "#2b83c6", lineHeight: 1 }}>
+                    {data.username}
+                  </div>
 
-              {/* thin bar under name */}
-              <div style={{ marginTop: 8, height: 10, borderRadius: 999, background: "#f3f6f9", border: "1px solid rgba(0,0,0,0.08)" }} />
+                  {/* bar is in the right column, but the background bar spans full width */}
+                  <div style={{ width: 0 }} />
+                </div>
+
+                {/* ✅ full-width bar behind */}
+                <div
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    right: 0,
+                    top: 40,
+                    height: 10,
+                    borderRadius: 999,
+                    background: "#f3f6f9",
+                    border: "1px solid rgba(0,0,0,0.08)",
+                    zIndex: -1,
+                  }}
+                />
+              </div>
 
               <StatLine label="Karma:" value={data.karma} />
               {data.isOwnProfile && <StatLine label="Money:" value={data.tMoney} suffixText="T$" />}
               <StatLine label="Played:" value={data.stats.gamesPlayed} suffixText="times" />
+
               <div style={{ marginTop: 8, fontSize: 14, color: "#666" }}>
                 Last Activity: <b>{last}</b>
               </div>
@@ -214,15 +236,13 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
               <div style={{ marginTop: 6, fontSize: 12, color: "#777" }}>Joined {joinedLabel}</div>
             </div>
 
-            {/* ✅ swatch less wide, no buy button */}
-            <div style={{ display: "grid", justifyItems: "end" }}>
-             <div
-  title={data.colorName}
-  className={`lvlSwatch ${data.colorName.toLowerCase() === "tv star" ? "tvstar" : ""} ${
-    data.colorAnimated || data.colorName.toLowerCase() === "tv star" ? "animated" : "static"
-  }`}
-            style={{ ["--lvl" as any]: swatch }}
-             />
+            {/* ✅ Swatch sits here; bar spans under it because the bar uses full width (left/right) */}
+            <div style={{ display: "grid", justifyItems: "end", paddingTop: 6 }}>
+              <div
+                title={data.colorName}
+                className={swatchClass}
+                style={{ ["--lvl" as any]: swatch }}
+              />
             </div>
           </div>
 
