@@ -12,6 +12,7 @@ export async function resolveFastingNominations(gameId: string) {
   if (!game) return;
   if (game.state !== "ROUND_NOMINATE") return;
 
+  // Ensure POV exists first
   if (!game.povUserId) {
     try {
       await assignFastingPov(gameId);
@@ -57,10 +58,8 @@ export async function resolveFastingNominations(gameId: string) {
 
   const systemUserId = await getSystemUserId();
 
-  // ✅ Only show players with at least 1 nomination vote
-  // But ALWAYS include the nominees even if they somehow have 0 (edge-case safety)
+  // Only show players with at least 1 nomination vote (but always include nominees)
   const filtered = ranked.filter((p) => p.votes >= 1 || p.userId === nomineeA || p.userId === nomineeB);
-
   const lines = filtered.map((p) => {
     const tag = p.userId === nomineeA || p.userId === nomineeB ? "NOM" : "";
     return `${p.username}|${p.votes}|${tag}`;
@@ -69,6 +68,7 @@ export async function resolveFastingNominations(gameId: string) {
   const body = `[SYSTEM:NOM_VOTES]\n${lines.join("\n")}`;
 
   await prisma.$transaction(async (tx) => {
+    // Upsert round result
     await tx.roundResult.upsert({
       where: { gameId_roundNumber: { gameId, roundNumber: game.roundNumber } },
       update: { nomineeAUserId: nomineeA, nomineeBUserId: nomineeB, evictedUserId: null },
@@ -81,21 +81,33 @@ export async function resolveFastingNominations(gameId: string) {
       },
     });
 
+    // Move to vote phase
     await tx.game.update({
       where: { id: gameId },
-      data: {
-        state: "ROUND_VOTE",
-        stateEndsAt: new Date(Date.now() + VOTE_PHASE_MS),
-      },
+      data: { state: "ROUND_VOTE", stateEndsAt: new Date(Date.now() + VOTE_PHASE_MS) },
     });
 
-    await tx.gameMessage.create({
-      data: {
+    // ✅ guard: don't post the same nomination result twice for this round
+    const existing = await tx.gameMessage.findFirst({
+      where: {
         gameId,
-        userId: systemUserId,
         channel: "PUBLIC",
-        body,
+        userId: systemUserId,
+        body: { startsWith: "[SYSTEM:NOM_VOTES]" },
+        createdAt: { gte: new Date(Date.now() - 10 * 60 * 1000) }, // safety window
       },
+      orderBy: { createdAt: "desc" },
     });
+
+    if (!existing) {
+      await tx.gameMessage.create({
+        data: {
+          gameId,
+          userId: systemUserId,
+          channel: "PUBLIC",
+          body,
+        },
+      });
+    }
   });
 }
