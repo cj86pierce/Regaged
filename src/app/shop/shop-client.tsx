@@ -63,7 +63,18 @@ export default function ShopClient({
   ownedColorIds: number[];
 }) {
   const [tab, setTab] = useState<"colors" | "items">("colors");
-  const owned = useMemo(() => new Set(ownedColorIds), [ownedColorIds]);
+
+  // ✅ Everyone always owns White (id 0)
+  const owned = useMemo(() => new Set([0, ...ownedColorIds]), [ownedColorIds]);
+
+  // ✅ Highest owned color id determines what can be bought next
+  const highestOwnedId = useMemo(() => {
+    let max = 0;
+    for (const id of owned) if (id > max) max = id;
+    return max;
+  }, [owned]);
+
+  const nextBuyableId = highestOwnedId + 1;
 
   async function buyColor(colorId: number) {
     const res = await fetch("/api/shop/buy-color", {
@@ -76,7 +87,6 @@ export default function ShopClient({
       alert(json?.error ?? "Purchase failed");
       return;
     }
-    // simplest: refresh so balances + owned update
     window.location.reload();
   }
 
@@ -84,7 +94,6 @@ export default function ShopClient({
     <main style={{ padding: 12 }}>
       <h1 style={{ marginTop: 0 }}>Shop</h1>
 
-      {/* Header balances */}
       <div
         style={{
           border: "1px solid rgba(0,0,0,0.12)",
@@ -110,7 +119,6 @@ export default function ShopClient({
         </div>
       </div>
 
-      {/* Tabs */}
       <div style={{ display: "flex", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
         <TabButton active={tab === "colors"} onClick={() => setTab("colors")}>
           Color Levels
@@ -120,84 +128,103 @@ export default function ShopClient({
         </TabButton>
       </div>
 
-      {/* Tab content */}
       {tab === "colors" && (
         <div style={{ display: "grid", gap: 10 }}>
-          {levels.map((lvl) => {
-            const has = owned.has(lvl.id);
-            const canKarma = me.karma >= lvl.karmaNeeded;
-            const canMoney = me.tMoney >= lvl.priceT;
-            const canBuy = !has && canKarma && canMoney;
+          {levels
+            .slice()
+            .sort((a, b) => a.id - b.id)
+            .map((lvl) => {
+              const has = owned.has(lvl.id);
+              const canKarma = me.karma >= lvl.karmaNeeded;
+              const canMoney = me.tMoney >= lvl.priceT;
 
-            return (
-              <div
-                key={lvl.id}
-                style={{
-                  border: "1px solid rgba(0,0,0,0.12)",
-                  borderRadius: 12,
-                  padding: 12,
-                  background: "#fff",
-                  display: "grid",
-                  gridTemplateColumns: "1fr 160px",
-                  gap: 12,
-                  alignItems: "center",
-                }}
-              >
-                <div>
-                  <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-                    <div
-                      title={lvl.name}
-                      style={{
-                        width: 44,
-                        height: 18,
-                        borderRadius: 8,
-                        background: colorToSwatch(lvl.name),
-                        border: "1px solid rgba(0,0,0,0.85)",
-                      }}
-                    />
-                    <div style={{ fontWeight: 1000, fontSize: 16 }}>
-                      {lvl.name} {lvl.isAnimated ? "✨" : ""}
-                    </div>
-                  </div>
+              const isNext = lvl.id === nextBuyableId;
+              const isLockedByOrder = !has && lvl.id !== nextBuyableId && lvl.id !== 0;
 
-                  <div style={{ marginTop: 6, fontSize: 12, opacity: 0.85 }}>
-                    Requires <b>{lvl.karmaNeeded}</b> karma · Costs <b>{lvl.priceT}</b> T$ · Strength <b>{lvl.strength}</b>
-                  </div>
+              // White is always owned and not buyable
+              const canBuy =
+                lvl.id !== 0 && !has && isNext && canKarma && canMoney;
 
-                  {has && <div style={{ marginTop: 6, fontSize: 12, fontWeight: 1000, color: "#198754" }}>Owned</div>}
-
-                  {!has && (!canKarma || !canMoney) && (
-                    <div style={{ marginTop: 6, fontSize: 12, fontWeight: 900, color: "#b02a37" }}>
-                      {canKarma ? "" : "Not enough karma. "}
-                      {canMoney ? "" : "Not enough T$."}
-                    </div>
-                  )}
-                </div>
-
-                <button
-                  disabled={!canBuy}
-                  onClick={() => buyColor(lvl.id)}
+              return (
+                <div
+                  key={lvl.id}
                   style={{
-                    width: 160,
-                    padding: "10px 12px",
-                    borderRadius: 10,
-                    border: "1px solid rgba(0,0,0,0.15)",
-                    background: canBuy ? "linear-gradient(#ffd85a,#ffb703)" : "#f3f6f9",
-                    fontWeight: 1000,
-                    cursor: canBuy ? "pointer" : "not-allowed",
+                    border: "1px solid rgba(0,0,0,0.12)",
+                    borderRadius: 12,
+                    padding: 12,
+                    background: "#fff",
+                    display: "grid",
+                    gridTemplateColumns: "1fr 160px",
+                    gap: 12,
+                    alignItems: "center",
+                    opacity: isLockedByOrder ? 0.65 : 1,
                   }}
                 >
-                  {has ? "Owned" : "Buy"}
-                </button>
-              </div>
-            );
-          })}
+                  <div>
+                    <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                      <div
+                        title={lvl.name}
+                        style={{
+                          width: 44,
+                          height: 18,
+                          borderRadius: 8,
+                          background: colorToSwatch(lvl.name),
+                          border: "1px solid rgba(0,0,0,0.85)",
+                        }}
+                      />
+                      <div style={{ fontWeight: 1000, fontSize: 16 }}>
+                        {lvl.name} {lvl.isAnimated ? "✨" : ""}
+                      </div>
+                    </div>
 
-          {levels.length === 0 && (
-            <div style={{ padding: 12, borderRadius: 12, border: "1px solid rgba(0,0,0,0.12)", background: "#fff" }}>
-              No color levels found. (You’ll need to seed the ColorLevel table.)
-            </div>
-          )}
+                    <div style={{ marginTop: 6, fontSize: 12, opacity: 0.85 }}>
+                      Requires <b>{lvl.karmaNeeded}</b> karma · Costs <b>{lvl.priceT}</b> T$ · Strength <b>{lvl.strength}</b>
+                    </div>
+
+                    {lvl.id === 0 && (
+                      <div style={{ marginTop: 6, fontSize: 12, fontWeight: 1000, color: "#198754" }}>
+                        Default
+                      </div>
+                    )}
+
+                    {has && lvl.id !== 0 && (
+                      <div style={{ marginTop: 6, fontSize: 12, fontWeight: 1000, color: "#198754" }}>
+                        Owned
+                      </div>
+                    )}
+
+                    {!has && isLockedByOrder && (
+                      <div style={{ marginTop: 6, fontSize: 12, fontWeight: 900, color: "#b02a37" }}>
+                        Locked — buy levels in order.
+                      </div>
+                    )}
+
+                    {!has && isNext && (!canKarma || !canMoney) && (
+                      <div style={{ marginTop: 6, fontSize: 12, fontWeight: 900, color: "#b02a37" }}>
+                        {canKarma ? "" : "Not enough karma. "}
+                        {canMoney ? "" : "Not enough T$."}
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    disabled={!canBuy}
+                    onClick={() => buyColor(lvl.id)}
+                    style={{
+                      width: 160,
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      border: "1px solid rgba(0,0,0,0.15)",
+                      background: canBuy ? "linear-gradient(#ffd85a,#ffb703)" : "#f3f6f9",
+                      fontWeight: 1000,
+                      cursor: canBuy ? "pointer" : "not-allowed",
+                    }}
+                  >
+                    {lvl.id === 0 ? "Owned" : has ? "Owned" : isNext ? "Buy" : "Locked"}
+                  </button>
+                </div>
+              );
+            })}
         </div>
       )}
 
