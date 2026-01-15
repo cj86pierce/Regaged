@@ -23,7 +23,6 @@ export type ProfileTabsData = {
   colorName: string;
   colorAnimated: boolean;
   lastSeenAt: string;
-
   bio: string;
 
   avatar: AvatarConfig;
@@ -61,8 +60,7 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 }
 
 function suffix(n: number) {
-  const j = n % 10,
-    k = n % 100;
+  const j = n % 10, k = n % 100;
   if (j === 1 && k !== 11) return `${n}st`;
   if (j === 2 && k !== 12) return `${n}nd`;
   if (j === 3 && k !== 13) return `${n}rd`;
@@ -100,13 +98,12 @@ function colorToSwatch(name: string) {
   return COLOR_SWATCH[key] ?? "#ffffff";
 }
 
-function StatRow({ label, value }: { label: string; value: React.ReactNode }) {
+function StatPill({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "90px 1fr", alignItems: "center", gap: 8 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "92px 1fr", gap: 8, alignItems: "center" }}>
       <div style={{ fontSize: 12, opacity: 0.75 }}>{label}</div>
       <div
         style={{
-          display: "inline-block",
           width: "fit-content",
           padding: "6px 10px",
           borderRadius: 8,
@@ -206,51 +203,51 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
     <main style={{ padding: 8 }}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 14 }}>
         <Card title="Profile">
-          {/* Header */}
           <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: 14, alignItems: "start" }}>
             <div style={{ display: "grid", placeItems: "start" }}>
               <Avatar config={data.avatar} width={200} />
             </div>
 
             <div>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "flex-start" }}>
+              {/* Name row */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
                 <div style={{ fontSize: 28, fontWeight: 1000, letterSpacing: -0.4, lineHeight: 1.05 }}>
                   {data.username}
                 </div>
 
-                {/* Color swatch anchored top-right */}
+                {/* Wider color level swatch */}
                 <div
                   title={data.colorName}
                   style={{
-                    width: 22,
-                    height: 22,
+                    width: 70,
+                    height: 16,
                     borderRadius: 6,
                     background: swatch,
                     border: "1px solid rgba(0,0,0,0.85)",
-                    boxShadow: "0 1px 2px rgba(0,0,0,0.15)",
+                    boxShadow: "0 1px 2px rgba(0,0,0,0.12)",
+                    marginTop: 6,
                     flex: "0 0 auto",
-                    marginTop: 2,
                   }}
                 />
               </div>
 
-              {/* Stat box (stacked vertically) */}
+              {/* Thin bar under name all the way across to swatch */}
               <div
                 style={{
-                  marginTop: 10,
-                  padding: 10,
-                  borderRadius: 10,
-                  border: "1px solid rgba(0,0,0,0.10)",
+                  marginTop: 6,
+                  height: 10,
+                  borderRadius: 999,
                   background: "#f3f6f9",
-                  display: "grid",
-                  gap: 8,
-                  maxWidth: 340,
+                  border: "1px solid rgba(0,0,0,0.08)",
                 }}
-              >
-                <StatRow label="Karma:" value={data.karma} />
-                {data.isOwnProfile && <StatRow label="Money:" value={`${data.tMoney} T$`} />}
-                <StatRow label="Played:" value={`${data.stats.gamesPlayed} times`} />
-                <StatRow
+              />
+
+              {/* Stacked stats (no colored container) */}
+              <div style={{ marginTop: 12, display: "grid", gap: 8, maxWidth: 360 }}>
+                <StatPill label="Karma:" value={data.karma} />
+                {data.isOwnProfile && <StatPill label="Money:" value={`${data.tMoney} T$`} />}
+                <StatPill label="Played:" value={`${data.stats.gamesPlayed} times`} />
+                <StatPill
                   label="Status:"
                   value={
                     <span
