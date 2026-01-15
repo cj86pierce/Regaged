@@ -3,13 +3,22 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
 
-const me = await prisma.user.findUnique({ where: { id: userId }, select: { phoneVerifiedAt: true } });
-if (!me?.phoneVerifiedAt) return NextResponse.json({ error: "Phone verification required", redirect: "/verify-phone" }, { status: 403 });
-
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
   const userId = (session?.user as any)?.id as string | undefined;
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // ✅ phone verification gate (must be INSIDE the handler)
+  const me = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { phoneVerifiedAt: true },
+  });
+  if (!me?.phoneVerifiedAt) {
+    return NextResponse.json(
+      { error: "Phone verification required", redirect: "/verify-phone" },
+      { status: 403 }
+    );
+  }
 
   const body = await req.json().catch(() => null);
   const colorId = Number(body?.colorId);
@@ -25,33 +34,30 @@ export async function POST(req: Request) {
   if (!level) return NextResponse.json({ error: "Color level not found" }, { status: 404 });
 
   await prisma.$transaction(async (tx) => {
-    // Already owned?
     const already = await tx.userColor.findUnique({
       where: { userId_colorId: { userId, colorId } },
       select: { id: true },
     });
     if (already) throw new Error("Already owned");
 
-    const me = await tx.user.findUnique({
+    const me2 = await tx.user.findUnique({
       where: { id: userId },
       select: { karma: true, tMoney: true },
     });
-    if (!me) throw new Error("User not found");
+    if (!me2) throw new Error("User not found");
 
-    // Determine highest owned color (treat White as owned)
+    // enforce buy in order (treat white as owned)
     const owned = await tx.userColor.findMany({
       where: { userId },
       select: { colorId: true },
     });
-    const ownedIds = owned.map((o) => o.colorId);
     let highest = 0;
-    for (const id of ownedIds) if (id > highest) highest = id;
-
+    for (const o of owned) if (o.colorId > highest) highest = o.colorId;
     const nextBuyable = highest + 1;
     if (colorId !== nextBuyable) throw new Error("Locked — buy levels in order");
 
-    if (me.karma < level.karmaNeeded) throw new Error("Not enough karma");
-    if (me.tMoney < level.priceT) throw new Error("Not enough T$");
+    if (me2.karma < level.karmaNeeded) throw new Error("Not enough karma");
+    if (me2.tMoney < level.priceT) throw new Error("Not enough T$");
 
     await tx.user.update({
       where: { id: userId },

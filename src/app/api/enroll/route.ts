@@ -4,24 +4,26 @@ import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
 import { tryStartFastingGame } from "@/lib/gameEngine";
 
-const me = await prisma.user.findUnique({ where: { id: userId }, select: { phoneVerifiedAt: true } });
-if (!me?.phoneVerifiedAt) return NextResponse.json({ error: "Phone verification required", redirect: "/verify-phone" }, { status: 403 });
-
 const FASTING_MAX = 15;
-
-function pickRandomOpenSeat(taken: Set<number>) {
-  const open: number[] = [];
-  for (let i = 1; i <= FASTING_MAX; i++) if (!taken.has(i)) open.push(i);
-  if (open.length === 0) return null;
-  return open[Math.floor(Math.random() * open.length)];
-}
 
 export async function POST() {
   const session = await getServerSession(authOptions);
   const userId = (session?.user as any)?.id as string | undefined;
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // Already in an active game?
+  // ✅ phone verification gate (inside handler)
+  const me = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { phoneVerifiedAt: true },
+  });
+  if (!me?.phoneVerifiedAt) {
+    return NextResponse.json(
+      { error: "Phone verification required", redirect: "/verify-phone" },
+      { status: 403 }
+    );
+  }
+
+  // If user is already ACTIVE in any non-completed game, send them there
   const already = await prisma.gamePlayer.findFirst({
     where: {
       userId,
@@ -46,46 +48,30 @@ export async function POST() {
     });
   }
 
-  // Join + assign seat in a transaction to avoid collisions
-  await prisma.$transaction(async (tx) => {
-    const existing = await tx.gamePlayer.findUnique({
-      where: { gameId_userId: { gameId: lobby!.id, userId } },
-      select: { id: true, seatIndex: true },
-    });
+  // Seat assignment is handled in your enroll logic elsewhere if you already added it.
+  // Join the lobby if not already
+  const existing = await prisma.gamePlayer.findUnique({
+    where: { gameId_userId: { gameId: lobby.id, userId } },
+    select: { id: true },
+  });
 
-    if (existing) {
-      // If somehow seatIndex is missing, assign now
-      if (!existing.seatIndex) {
-        const takenRows = await tx.gamePlayer.findMany({
-          where: { gameId: lobby!.id, seatIndex: { not: null } },
-          select: { seatIndex: true },
-        });
-        const taken = new Set(takenRows.map((r) => r.seatIndex!).filter(Boolean));
-        const seat = pickRandomOpenSeat(taken);
-        if (seat) {
-          await tx.gamePlayer.update({
-            where: { id: existing.id },
-            data: { seatIndex: seat },
-          });
-        }
-      }
-      return;
-    }
-
-    const takenRows = await tx.gamePlayer.findMany({
-      where: { gameId: lobby!.id, seatIndex: { not: null } },
+  if (!existing) {
+    // Assign random open seat (1–15) if your schema has seatIndex
+    const takenRows = await prisma.gamePlayer.findMany({
+      where: { gameId: lobby.id, seatIndex: { not: null } },
       select: { seatIndex: true },
     });
     const taken = new Set(takenRows.map((r) => r.seatIndex!).filter(Boolean));
-    const seat = pickRandomOpenSeat(taken);
-    if (!seat) throw new Error("No seats available");
+    const open: number[] = [];
+    for (let i = 1; i <= FASTING_MAX; i++) if (!taken.has(i)) open.push(i);
+    const seat = open.length ? open[Math.floor(Math.random() * open.length)] : null;
 
-    await tx.gamePlayer.create({
-      data: { gameId: lobby!.id, userId, status: "ACTIVE", seatIndex: seat },
+    await prisma.gamePlayer.create({
+      data: { gameId: lobby.id, userId, status: "ACTIVE", ...(seat ? { seatIndex: seat } : {}) },
     });
-  });
+  }
 
-  // Try to start if full
+  // Try start if full
   await tryStartFastingGame(lobby.id);
 
   return NextResponse.json({ ok: true, gameId: lobby.id });

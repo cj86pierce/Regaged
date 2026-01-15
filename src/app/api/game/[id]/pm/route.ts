@@ -1,13 +1,18 @@
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
-import { prisma } from "@/lib/prisma";
-
-const me = await prisma.user.findUnique({ where: { id: meUserId }, select: { phoneVerifiedAt: true } });
-if (!me?.phoneVerifiedAt) return NextResponse.json({ error: "Phone verification required", redirect: "/verify-phone" }, { status: 403 });
 
 function bad(msg: string, status = 400) {
   return NextResponse.json({ error: msg }, { status });
+}
+
+async function requirePhoneVerified(userId: string) {
+  const me = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { phoneVerifiedAt: true },
+  });
+  return !!me?.phoneVerifiedAt;
 }
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
@@ -15,12 +20,15 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   const meUserId = (session?.user as any)?.id as string | undefined;
   if (!meUserId) return bad("Unauthorized", 401);
 
+  // ✅ phone verification gate (inside handler)
+  const okPhone = await requirePhoneVerified(meUserId);
+  if (!okPhone) return NextResponse.json({ error: "Phone verification required", redirect: "/verify-phone" }, { status: 403 });
+
   const gameId = params.id;
   const url = new URL(req.url);
   const withUserId = (url.searchParams.get("with") ?? "").toString().trim();
   if (!withUserId) return bad("Missing ?with=userId");
 
-  // must both be in this game (any status, so you can still read after elimination)
   const meInGame = await prisma.gamePlayer.findUnique({ where: { gameId_userId: { gameId, userId: meUserId } } });
   if (!meInGame) return bad("Not in this game", 403);
 
@@ -35,7 +43,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         { senderUserId: withUserId, recipientUserId: meUserId },
       ],
     },
-    orderBy: { createdAt: "desc" }, // newest on top
+    orderBy: { createdAt: "desc" },
     take: 100,
     include: {
       sender: { select: { username: true } },
@@ -63,6 +71,10 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const meUserId = (session?.user as any)?.id as string | undefined;
   if (!meUserId) return bad("Unauthorized", 401);
 
+  // ✅ phone verification gate (inside handler)
+  const okPhone = await requirePhoneVerified(meUserId);
+  if (!okPhone) return NextResponse.json({ error: "Phone verification required", redirect: "/verify-phone" }, { status: 403 });
+
   const gameId = params.id;
 
   const body = await req.json().catch(() => null);
@@ -71,10 +83,9 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   if (!toUserId) return bad("toUserId required");
   if (toUserId === meUserId) return bad("Cannot PM yourself");
-  if (text.length < 1) return bad("Message required");
+  if (text.trim().length < 1) return bad("Message required");
   if (text.length > 500) return bad("Message too long (max 500)");
 
-  // must both be in this game
   const meInGame = await prisma.gamePlayer.findUnique({ where: { gameId_userId: { gameId, userId: meUserId } } });
   if (!meInGame) return bad("Not in this game", 403);
 
