@@ -220,6 +220,8 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
             title={data.colorName}
              className={`lvlSwatch ${data.colorAnimated ? "animated" : "static"}`}
             style={{ ["--lvl" as any]: swatch }}
+            className={`lvlSwatch ${data.colorName.toLowerCase() === "tv star" ? "tvstar" : ""} ${data.colorAnimated || data.colorName.toLowerCase() === "tv star" ? "animated" : "static"}`}
+            style={{ ["--lvl" as any]: swatch }}
             />
             </div>
           </div>

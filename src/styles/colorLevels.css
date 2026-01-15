@@ -1,14 +1,14 @@
 /* ===== Color Level Swatches ===== */
 
 .lvlSwatch {
-  width: 88px;
-  height: 42px;
-  border-radius: 10px;
+  width: 44px;
+  height: 18px;           /* thinner overall */
+  border-radius: 8px;
   border: 1px solid rgba(0,0,0,0.85);
   background: #000;
   position: relative;
   overflow: hidden;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
 }
 
 /* Static (non-animated) color */
@@ -20,31 +20,51 @@
 .lvlSwatch.animated::before {
   content: "";
   position: absolute;
-  top: -25%;
-  bottom: -25%;
-  width: 45%;
-  left: -60%;
+  top: -35%;
+  bottom: -35%;
+  width: 28%;            /* thinner sweep band */
+  left: -50%;
 
   background: linear-gradient(
     90deg,
     transparent,
-    color-mix(in srgb, var(--lvl) 70%, white),
+    color-mix(in srgb, var(--lvl) 55%, white),
+    color-mix(in srgb, var(--lvl) 85%, white),
     var(--lvl),
-    color-mix(in srgb, var(--lvl) 70%, white),
+    color-mix(in srgb, var(--lvl) 85%, white),
     transparent
   );
 
-  filter: blur(2px);
-  opacity: 0.95;
+  filter: blur(1.2px);
+  opacity: 1;
 
   box-shadow:
-    0 0 10px var(--lvl),
-    0 0 18px color-mix(in srgb, var(--lvl) 60%, white);
+    0 0 14px color-mix(in srgb, var(--lvl) 75%, white),
+    0 0 26px var(--lvl);
 
-  animation: lvlSweep 1.8s linear infinite;
+  animation: lvlSweep 1.05s linear infinite; /* faster */
+}
+
+/* TV STAR: rainbow sweep regardless of --lvl */
+.lvlSwatch.tvstar.animated::before {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    #ff1744,
+    #ff9100,
+    #ffea00,
+    #00e676,
+    #2979ff,
+    #d500f9,
+    transparent
+  );
+  box-shadow:
+    0 0 16px rgba(255,255,255,0.65),
+    0 0 28px rgba(255,0,255,0.6),
+    0 0 28px rgba(0,128,255,0.6);
 }
 
 @keyframes lvlSweep {
   from { transform: translateX(0); }
-  to   { transform: translateX(320%); }
+  to   { transform: translateX(360%); }
 }

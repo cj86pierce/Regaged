@@ -34,6 +34,9 @@ const SWATCH: Record<string, string> = {
 function colorToSwatch(name: string) {
   return SWATCH[name.trim().toLowerCase()] ?? "#ffffff";
 }
+function isTvStar(name: string) {
+  return name.trim().toLowerCase() === "tv star";
+}
 
 function TabButton({ active, children, onClick }: { active: boolean; children: React.ReactNode; onClick: () => void }) {
   return (
@@ -64,16 +67,12 @@ export default function ShopClient({
 }) {
   const [tab, setTab] = useState<"colors" | "items">("colors");
 
-  // ✅ Everyone always owns White (id 0)
   const owned = useMemo(() => new Set([0, ...ownedColorIds]), [ownedColorIds]);
-
-  // ✅ Highest owned color id determines what can be bought next
   const highestOwnedId = useMemo(() => {
     let max = 0;
     for (const id of owned) if (id > max) max = id;
     return max;
   }, [owned]);
-
   const nextBuyableId = highestOwnedId + 1;
 
   async function buyColor(colorId: number) {
@@ -83,10 +82,7 @@ export default function ShopClient({
       body: JSON.stringify({ colorId }),
     });
     const json = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      alert(json?.error ?? "Purchase failed");
-      return;
-    }
+    if (!res.ok) return alert(json?.error ?? "Purchase failed");
     window.location.reload();
   }
 
@@ -135,15 +131,17 @@ export default function ShopClient({
             .sort((a, b) => a.id - b.id)
             .map((lvl) => {
               const has = owned.has(lvl.id);
+
               const canKarma = me.karma >= lvl.karmaNeeded;
               const canMoney = me.tMoney >= lvl.priceT;
 
               const isNext = lvl.id === nextBuyableId;
               const isLockedByOrder = !has && lvl.id !== nextBuyableId && lvl.id !== 0;
 
-              // White is always owned and not buyable
-              const canBuy =
-                lvl.id !== 0 && !has && isNext && canKarma && canMoney;
+              const canBuy = lvl.id !== 0 && !has && isNext && canKarma && canMoney;
+
+              const sw = colorToSwatch(lvl.name);
+              const tv = isTvStar(lvl.name);
 
               return (
                 <div
@@ -162,18 +160,14 @@ export default function ShopClient({
                 >
                   <div>
                     <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                      {/* ✅ animated swatch */}
                       <div
+                        className={`lvlSwatch ${tv ? "tvstar" : ""} ${lvl.isAnimated || tv ? "animated" : "static"}`}
+                        style={{ ["--lvl" as any]: sw }}
                         title={lvl.name}
-                        style={{
-                          width: 44,
-                          height: 18,
-                          borderRadius: 8,
-                          background: colorToSwatch(lvl.name),
-                          border: "1px solid rgba(0,0,0,0.85)",
-                        }}
                       />
                       <div style={{ fontWeight: 1000, fontSize: 16 }}>
-                        {lvl.name} {lvl.isAnimated ? "✨" : ""}
+                        {lvl.name} {(lvl.isAnimated || tv) ? "✨" : ""}
                       </div>
                     </div>
 
@@ -181,17 +175,8 @@ export default function ShopClient({
                       Requires <b>{lvl.karmaNeeded}</b> karma · Costs <b>{lvl.priceT}</b> T$ · Strength <b>{lvl.strength}</b>
                     </div>
 
-                    {lvl.id === 0 && (
-                      <div style={{ marginTop: 6, fontSize: 12, fontWeight: 1000, color: "#198754" }}>
-                        Default
-                      </div>
-                    )}
-
-                    {has && lvl.id !== 0 && (
-                      <div style={{ marginTop: 6, fontSize: 12, fontWeight: 1000, color: "#198754" }}>
-                        Owned
-                      </div>
-                    )}
+                    {lvl.id === 0 && <div style={{ marginTop: 6, fontSize: 12, fontWeight: 1000, color: "#198754" }}>Default</div>}
+                    {has && lvl.id !== 0 && <div style={{ marginTop: 6, fontSize: 12, fontWeight: 1000, color: "#198754" }}>Owned</div>}
 
                     {!has && isLockedByOrder && (
                       <div style={{ marginTop: 6, fontSize: 12, fontWeight: 900, color: "#b02a37" }}>
@@ -231,9 +216,7 @@ export default function ShopClient({
       {tab === "items" && (
         <div style={{ padding: 12, borderRadius: 12, border: "1px solid rgba(0,0,0,0.12)", background: "#fff" }}>
           <div style={{ fontWeight: 1000 }}>More shop items soon.</div>
-          <div style={{ marginTop: 6, fontSize: 12, opacity: 0.8 }}>
-            Next: avatar items, buttons, cosmetic frames, and more.
-          </div>
+          <div style={{ marginTop: 6, fontSize: 12, opacity: 0.8 }}>Next: avatar items, buttons, cosmetic frames, and more.</div>
         </div>
       )}
     </main>
