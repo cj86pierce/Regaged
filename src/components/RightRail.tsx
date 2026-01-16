@@ -13,7 +13,7 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
         borderRadius: 12,
         background: "#fff",
         overflow: "hidden",
-        boxShadow: "0 6px 18px rgba(0,0,0,0.05)",
+        boxShadow: "0 6px 18px rgba(0,0,0,0.06)",
       }}
     >
       <div style={{ padding: "10px 12px", borderBottom: "1px solid rgba(0,0,0,0.06)", fontWeight: 1000, fontSize: 13 }}>
@@ -24,7 +24,7 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
   );
 }
 
-function GameButton({ href, label, sub }: { href: string; label: string; sub?: string }) {
+function GameBtn({ href, label, sub }: { href: string; label: string; sub: string }) {
   return (
     <Link
       href={href}
@@ -39,7 +39,7 @@ function GameButton({ href, label, sub }: { href: string; label: string; sub?: s
       }}
     >
       <div style={{ fontWeight: 1000, fontSize: 12 }}>{label}</div>
-      {sub && <div style={{ fontSize: 11, opacity: 0.7, marginTop: 2 }}>{sub}</div>}
+      <div style={{ fontSize: 11, opacity: 0.7, marginTop: 2 }}>{sub}</div>
     </Link>
   );
 }
@@ -48,75 +48,44 @@ export default async function RightRail() {
   const session = await getServerSession(authOptions);
   const userId = (session?.user as any)?.id as string | undefined;
 
-  // All active games (spectate list)
-  const allGames = await prisma.game.findMany({
-    where: { state: { not: "COMPLETED" } },
-    orderBy: { createdAt: "desc" },
-    take: 20,
-    select: { id: true, number: true, gameType: true, state: true },
+  if (!userId) {
+    return (
+      <Card title="My Active Games">
+        <div style={{ fontSize: 12, opacity: 0.7 }}>Login to see your games.</div>
+      </Card>
+    );
+  }
+
+  const myGames = await prisma.gamePlayer.findMany({
+    where: {
+      userId,
+      status: "ACTIVE",
+      game: { state: { in: ["ENROLLING", "ROUND_NOMINATE", "ROUND_VOTE", "FINAL3"] } },
+    },
+    orderBy: { joinedAt: "desc" },
+    take: 10,
+    select: {
+      gameId: true,
+      game: { select: { number: true, gameType: true, state: true } },
+    },
   });
 
-  // My active games (only if logged in)
-  const myGames =
-    userId
-      ? await prisma.gamePlayer.findMany({
-          where: {
-            userId,
-            status: "ACTIVE",
-            game: { state: { in: ["ENROLLING", "ROUND_NOMINATE", "ROUND_VOTE", "FINAL3"] } },
-          },
-          orderBy: { joinedAt: "desc" },
-          take: 10,
-          select: {
-            gameId: true,
-            game: { select: { number: true, gameType: true, state: true } },
-          },
-        })
-      : [];
-
   return (
-    <div style={{ display: "grid", gap: 12 }}>
-      <Card title="My Active Games">
-        {userId ? (
-          myGames.length ? (
-            <div style={{ display: "grid", gap: 8 }}>
-              {myGames.map((g) => (
-                <GameButton
-                  key={g.gameId}
-                  href={`/game/${g.gameId}`}
-                  label={`${g.game.gameType} #${g.game.number}`}
-                  sub={`(your game) · ${g.game.state.toLowerCase()}`}
-                />
-              ))}
-            </div>
-          ) : (
-            <div style={{ fontSize: 12, opacity: 0.7 }}>No active games.</div>
-          )
-        ) : (
-          <div style={{ fontSize: 12, opacity: 0.7 }}>Login to see your games.</div>
-        )}
-      </Card>
-
-      <Card title="All Active Games">
-        {allGames.length ? (
-          <div style={{ display: "grid", gap: 8 }}>
-            {allGames.map((g) => (
-              <GameButton
-                key={g.id}
-                href={`/game/${g.id}`}
-                label={`${g.gameType} #${g.number}`}
-                sub={`${g.id}`}
-              />
-            ))}
-          </div>
-        ) : (
-          <div style={{ fontSize: 12, opacity: 0.7 }}>No active games right now.</div>
-        )}
-
-        <div style={{ marginTop: 10, fontSize: 11, opacity: 0.65 }}>
-          Anyone can spectate. Only players in the game can act.
+    <Card title="My Active Games">
+      {myGames.length ? (
+        <div style={{ display: "grid", gap: 8 }}>
+          {myGames.map((g) => (
+            <GameBtn
+              key={g.gameId}
+              href={`/game/${g.gameId}`}
+              label={`${g.game.gameType} #${g.game.number}`}
+              sub={`${g.gameId}`}
+            />
+          ))}
         </div>
-      </Card>
-    </div>
+      ) : (
+        <div style={{ fontSize: 12, opacity: 0.7 }}>No active games.</div>
+      )}
+    </Card>
   );
 }

@@ -1,0 +1,13 @@
+.rightRail {
+  position: fixed;
+  top: 72px;          /* under the navbar */
+  right: 12px;
+  width: 240px;
+  z-index: 40;
+}
+
+@media (max-width: 1150px) {
+  .rightRail {
+    display: none;
+  }
+}

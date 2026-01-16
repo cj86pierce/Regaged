@@ -3,6 +3,7 @@ import { Providers } from "@/app/providers";
 import NavBar from "@/components/NavBar";
 import RightRail from "@/components/RightRail";
 import "@/styles/colorLevels.css";
+import "@/styles/layout.css";
 
 export const metadata: Metadata = {
   title: "Regaged",
@@ -23,23 +24,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Providers>
           <NavBar />
 
-          <div style={{ padding: "16px 12px 40px" }}>
-            <div style={{ maxWidth: 1120, margin: "0 auto" }}>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 260px",
-                  gap: 14,
-                  alignItems: "start",
-                }}
-              >
-                <div>{children}</div>
+          {/* Floating rail that does NOT push game UI */}
+          <div className="rightRail">
+            <RightRail />
+          </div>
 
-                <div style={{ position: "sticky", top: 70, alignSelf: "start" }}>
-                  <RightRail />
-                </div>
-              </div>
-            </div>
+          <div style={{ padding: "16px 12px 40px" }}>
+            <div style={{ maxWidth: 1120, margin: "0 auto" }}>{children}</div>
           </div>
         </Providers>
       </body>
