@@ -11,14 +11,15 @@ export async function POST() {
   const userId = (session?.user as any)?.id as string | undefined;
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // ✅ phone verification gate (inside handler)
+  // ✅ EMAIL verification gate (early, before joining/creating anything)
   const me = await prisma.user.findUnique({
     where: { id: userId },
-    select: { phoneVerifiedAt: true },
+    select: { emailVerifiedAt: true },
   });
-  if (!me?.phoneVerifiedAt) {
+
+  if (!me?.emailVerifiedAt) {
     return NextResponse.json(
-      { error: "Phone verification required", redirect: "/verify-phone" },
+      { error: "Email verification required", redirect: "/profile/edit" },
       { status: 403 }
     );
   }
@@ -48,7 +49,6 @@ export async function POST() {
     });
   }
 
-  // Seat assignment is handled in your enroll logic elsewhere if you already added it.
   // Join the lobby if not already
   const existing = await prisma.gamePlayer.findUnique({
     where: { gameId_userId: { gameId: lobby.id, userId } },
@@ -56,18 +56,25 @@ export async function POST() {
   });
 
   if (!existing) {
-    // Assign random open seat (1–15) if your schema has seatIndex
+    // Assign random open seat (1–15)
     const takenRows = await prisma.gamePlayer.findMany({
       where: { gameId: lobby.id, seatIndex: { not: null } },
       select: { seatIndex: true },
     });
+
     const taken = new Set(takenRows.map((r) => r.seatIndex!).filter(Boolean));
     const open: number[] = [];
     for (let i = 1; i <= FASTING_MAX; i++) if (!taken.has(i)) open.push(i);
+
     const seat = open.length ? open[Math.floor(Math.random() * open.length)] : null;
 
     await prisma.gamePlayer.create({
-      data: { gameId: lobby.id, userId, status: "ACTIVE", ...(seat ? { seatIndex: seat } : {}) },
+      data: {
+        gameId: lobby.id,
+        userId,
+        status: "ACTIVE",
+        ...(seat ? { seatIndex: seat } : {}),
+      },
     });
   }
 

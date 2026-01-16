@@ -7,12 +7,12 @@ function bad(msg: string, status = 400) {
   return NextResponse.json({ error: msg }, { status });
 }
 
-async function requirePhoneVerified(userId: string) {
+async function requireEmailVerified(userId: string) {
   const me = await prisma.user.findUnique({
     where: { id: userId },
-    select: { phoneVerifiedAt: true },
+    select: { emailVerifiedAt: true },
   });
-  return !!me?.phoneVerifiedAt;
+  return !!me?.emailVerifiedAt;
 }
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
@@ -20,19 +20,32 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   const meUserId = (session?.user as any)?.id as string | undefined;
   if (!meUserId) return bad("Unauthorized", 401);
 
-  // ✅ phone verification gate (inside handler)
-  const okPhone = await requirePhoneVerified(meUserId);
-  if (!okPhone) return NextResponse.json({ error: "Phone verification required", redirect: "/verify-phone" }, { status: 403 });
+  // ✅ email verification gate
+  const okEmail = await requireEmailVerified(meUserId);
+  if (!okEmail) {
+    return NextResponse.json(
+      { error: "Email verification required", redirect: "/profile/edit" },
+      { status: 403 }
+    );
+  }
 
   const gameId = params.id;
+
   const url = new URL(req.url);
   const withUserId = (url.searchParams.get("with") ?? "").toString().trim();
   if (!withUserId) return bad("Missing ?with=userId");
 
-  const meInGame = await prisma.gamePlayer.findUnique({ where: { gameId_userId: { gameId, userId: meUserId } } });
+  // must both be in this game (any status)
+  const meInGame = await prisma.gamePlayer.findUnique({
+    where: { gameId_userId: { gameId, userId: meUserId } },
+    select: { id: true },
+  });
   if (!meInGame) return bad("Not in this game", 403);
 
-  const themInGame = await prisma.gamePlayer.findUnique({ where: { gameId_userId: { gameId, userId: withUserId } } });
+  const themInGame = await prisma.gamePlayer.findUnique({
+    where: { gameId_userId: { gameId, userId: withUserId } },
+    select: { id: true },
+  });
   if (!themInGame) return bad("Recipient not in this game", 400);
 
   const msgs = await prisma.gamePmMessage.findMany({
@@ -43,7 +56,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         { senderUserId: withUserId, recipientUserId: meUserId },
       ],
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: { createdAt: "desc" }, // newest first
     take: 100,
     include: {
       sender: { select: { username: true } },
@@ -71,9 +84,14 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const meUserId = (session?.user as any)?.id as string | undefined;
   if (!meUserId) return bad("Unauthorized", 401);
 
-  // ✅ phone verification gate (inside handler)
-  const okPhone = await requirePhoneVerified(meUserId);
-  if (!okPhone) return NextResponse.json({ error: "Phone verification required", redirect: "/verify-phone" }, { status: 403 });
+  // ✅ email verification gate
+  const okEmail = await requireEmailVerified(meUserId);
+  if (!okEmail) {
+    return NextResponse.json(
+      { error: "Email verification required", redirect: "/profile/edit" },
+      { status: 403 }
+    );
+  }
 
   const gameId = params.id;
 
@@ -86,10 +104,17 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   if (text.trim().length < 1) return bad("Message required");
   if (text.length > 500) return bad("Message too long (max 500)");
 
-  const meInGame = await prisma.gamePlayer.findUnique({ where: { gameId_userId: { gameId, userId: meUserId } } });
+  // must both be in this game
+  const meInGame = await prisma.gamePlayer.findUnique({
+    where: { gameId_userId: { gameId, userId: meUserId } },
+    select: { id: true },
+  });
   if (!meInGame) return bad("Not in this game", 403);
 
-  const themInGame = await prisma.gamePlayer.findUnique({ where: { gameId_userId: { gameId, userId: toUserId } } });
+  const themInGame = await prisma.gamePlayer.findUnique({
+    where: { gameId_userId: { gameId, userId: toUserId } },
+    select: { id: true },
+  });
   if (!themInGame) return bad("Recipient not in this game", 400);
 
   const msg = await prisma.gamePmMessage.create({

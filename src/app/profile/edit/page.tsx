@@ -22,7 +22,7 @@ export default async function EditProfilePage() {
 
   const me = await prisma.user.findUnique({
     where: { id: userId },
-    select: { bio: true, phoneVerifiedAt: true, phoneE164: true },
+    select: { bio: true, email: true, emailVerifiedAt: true },
   });
 
   if (!me) {
@@ -37,8 +37,8 @@ export default async function EditProfilePage() {
   return (
     <EditProfileClient
       initialBio={me.bio ?? ""}
-      phoneVerifiedAt={me.phoneVerifiedAt ? me.phoneVerifiedAt.toISOString() : null}
-      phoneE164={me.phoneE164 ?? null}
+      email={me.email ?? ""}
+      emailVerifiedAt={me.emailVerifiedAt ? me.emailVerifiedAt.toISOString() : null}
     />
   );
 }

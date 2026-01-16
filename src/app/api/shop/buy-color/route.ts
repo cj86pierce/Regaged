@@ -8,17 +8,9 @@ export async function POST(req: Request) {
   const userId = (session?.user as any)?.id as string | undefined;
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // ✅ phone verification gate (must be INSIDE the handler)
-  const me = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { phoneVerifiedAt: true },
-  });
-  if (!me?.phoneVerifiedAt) {
-    return NextResponse.json(
-      { error: "Phone verification required", redirect: "/verify-phone" },
-      { status: 403 }
-    );
-  }
+  const me = await prisma.user.findUnique({ where: { id: userId }, select: { emailVerifiedAt: true } });
+if (!me?.emailVerifiedAt) return NextResponse.json({ error: "Email verification required", redirect: "/profile/edit" }, { status: 403 });
+
 
   const body = await req.json().catch(() => null);
   const colorId = Number(body?.colorId);
