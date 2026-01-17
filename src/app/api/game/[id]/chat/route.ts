@@ -5,9 +5,6 @@ import { prisma } from "@/lib/prisma";
 import { touchUser } from "@/lib/touchUser";
 import { checkBlockedContent } from "@/lib/contentFilter";
 
-const hit = checkBlockedContent(text);
-if (hit) return NextResponse.json({ error: "Message contains blocked language." }, { status: 400 });
-
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   const userId = (session?.user as any)?.id as string | undefined;
@@ -15,15 +12,29 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   const gameId = params.id;
 
-  const gp = await prisma.gamePlayer.findUnique({
-    where: { gameId_userId: { gameId, userId } },
-  });
-  if (!gp || gp.status !== "ACTIVE") return NextResponse.json({ error: "Not in game" }, { status: 403 });
-
   const body = await req.json().catch(() => null);
-  const text = (body?.text ?? "").toString().trim();
-  if (text.length < 1 || text.length > 240) {
-    return NextResponse.json({ error: "Message must be 1–240 chars." }, { status: 400 });
+  const text = (body?.text ?? "").toString();
+
+  if (text.trim().length < 1) {
+    return NextResponse.json({ error: "Message required" }, { status: 400 });
+  }
+  if (text.length > 500) {
+    return NextResponse.json({ error: "Message too long (max 500)" }, { status: 400 });
+  }
+
+  // ✅ content filter (INSIDE handler)
+  const hit = checkBlockedContent(text);
+  if (hit) {
+    return NextResponse.json({ error: "Message contains blocked language." }, { status: 400 });
+  }
+
+  // must be in game to chat
+  const inGame = await prisma.gamePlayer.findUnique({
+    where: { gameId_userId: { gameId, userId } },
+    select: { status: true },
+  });
+  if (!inGame || inGame.status !== "ACTIVE") {
+    return NextResponse.json({ error: "Not in this game" }, { status: 403 });
   }
 
   await prisma.$transaction(async (tx) => {

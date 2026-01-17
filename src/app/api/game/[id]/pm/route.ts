@@ -4,9 +4,6 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { checkBlockedContent } from "@/lib/contentFilter";
 
-const hit = checkBlockedContent(text);
-if (hit) return NextResponse.json({ error: "Message contains blocked language." }, { status: 400 });
-
 function bad(msg: string, status = 400) {
   return NextResponse.json({ error: msg }, { status });
 }
@@ -24,22 +21,15 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   const meUserId = (session?.user as any)?.id as string | undefined;
   if (!meUserId) return bad("Unauthorized", 401);
 
-  // ✅ email verification gate
+  // email gate (you already wanted this)
   const okEmail = await requireEmailVerified(meUserId);
-  if (!okEmail) {
-    return NextResponse.json(
-      { error: "Email verification required", redirect: "/profile/edit" },
-      { status: 403 }
-    );
-  }
+  if (!okEmail) return NextResponse.json({ error: "Email verification required", redirect: "/profile/edit" }, { status: 403 });
 
   const gameId = params.id;
-
   const url = new URL(req.url);
   const withUserId = (url.searchParams.get("with") ?? "").toString().trim();
   if (!withUserId) return bad("Missing ?with=userId");
 
-  // must both be in this game (any status)
   const meInGame = await prisma.gamePlayer.findUnique({
     where: { gameId_userId: { gameId, userId: meUserId } },
     select: { id: true },
@@ -60,7 +50,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         { senderUserId: withUserId, recipientUserId: meUserId },
       ],
     },
-    orderBy: { createdAt: "desc" }, // newest first
+    orderBy: { createdAt: "desc" },
     take: 100,
     include: {
       sender: { select: { username: true } },
@@ -88,14 +78,9 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const meUserId = (session?.user as any)?.id as string | undefined;
   if (!meUserId) return bad("Unauthorized", 401);
 
-  // ✅ email verification gate
+  // email gate
   const okEmail = await requireEmailVerified(meUserId);
-  if (!okEmail) {
-    return NextResponse.json(
-      { error: "Email verification required", redirect: "/profile/edit" },
-      { status: 403 }
-    );
-  }
+  if (!okEmail) return NextResponse.json({ error: "Email verification required", redirect: "/profile/edit" }, { status: 403 });
 
   const gameId = params.id;
 
@@ -108,7 +93,10 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   if (text.trim().length < 1) return bad("Message required");
   if (text.length > 500) return bad("Message too long (max 500)");
 
-  // must both be in this game
+  // ✅ content filter (INSIDE handler)
+  const hit = checkBlockedContent(text);
+  if (hit) return bad("Message contains blocked language.", 400);
+
   const meInGame = await prisma.gamePlayer.findUnique({
     where: { gameId_userId: { gameId, userId: meUserId } },
     select: { id: true },
