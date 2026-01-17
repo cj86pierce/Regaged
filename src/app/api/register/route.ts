@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { checkBlockedContent } from "@/lib/contentFilter";
 
 function okJson(data: any) {
   return NextResponse.json(data);
@@ -22,13 +23,15 @@ export async function POST(req: Request) {
   if (!isValidUsername(usernameRaw)) {
     return errJson("Username must be 3–20 characters (letters + numbers only).");
   }
+
+  // ✅ filter username for slurs/graphic only (swearing list not included)
+  const hit = checkBlockedContent(usernameRaw);
+  if (hit) return errJson("Username contains blocked language.", 400);
+
   if (password.length < 4) return errJson("Password too short.");
 
   const usernameLower = usernameRaw.toLowerCase();
 
-  // ✅ migration-safe uniqueness check:
-  // - match new rows by usernameLower
-  // - also match old rows by username case-insensitive
   const existing = await prisma.user.findFirst({
     where: {
       OR: [
@@ -45,8 +48,8 @@ export async function POST(req: Request) {
 
   await prisma.user.create({
     data: {
-      username: usernameRaw,     // ✅ preserve caps
-      usernameLower,             // ✅ normalized lookup
+      username: usernameRaw,
+      usernameLower,
       passwordHash,
     },
   });

@@ -3,6 +3,10 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
 import { touchUser } from "@/lib/touchUser";
+import { checkBlockedContent } from "@/lib/contentFilter";
+
+const hit = checkBlockedContent(text);
+if (hit) return NextResponse.json({ error: "Message contains blocked language." }, { status: 400 });
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
