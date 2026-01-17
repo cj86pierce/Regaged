@@ -10,6 +10,7 @@ datasource db {
 enum GameType {
   FASTING
   FASTING_LITE
+  CASTING
 }
 
 enum GameState {
@@ -33,6 +34,48 @@ enum ChatChannel {
 enum ReactionType {
   PLUS
   MINUS
+}
+
+enum CastingDropKind {
+  APPLE
+  KEY
+}
+
+enum CastingDropOptionKind {
+  APPLE
+  KEY
+  POISON
+}
+
+model CastingDropEvent {
+  id        String          @id @default(cuid())
+  gameId    String
+  dayNumber Int
+  kind      CastingDropKind
+  createdAt DateTime        @default(now())
+
+  messageId String @unique
+
+  claimedByUserId String?
+  claimedAt       DateTime?
+
+  game    Game                @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  options CastingDropOption[]
+
+  @@index([gameId, dayNumber, createdAt])
+  @@index([gameId, claimedAt])
+}
+
+model CastingDropOption {
+  id        String                @id @default(cuid())
+  eventId   String
+  slotIndex Int
+  kind      CastingDropOptionKind
+
+  event CastingDropEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, slotIndex])
+  @@index([eventId])
 }
 
 model User {
@@ -149,6 +192,12 @@ model Game {
   roundResults  RoundResult[]
   pmMessages    GamePmMessage[]
 
+  // CASTINGS drop scheduling
+  castingDayStartedAt     DateTime?
+  castingLastAppleHourKey String?
+  castingLastKeyHourKey   String?
+  castingDropEvents       CastingDropEvent[]
+
   @@index([state, stateEndsAt])
 }
 
@@ -175,6 +224,10 @@ model GamePlayer {
 
   game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // CASTINGS
+  health Int @default(100)
+  keys   Int @default(0)
 
   @@unique([gameId, userId])
   @@unique([gameId, seatIndex])
