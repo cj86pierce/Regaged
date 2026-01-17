@@ -28,24 +28,69 @@ function parseCsvEnv(name: string) {
 }
 
 /**
- * Put your real lists in env vars:
- * SLUR_BLOCKLIST="word1,word2"
- * GRAPHIC_BLOCKLIST="phrase1,phrase2"
+ * ✅ Built-in defaults for beta (works even if env vars are missing)
+ * Keep this list small and focused: slurs + graphic content only.
+ *
+ * Later you can move this to env/DB if you want.
  */
+const DEFAULT_SLURS = [
+  "fag",
+  "faggot",
+  "nigger",
+  "nigga",
+  "chink",
+  "kike",
+  "spic",
+  "wetback",
+  "gook",
+  "beaner",
+  "jap",
+  "coon",
+  "dyke",
+];
+
+const DEFAULT_GRAPHIC = [
+  "rape",
+  "rapist",
+  "pedophile",
+  "pedophilia",
+  "pedo",
+  "bestiality",
+  "bukkake",
+  "cumshot",
+  "cunnilingus",
+  "fisting",
+  "incest",
+  "pornography",
+  "porn",
+  "xxx",
+];
+
+function buildWordRegex(words: string[]) {
+  // word boundary match on normalized text
+  const cleaned = words.map((w) => normalize(w)).filter(Boolean);
+  if (cleaned.length === 0) return null;
+  const pattern = cleaned.map(escapeRegExp).join("|");
+  return new RegExp(`(^|\\s)(${pattern})(\\s|$)`, "i");
+}
+
 export function checkBlockedContent(input: string): null | { reason: "slur" | "graphic"; match: string } {
   const norm = normalize(input);
 
-  const slurs = parseCsvEnv("SLUR_BLOCKLIST");
-  for (const w of slurs) {
-    const re = new RegExp(`(^|\\s)${escapeRegExp(w)}(\\s|$)`, "i");
-    if (re.test(norm)) return { reason: "slur", match: w };
+  // env vars can add more terms without redeploy
+  const slurs = [...DEFAULT_SLURS, ...parseCsvEnv("SLUR_BLOCKLIST")];
+  const graphic = [...DEFAULT_GRAPHIC, ...parseCsvEnv("GRAPHIC_BLOCKLIST")];
+
+  const slurRe = buildWordRegex(slurs);
+  if (slurRe) {
+    const m = norm.match(slurRe);
+    if (m) return { reason: "slur", match: m[2] };
   }
 
-  const graphic = parseCsvEnv("GRAPHIC_BLOCKLIST");
-  for (const w of graphic) {
-    const ww = normalize(w);
-    const re = new RegExp(`(^|\\s)${escapeRegExp(ww)}(\\s|$)`, "i");
-    if (re.test(norm)) return { reason: "graphic", match: w };
+  const graphicRe = buildWordRegex(graphic);
+  if (graphicRe) {
+    const m = norm.match(graphicRe);
+    if (m) return { reason: "graphic", match: m[2] };
   }
 
   return null;
