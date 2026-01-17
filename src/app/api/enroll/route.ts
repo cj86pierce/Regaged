@@ -3,8 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
 import { tryStartFastingGame } from "@/lib/gameEngine";
-// We'll add tryStartCastingsGame later; for now we can reuse tryStartFastingGame start logic or just start when full.
-import { tryStartCastingsGame } from "@/lib/gameEngineCastings"; // create stub next step
+import { tryStartCastingsGame } from "@/lib/gameEngineCastings";
 
 const FASTING_MAX = 15;
 const CASTING_MAX = 20;
@@ -31,16 +30,20 @@ export async function POST(req: Request) {
 
   const MAX = gameType === "CASTING" ? CASTING_MAX : FASTING_MAX;
 
-  // If user already ACTIVE in any running game, send them there
-  const already = await prisma.gamePlayer.findFirst({
+  // ✅ Only redirect if already ACTIVE in THIS requested gameType
+  const alreadySameType = await prisma.gamePlayer.findFirst({
     where: {
       userId,
       status: "ACTIVE",
-      game: { state: { in: ["ENROLLING", "ROUND_NOMINATE", "ROUND_VOTE", "FINAL3"] } },
+      game: {
+        gameType,
+        state: { in: ["ENROLLING", "ROUND_NOMINATE", "ROUND_VOTE", "FINAL3"] },
+      },
     },
     select: { gameId: true },
   });
-  if (already) return NextResponse.json({ ok: true, gameId: already.gameId });
+
+  if (alreadySameType) return NextResponse.json({ ok: true, gameId: alreadySameType.gameId });
 
   // Find or create lobby for this gameType
   let lobby = await prisma.game.findFirst({
@@ -63,7 +66,6 @@ export async function POST(req: Request) {
   });
 
   if (!existing) {
-    // Random open seat 1..MAX (if seatIndex exists)
     const takenRows = await prisma.gamePlayer.findMany({
       where: { gameId: lobby.id, seatIndex: { not: null } },
       select: { seatIndex: true },
@@ -72,6 +74,7 @@ export async function POST(req: Request) {
     const taken = new Set(takenRows.map((r) => r.seatIndex!).filter(Boolean));
     const open: number[] = [];
     for (let i = 1; i <= MAX; i++) if (!taken.has(i)) open.push(i);
+
     const seat = open.length ? open[Math.floor(Math.random() * open.length)] : null;
 
     await prisma.gamePlayer.create({
