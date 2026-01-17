@@ -8,7 +8,7 @@ function bad(msg: string, status = 400) {
   return NextResponse.json({ error: msg }, { status });
 }
 
-function randStr(n = 6) {
+function randStr(n = 8) {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
   let s = "";
   for (let i = 0; i < n; i++) s += chars[Math.floor(Math.random() * chars.length)];
@@ -16,7 +16,7 @@ function randStr(n = 6) {
 }
 
 export async function POST(req: Request) {
-  // ✅ dev secret gate
+  // ✅ secret gate (works in prod)
   const secret = req.headers.get("x-dev-secret") ?? "";
   if (!process.env.DEV_SECRET || secret !== process.env.DEV_SECRET) {
     return bad("Forbidden", 403);
@@ -39,32 +39,25 @@ export async function POST(req: Request) {
 
   const maxPlayers = game.gameType === "CASTING" ? 20 : 15;
 
-  const existingPlayers = await prisma.gamePlayer.findMany({
-    where: { gameId },
-    select: { userId: true, seatIndex: true },
+  // Ensure you are in the lobby
+  const meIn = await prisma.gamePlayer.findUnique({
+    where: { gameId_userId: { gameId, userId: meId } },
+    select: { id: true },
   });
-  const existingUserIds = new Set(existingPlayers.map((p) => p.userId));
-  const takenSeats = new Set(existingPlayers.map((p) => p.seatIndex!).filter(Boolean));
 
-  // Ensure you are in the game (seat assigned if missing)
-  if (!existingUserIds.has(meId)) {
-    const openSeats: number[] = [];
-    for (let i = 1; i <= maxPlayers; i++) if (!takenSeats.has(i)) openSeats.push(i);
-    const seat = openSeats.length ? openSeats[Math.floor(Math.random() * openSeats.length)] : null;
-
+  if (!meIn) {
     await prisma.gamePlayer.create({
-      data: { gameId, userId: meId, status: "ACTIVE", ...(seat ? { seatIndex: seat } : {}) },
+      data: { gameId, userId: meId, status: "ACTIVE" },
     });
-
-    if (seat) takenSeats.add(seat);
   }
 
-  // Fill remaining seats with dummy users
-  let currentCount = await prisma.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
+  // Fill remaining seats with verified bot accounts
+  let current = await prisma.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
 
-  while (currentCount < maxPlayers) {
+  while (current < maxPlayers) {
     const uname = `bot_${randStr(7)}`;
     const unameLower = uname.toLowerCase();
+    const email = `${unameLower}@regaged.local`; // ✅ unique & safe fake domain
     const passwordHash = await bcrypt.hash("bot-password", 4);
 
     const u = await prisma.user.create({
@@ -72,22 +65,17 @@ export async function POST(req: Request) {
         username: uname,
         usernameLower: unameLower,
         passwordHash,
-        // bots don’t need verified email
-        emailVerifiedAt: null,
+        email,
+        emailVerifiedAt: new Date(), // ✅ bypass email verification gate
       },
       select: { id: true },
     });
 
-    const openSeats: number[] = [];
-    for (let i = 1; i <= maxPlayers; i++) if (!takenSeats.has(i)) openSeats.push(i);
-    const seat = openSeats.length ? openSeats[Math.floor(Math.random() * openSeats.length)] : null;
-
     await prisma.gamePlayer.create({
-      data: { gameId, userId: u.id, status: "ACTIVE", ...(seat ? { seatIndex: seat } : {}) },
+      data: { gameId, userId: u.id, status: "ACTIVE" },
     });
 
-    if (seat) takenSeats.add(seat);
-    currentCount++;
+    current++;
   }
 
   return NextResponse.json({ ok: true, gameId, filledTo: maxPlayers });
