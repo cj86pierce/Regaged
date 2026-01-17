@@ -148,7 +148,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
     <div style={{ padding: 12 }}>
       <div style={{ marginBottom: 8 }}>
         <div style={{ fontSize: 22, fontWeight: 800 }}>
-          Fasting <span style={{ opacity: 0.6, fontWeight: 900 }}>· Game #{data.game.number}</span>
+          {data.game.gameType} <span style={{ opacity: 0.6, fontWeight: 900 }}>· Game #{data.game.number}</span>
         </div>
         <div style={{ fontSize: 12, opacity: 0.75 }}>
           {data.game.state === "ENROLLING" && data.lobby ? (
