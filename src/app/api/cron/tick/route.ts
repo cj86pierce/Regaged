@@ -4,6 +4,10 @@ import { assignFastingPov } from "@/lib/fastingPov";
 import { resolveFastingNominations } from "@/lib/fastingNoms";
 import { resolveFastingEviction } from "@/lib/fastingVotes";
 
+if (process.env.CRON_DISABLED === "1") {
+  return Response.json({ ok: true, disabled: true });
+}
+
 async function runTick() {
   // Advance games whose timers have expired
   const due = await prisma.game.findMany({
