@@ -12,18 +12,18 @@ export async function resolveFastingNominations(gameId: string) {
   if (!game) return;
   if (game.state !== "ROUND_NOMINATE") return;
 
-  // Ensure POV exists first
+  // Ensure POV exists first (safe: assignFastingPov is compare-and-set)
   if (!game.povUserId) {
     try {
       await assignFastingPov(gameId);
     } catch {}
   }
 
-  const gameAfter = await prisma.game.findUnique({
-    where: { id: gameId },
-    select: { povUserId: true },
-  });
-  const povUserId = gameAfter?.povUserId ?? null;
+  const povUserId =
+    (await prisma.game.findUnique({
+      where: { id: gameId },
+      select: { povUserId: true },
+    }))?.povUserId ?? null;
 
   const players = await prisma.gamePlayer.findMany({
     where: { gameId, status: "ACTIVE" },
@@ -56,60 +56,42 @@ export async function resolveFastingNominations(gameId: string) {
   const nomineeB = ranked[1]?.userId ?? null;
   if (!nomineeA || !nomineeB) return;
 
+  const nameA = ranked[0]?.username ?? "Nominee A";
+  const nameB = ranked[1]?.username ?? "Nominee B";
+
   const systemUserId = await getSystemUserId();
-
-  // Only show players with at least 1 nomination vote (but always include nominees)
-  const filtered = ranked.filter((p) => p.votes >= 1 || p.userId === nomineeA || p.userId === nomineeB);
-
-  // ✅ round-scoped marker so we never suppress future rounds
   const tag = `[SYSTEM:NOM_VOTES:R${game.roundNumber}]`;
 
+  const filtered = ranked.filter((p) => p.votes >= 1 || p.userId === nomineeA || p.userId === nomineeB);
+
   const lines = filtered.map((p) => {
-    const mark = p.userId === nomineeA || p.userId === nomineeB ? "NOM" : "";
-    return `${p.username}|${p.votes}|${mark}`;
+    const nom = p.userId === nomineeA || p.userId === nomineeB ? " (NOM)" : "";
+    return `${p.username} — ${p.votes}${nom}`;
   });
 
-  const body = `${tag}\n${lines.join("\n")}`;
+  const body = `${tag}\n[SYSTEM] Nominees: ${nameA} vs ${nameB}\n[SYSTEM] Nom votes:\n${lines.join("\n")}`;
 
   await prisma.$transaction(async (tx) => {
-    // Upsert round result
     await tx.roundResult.upsert({
       where: { gameId_roundNumber: { gameId, roundNumber: game.roundNumber } },
       update: { nomineeAUserId: nomineeA, nomineeBUserId: nomineeB, evictedUserId: null },
-      create: {
-        gameId,
-        roundNumber: game.roundNumber,
-        nomineeAUserId: nomineeA,
-        nomineeBUserId: nomineeB,
-        evictedUserId: null,
-      },
+      create: { gameId, roundNumber: game.roundNumber, nomineeAUserId: nomineeA, nomineeBUserId: nomineeB, evictedUserId: null },
     });
 
-    // Move to vote phase
     await tx.game.update({
       where: { id: gameId },
       data: { state: "ROUND_VOTE", stateEndsAt: new Date(Date.now() + VOTE_PHASE_MS) },
     });
 
-    // ✅ only skip if THIS round already posted
+    // Only skip if THIS round already posted
     const existing = await tx.gameMessage.findFirst({
-      where: {
-        gameId,
-        channel: "PUBLIC",
-        userId: systemUserId,
-        body: { startsWith: tag },
-      },
+      where: { gameId, channel: "PUBLIC", userId: systemUserId, body: { startsWith: tag } },
       select: { id: true },
     });
 
     if (!existing) {
       await tx.gameMessage.create({
-        data: {
-          gameId,
-          userId: systemUserId,
-          channel: "PUBLIC",
-          body,
-        },
+        data: { gameId, userId: systemUserId, channel: "PUBLIC", body },
       });
     }
   });
