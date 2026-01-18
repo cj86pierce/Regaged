@@ -84,7 +84,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     load().catch((e) => setError(e.message));
-    const poll = setInterval(() => load().catch(() => {}), 3500);
+    const poll = setInterval(() => load().catch(() => {}), 9000);
     return () => clearInterval(poll);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameId, page]);
