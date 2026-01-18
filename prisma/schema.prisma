@@ -98,10 +98,13 @@ model User {
   lastSeenAt DateTime @default(now())
 
   // ✅ Email verification (beta)
-  email             String?   @unique
-  emailVerifiedAt   DateTime?
-  emailVerifyToken  String?
-  emailVerifySentAt DateTime?
+  email              String?   @unique
+  emailVerifiedAt    DateTime?
+
+  emailVerifyCodeHash String?
+  emailVerifyExpiresAt DateTime?
+  emailVerifySentAt    DateTime?
+  emailVerifyAttempts  Int      @default(0)
 
   // (Optional) phone fields can stay if you want, but not required
   phoneE164       String?   @unique
