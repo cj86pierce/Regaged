@@ -81,6 +81,9 @@ model CastingDropOption {
 model User {
   id String @id @default(cuid())
 
+  equippedColorId Int?
+  equippedColor   ColorLevel? @relation("EquippedColor", fields: [equippedColorId], references: [id], onDelete: SetNull)
+
   // display username (caps preserved)
   username String
 
@@ -142,6 +145,8 @@ model ColorLevel {
   isAnimated  Boolean @default(false)
 
   purchases UserColor[]
+
+  equippedBy User[] @relation("EquippedColor")
 }
 
 model UserColor {

@@ -49,7 +49,7 @@ export async function resolveFastingNominations(gameId: string) {
     }))
     .sort((a, b) => {
       if (b.votes !== a.votes) return b.votes - a.votes;
-      return a.activity - b.activity;
+      return a.activity - b.activity; // less active loses ties
     });
 
   const nomineeA = ranked[0]?.userId ?? null;
@@ -60,12 +60,16 @@ export async function resolveFastingNominations(gameId: string) {
 
   // Only show players with at least 1 nomination vote (but always include nominees)
   const filtered = ranked.filter((p) => p.votes >= 1 || p.userId === nomineeA || p.userId === nomineeB);
+
+  // ✅ round-scoped marker so we never suppress future rounds
+  const tag = `[SYSTEM:NOM_VOTES:R${game.roundNumber}]`;
+
   const lines = filtered.map((p) => {
-    const tag = p.userId === nomineeA || p.userId === nomineeB ? "NOM" : "";
-    return `${p.username}|${p.votes}|${tag}`;
+    const mark = p.userId === nomineeA || p.userId === nomineeB ? "NOM" : "";
+    return `${p.username}|${p.votes}|${mark}`;
   });
 
-  const body = `[SYSTEM:NOM_VOTES]\n${lines.join("\n")}`;
+  const body = `${tag}\n${lines.join("\n")}`;
 
   await prisma.$transaction(async (tx) => {
     // Upsert round result
@@ -87,16 +91,15 @@ export async function resolveFastingNominations(gameId: string) {
       data: { state: "ROUND_VOTE", stateEndsAt: new Date(Date.now() + VOTE_PHASE_MS) },
     });
 
-    // ✅ guard: don't post the same nomination result twice for this round
+    // ✅ only skip if THIS round already posted
     const existing = await tx.gameMessage.findFirst({
       where: {
         gameId,
         channel: "PUBLIC",
         userId: systemUserId,
-        body: { startsWith: "[SYSTEM:NOM_VOTES]" },
-        createdAt: { gte: new Date(Date.now() - 10 * 60 * 1000) }, // safety window
+        body: { startsWith: tag },
       },
-      orderBy: { createdAt: "desc" },
+      select: { id: true },
     });
 
     if (!existing) {
