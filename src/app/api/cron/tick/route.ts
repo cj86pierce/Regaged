@@ -86,7 +86,7 @@ export async function POST() {
 
 // ✅ CASTING: spawn drops (no voting yet)
 const casting = await prisma.game.findMany({
-  where: { gameType: "CASTING", state: "CASTING_DAY" },
+  where: { gameType: "CASTING", state: "ROUND_NOMINATE" },
   select: { id: true },
   take: 25,
 });
