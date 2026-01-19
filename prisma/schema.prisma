@@ -241,8 +241,10 @@ model GamePlayer {
   @@unique([gameId, seatIndex])
   @@index([gameId, status])
   @@index([gameId, seatIndex])
-
-  castingHealthTickedAt DateTime?
+  
+  lastActiveAt DateTime @default(now())
+  castingLastDecayAt DateTime?
+  castingHealthGainedToday Int @default(0)
 }
 
 model Nomination {

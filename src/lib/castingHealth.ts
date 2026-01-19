@@ -1,20 +1,11 @@
 import { prisma } from "@/lib/prisma";
 
-// 30-minute tick model (matches your earlier intent)
-const TICK_MS = 30 * 60 * 1000;
-
-// Drain per 30 minutes by time since last activity
-function drainPerTick(hoursSinceActive: number) {
-  if (hoursSinceActive < 2) return 1;      // 0–2h: -1 per 30m  (2/hr)
-  if (hoursSinceActive < 5) return 6;      // 2–5h: -6 per 30m  (12/hr)
-  if (hoursSinceActive < 7) return 12;     // 5–7h: -12 per 30m (24/hr)
-  return 10;                                // 7h+: -10 per 30m (20/hr) -> dead by ~8h
-}
+const TEN_MIN_MS = 10 * 60 * 1000;
 
 export async function applyCastingHealthDecay() {
   const now = new Date();
 
-  // Only apply to active casting games (we’re temporarily using ROUND_NOMINATE as the “day running” state)
+  // CASTING day-running placeholder state (until enum adds CASTING_DAY)
   const games = await prisma.game.findMany({
     where: { gameType: "CASTING", state: "ROUND_NOMINATE" },
     select: { id: true },
@@ -35,32 +26,32 @@ export async function applyCastingHealthDecay() {
     });
 
     for (const p of players) {
-      const lastTick = p.castingHealthTickedAt ?? p.lastActiveAt ?? now;
-      const msSinceTick = now.getTime() - lastTick.getTime();
-      const ticks = Math.floor(msSinceTick / TICK_MS);
+      const hp0 = p.health ?? 70;
+
+      // Anchor time: we only decay since the later of lastActiveAt and last tick
+      const anchor = new Date(
+        Math.max(
+          (p.lastActiveAt ?? now).getTime(),
+          (p.castingHealthTickedAt ?? p.lastActiveAt ?? now).getTime()
+        )
+      );
+
+      const ms = now.getTime() - anchor.getTime();
+      const ticks = Math.floor(ms / TEN_MIN_MS);
 
       if (ticks <= 0) continue;
 
-      // simulate tick-by-tick drain based on time since lastActiveAt at each tick boundary
-      let hp = p.health ?? 100;
-      for (let i = 1; i <= ticks; i++) {
-        const tickTime = new Date(lastTick.getTime() + i * TICK_MS);
-        const hoursSinceActive = (tickTime.getTime() - (p.lastActiveAt ?? tickTime).getTime()) / (60 * 60 * 1000);
-        hp -= drainPerTick(Math.max(0, hoursSinceActive));
-        if (hp <= 0) {
-          hp = 0;
-          break;
-        }
-      }
+      const damage = ticks; // ✅ 1 HP per 10 min inactivity
+      const hp1 = Math.max(0, Math.min(100, hp0 - damage));
 
-      const newTickedAt = new Date(lastTick.getTime() + ticks * TICK_MS);
+      const newTickedAt = new Date(anchor.getTime() + ticks * TEN_MIN_MS);
 
       await prisma.gamePlayer.update({
         where: { gameId_userId: { gameId: g.id, userId: p.userId } },
         data: {
-          health: hp,
+          health: hp1,
           castingHealthTickedAt: newTickedAt,
-          ...(hp <= 0 ? { status: "ELIMINATED", eliminatedAt: now } : {}),
+          ...(hp1 <= 0 ? { status: "ELIMINATED", eliminatedAt: now } : {}),
         },
       });
 

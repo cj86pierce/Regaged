@@ -86,7 +86,7 @@ export default function CastingChatPanel(props: {
 
   return (
     <div>
-      {/* ✅ input at the TOP like FASTING */}
+      {/* input at top */}
       <div style={{ marginBottom: 10, display: "flex", gap: 8 }}>
         <input
           value={chatText}
@@ -109,12 +109,13 @@ export default function CastingChatPanel(props: {
         </button>
       </div>
 
+      {/* messages */}
       <div style={{ display: "grid", gap: 8 }}>
         {messages.map((m) => {
           const dropId = parseDropId(m.body);
           const drop = dropId ? dropEvents[dropId] : null;
 
-          // Drop rendering (claimed -> show small placeholder, not disappearing)
+          // DROP message
           if (dropId) {
             const claimed = !!drop?.claimedAt;
 
@@ -164,7 +165,7 @@ export default function CastingChatPanel(props: {
             );
           }
 
-          // Normal message rendering (reactions stay inside message card)
+          // NORMAL message
           return (
             <div
               key={m.id}
@@ -180,41 +181,46 @@ export default function CastingChatPanel(props: {
                 <div style={{ fontSize: 11, opacity: 0.6 }}>{new Date(m.createdAt).toLocaleTimeString()}</div>
               </div>
 
-              <div style={{ marginTop: 6, whiteSpace: "pre-wrap", fontSize: 13 }}>{m.body}</div>
+              <div style={{ marginTop: 6, display: "flex", gap: 10, alignItems: "flex-start" }}>
+                <div style={{ flex: 1, whiteSpace: "pre-wrap", fontSize: 13 }}>{m.body}</div>
 
-              <div style={{ marginTop: 8, display: "flex", gap: 8, alignItems: "center" }}>
-                <button
-                  disabled={!meUserId || m.myReaction !== null}
-                  onClick={() => onReact(m.id, "PLUS")}
-                  style={{
-                    padding: "4px 8px",
-                    borderRadius: 10,
-                    border: "1px solid rgba(0,0,0,0.12)",
-                    background: "#fff",
-                    cursor: "pointer",
-                    fontWeight: 900,
-                  }}
-                >
-                  ✅
-                </button>
+                {/* reactions on the right */}
+                <div style={{ display: "grid", gap: 6, justifyItems: "end" }}>
+                  <button
+                    disabled={!meUserId || m.myReaction !== null}
+                    onClick={() => onReact(m.id, "PLUS")}
+                    style={{
+                      padding: "4px 8px",
+                      borderRadius: 10,
+                      border: "1px solid rgba(0,0,0,0.12)",
+                      background: "#fff",
+                      cursor: "pointer",
+                      fontWeight: 900,
+                      minWidth: 44,
+                    }}
+                    title="Plus"
+                  >
+                    ✅
+                  </button>
 
-                <button
-                  disabled={!meUserId || m.myReaction !== null}
-                  onClick={() => onReact(m.id, "MINUS")}
-                  style={{
-                    padding: "4px 8px",
-                    borderRadius: 10,
-                    border: "1px solid rgba(0,0,0,0.12)",
-                    background: "#fff",
-                    cursor: "pointer",
-                    fontWeight: 900,
-                  }}
-                >
-                  ❌
-                </button>
+                  <button
+                    disabled={!meUserId || m.myReaction !== null}
+                    onClick={() => onReact(m.id, "MINUS")}
+                    style={{
+                      padding: "4px 8px",
+                      borderRadius: 10,
+                      border: "1px solid rgba(0,0,0,0.12)",
+                      background: "#fff",
+                      cursor: "pointer",
+                      fontWeight: 900,
+                      minWidth: 44,
+                    }}
+                    title="Minus"
+                  >
+                    ❌
+                  </button>
 
-                <div style={{ fontSize: 12, opacity: 0.75 }}>
-                  {m.plus - m.minus}
+                  <div style={{ fontSize: 12, opacity: 0.7, textAlign: "right" }}>{m.plus - m.minus}</div>
                 </div>
               </div>
             </div>

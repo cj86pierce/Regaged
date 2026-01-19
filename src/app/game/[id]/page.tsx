@@ -298,3 +298,14 @@ export default function GamePage({ params }: { params: { id: string } }) {
     </div>
   );
 }
+useEffect(() => {
+  if (!data || data.game.gameType !== "CASTING") return;
+
+  const t = setInterval(() => {
+    // only ping when tab is visible
+    if (document.visibilityState !== "visible") return;
+    fetch("/api/cron/tick", { method: "POST" }).catch(() => {});
+  }, 60000); // every 60s
+
+  return () => clearInterval(t);
+}, [data?.game.gameType]);
