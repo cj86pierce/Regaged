@@ -245,20 +245,21 @@ export default function GamePage({ params }: { params: { id: string } }) {
         </div>
 
         {isCasting ? (
-          <CastingsPanel
-            meUserId={data.meUserId}
-            gameNumber={data.game.number}
-            dayNumber={data.game.roundNumber}
-            timeLeft={timeLeft}
-            players={data.players.map((p) => ({
-              userId: p.userId,
-              username: p.username,
-              checks: p.checks,
-              health: p.health,
-              keys: p.keys,
-            }))}
-          />
-        ) : (
+  <CastingsPanel
+    meUserId={data.meUserId}
+    gameNumber={data.game.number}
+    dayNumber={data.game.roundNumber}
+    timeLeft={timeLeft}
+    me={
+      data.meUserId
+        ? (() => {
+            const me = data.players.find((p) => p.userId === data.meUserId) ?? null;
+            return me ? { username: me.username, checks: me.checks, health: me.health, keys: me.keys } : null;
+          })()
+        : null
+    }
+  />
+) : (
           <Sidebar
             gameState={data.game.state}
             roundNumber={data.game.roundNumber}
