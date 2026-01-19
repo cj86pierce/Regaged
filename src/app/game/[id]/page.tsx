@@ -207,13 +207,19 @@ export default function GamePage({ params }: { params: { id: string } }) {
   <CastingPlayerStrip
     players={data.players}
     me={
-      data.meUserId
-        ? (() => {
-            const me = data.players.find((p) => p.userId === data.meUserId);
-            return me ? { checks: me.checks, health: me.health, keys: me.keys } : null;
-          })()
-        : null
-    }
+  data.meUserId
+    ? (() => {
+        const me = data.players.find((p) => p.userId === data.meUserId);
+        return me
+          ? {
+              checks: me.checks ?? 0,
+              health: me.health ?? 100,
+              keys: me.keys ?? 0,
+            }
+          : null;
+      })()
+    : null
+}
   />
 ) : (
         <PlayerStrip
