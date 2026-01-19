@@ -278,7 +278,6 @@ export default function GamePage({ params }: { params: { id: string } }) {
   myVoteLockedIn={isFasting ? myVoteLockedIn : null}
   messages={data.messages}
 />
-        )}
       </div>
     </div>
   );
