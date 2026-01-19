@@ -204,7 +204,12 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       const plus = m.reactions.filter((r) => r.type === "PLUS").length;
       const minus = m.reactions.filter((r) => r.type === "MINUS").length;
       const myReaction = meUserId ? (m.reactions.find((r) => r.reactorUserId === meUserId)?.type ?? null) : null;
-      const isSystem = m.user.username === "__system__" || /^\[SYSTEM\]/i.test(m.body) || /^\[DROP:/i.test(m.body);
+      const isSystem =
+  m.user.username === "__system__" ||
+  /^\[SYSTEM\]/i.test(m.body) ||
+  /^\[DROP:/i.test(m.body) ||
+  /^\[CASTDROP:/i.test(m.body);
+
 
       return {
         id: m.id,

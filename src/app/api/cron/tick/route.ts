@@ -5,6 +5,7 @@ import { resolveFastingNominations } from "@/lib/fastingNoms";
 import { resolveFastingEviction } from "@/lib/fastingVotes";
 import { maybeSpawnCastingsDrops } from "@/lib/castingsDrops";
 
+
 async function runTick() {
   // ✅ global lock: prevents multiple ticks from running concurrently under load
   const lockRows = await prisma.$queryRaw<{ locked: boolean }[]>`
@@ -82,15 +83,20 @@ export async function POST() {
   const r = await runTick();
   return NextResponse.json({ ok: true, ...r });
 }
-// ✅ CASTING: spawn drops only (no nominations yet)
-const castingGames = await prisma.game.findMany({
-  where: {
-    gameType: "CASTING",
-    state: "CASTING_DAY",
-  },
+
+// ✅ CASTING: spawn drops (no voting yet)
+const casting = await prisma.game.findMany({
+  where: { gameType: "CASTING", state: "CASTING_DAY" },
   select: { id: true },
   take: 25,
 });
+
+for (const g of casting) {
+  try {
+    await maybeSpawnCastingsDrops(g.id);
+  } catch {}
+}
+
 
 for (const g of castingGames) {
   try {

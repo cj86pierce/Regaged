@@ -21,14 +21,14 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   if (!eventId) return bad("eventId required");
   if (!Number.isFinite(slotIndex) || slotIndex < 0 || slotIndex > 4) return bad("slotIndex must be 0..4");
 
-  // must be in game + active
+  // must be active in game
   const gp = await prisma.gamePlayer.findUnique({
     where: { gameId_userId: { gameId, userId } },
     select: { status: true, health: true, keys: true },
   });
   if (!gp || gp.status !== "ACTIVE") return bad("Not in this game", 403);
 
-  // per-event lock (prevents double-claim races)
+  // lock per event so only one claim wins
   const lockRows = await prisma.$queryRaw<{ locked: boolean }[]>`
     SELECT pg_try_advisory_lock(hashtext(${eventId})) as locked
   `;
@@ -45,13 +45,11 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     const opt = ev.options.find((o) => o.slotIndex === slotIndex);
     if (!opt) return bad("Invalid choice");
 
-    // claim it
     await prisma.castingDropEvent.update({
       where: { id: eventId },
       data: { claimedByUserId: userId, claimedAt: new Date() },
     });
 
-    // apply result
     let deltaHp = 0;
     let deltaKeys = 0;
 
