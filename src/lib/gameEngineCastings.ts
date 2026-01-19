@@ -4,7 +4,10 @@ const CASTING_MAX = 20;
 const CASTING_DAY_MS = 12 * 60 * 60 * 1000;
 
 export async function tryStartCastingsGame(gameId: string) {
-  const g = await prisma.game.findUnique({ where: { id: gameId }, select: { id: true, gameType: true, state: true } });
+  const g = await prisma.game.findUnique({
+    where: { id: gameId },
+    select: { id: true, gameType: true, state: true },
+  });
   if (!g || g.gameType !== "CASTING" || g.state !== "ENROLLING") return;
 
   const count = await prisma.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
@@ -12,15 +15,13 @@ export async function tryStartCastingsGame(gameId: string) {
 
   const now = new Date();
 
-  // Start day 1 in nominate state for now (we’ll implement actual Castings states later)
   await prisma.game.update({
     where: { id: gameId },
     data: {
-      state: "ROUND_NOMINATE",
+      state: "CASTING_DAY",
       roundNumber: 1,
       startsAt: now,
       castingDayStartedAt: now,
-      roundStartedAt: now,
       stateEndsAt: new Date(now.getTime() + CASTING_DAY_MS),
     },
   });

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import PlayerStrip from "./components/PlayerStrip"; // FASTING (do not touch)
 import CastingPlayerStrip from "./components/CastingPlayerStrip"; // CASTING only
 import ChatPanel from "./components/ChatPanel";
+import CastingChatPanel from "./components/CastingChatPanel"; // ✅ CASTING chat
 import Sidebar from "./components/Sidebar";
 import Tabs from "./components/Tabs";
 import PmPanel from "./components/PmPanel";
@@ -17,7 +18,6 @@ type Player = {
   eliminatedPlace: number | null;
   isNominee: boolean;
 
-  // from API (needed for your stats bubble)
   checks: number;
   health: number;
   keys: number;
@@ -37,6 +37,11 @@ type Message = {
   isSystem: boolean;
 };
 
+type DropEventsMap = Record<
+  string,
+  { eventId: string; claimedAt: string | null; options: { slotIndex: number; kind: "APPLE" | "KEY" | "POISON" }[] }
+>;
+
 type GameState = {
   ok: boolean;
   meUserId: string | null;
@@ -47,6 +52,9 @@ type GameState = {
   players: Player[];
   messages: Message[];
   pagination: { page: number; pageSize: number; totalPages: number; totalCount: number };
+
+  // ✅ CASTING-only helper
+  dropEvents?: DropEventsMap;
 };
 
 function fmtHMS(totalSeconds: number) {
@@ -82,7 +90,6 @@ export default function GamePage({ params }: { params: { id: string } }) {
     if (!res.ok) throw new Error(json?.error ?? "Failed to load game");
     setData(json);
 
-    // keep your existing fastings selection cleanup behavior
     if (json.game.gameType === "FASTING") {
       if (json.game.state !== "ROUND_NOMINATE") setNomSelected([]);
       if (json.game.state !== "ROUND_VOTE") setEvictSelected(null);
@@ -96,7 +103,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     load().catch((e) => setError(e.message));
-    const poll = setInterval(() => load().catch(() => {}), 12000); // slower for stability
+    const poll = setInterval(() => load().catch(() => {}), 12000);
     return () => clearInterval(poll);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameId, page]);
@@ -168,8 +175,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
   const myNomLockedIn = data.myNomLocked === true;
   const myVoteLockedIn = data.voteInfo?.myVoteTargetUserId ?? null;
 
-  const meStats =
-    data.meUserId ? data.players.find((p) => p.userId === data.meUserId) ?? null : null;
+  const meStats = data.meUserId ? data.players.find((p) => p.userId === data.meUserId) ?? null : null;
 
   return (
     <div style={{ padding: 12 }}>
@@ -197,7 +203,6 @@ export default function GamePage({ params }: { params: { id: string } }) {
         </div>
       </div>
 
-      {/* ✅ CASTING has its own top box; FASTING uses existing PlayerStrip unchanged */}
       {isCasting ? (
         <CastingPlayerStrip
           players={data.players}
@@ -222,19 +227,35 @@ export default function GamePage({ params }: { params: { id: string } }) {
         <div>
           <Tabs tab={tab} setTab={setTab} publicCount={data.pagination.totalCount} />
 
-          {tab === "public" && (
-            <ChatPanel
-              meUserId={data.meUserId}
-              messages={data.messages}
-              chatText={chatText}
-              setChatText={setChatText}
-              onSend={sendChat}
-              onReact={react}
-              page={data.pagination.page}
-              totalPages={data.pagination.totalPages}
-              setPage={setPage}
-            />
-          )}
+          {tab === "public" &&
+            (isCasting ? (
+              <CastingChatPanel
+                gameId={gameId}
+                meUserId={data.meUserId}
+                messages={data.messages}
+                dropEvents={data.dropEvents ?? {}}
+                chatText={chatText}
+                setChatText={setChatText}
+                onSend={sendChat}
+                onReact={react}
+                page={data.pagination.page}
+                totalPages={data.pagination.totalPages}
+                setPage={setPage}
+                onReload={load}
+              />
+            ) : (
+              <ChatPanel
+                meUserId={data.meUserId}
+                messages={data.messages}
+                chatText={chatText}
+                setChatText={setChatText}
+                onSend={sendChat}
+                onReact={react}
+                page={data.pagination.page}
+                totalPages={data.pagination.totalPages}
+                setPage={setPage}
+              />
+            ))}
 
           {tab === "private" && (
             <PmPanel
@@ -251,7 +272,6 @@ export default function GamePage({ params }: { params: { id: string } }) {
           )}
         </div>
 
-        {/* ✅ Right sidebar remains your existing system; CASTING stats are already in the top box */}
         <Sidebar
           gameState={data.game.state}
           roundNumber={data.game.roundNumber}

@@ -74,6 +74,39 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     take: pageSize,
     include: { user: { select: { username: true } }, reactions: true },
   });
+  // ✅ CASTING drop events for messages on this page (so chat UI can render them)
+  let dropEvents: Record<
+    string,
+    { eventId: string; claimedAt: string | null; options: { slotIndex: number; kind: "APPLE" | "KEY" | "POISON" }[] }
+  > = {};
+
+  if (game.gameType === "CASTING") {
+    const dropIds = messagesRaw
+      .map((m) => {
+        const mm = /^\[CASTDROP:([a-z0-9]+)\]$/i.exec(m.body.trim());
+        return mm ? mm[1] : null;
+      })
+      .filter((x): x is string => !!x);
+
+    if (dropIds.length) {
+      const events = await prisma.castingDropEvent.findMany({
+        where: { id: { in: dropIds } },
+        select: {
+          id: true,
+          claimedAt: true,
+          options: { select: { slotIndex: true, kind: true } },
+        },
+      });
+
+      for (const ev of events) {
+        dropEvents[ev.id] = {
+          eventId: ev.id,
+          claimedAt: ev.claimedAt ? ev.claimedAt.toISOString() : null,
+          options: ev.options.map((o) => ({ slotIndex: o.slotIndex, kind: o.kind as any })),
+        };
+      }
+    }
+  }
 
   // FASTING-only nominee info (read only)
   let nomineeA: string | null = null;
@@ -113,6 +146,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   return NextResponse.json({
     ok: true,
     meUserId: meUserId ?? null,
+    dropEvents,
 
     game: {
       id: game.id,
