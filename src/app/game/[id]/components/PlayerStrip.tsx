@@ -12,7 +12,7 @@ type Player = {
   eliminatedPlace: number | null;
   isNominee: boolean;
 
-  // ✅ new stats from API
+  // still present in API, but NOT displayed on tiles
   checks: number;
   health: number;
   keys: number;
@@ -39,9 +39,8 @@ export default function PlayerStrip(props: {
 }) {
   const { players, gameType } = props;
   const isCasting = gameType === "CASTING";
-  const isFasting = gameType === "FASTING";
 
-  // 10x2 grid for castings (20 players)
+  // ✅ CASTING: 10x2 grid (20 players), tiles unchanged except no stats shown
   if (isCasting) {
     return (
       <div
@@ -97,21 +96,6 @@ export default function PlayerStrip(props: {
                   {p.username}
                 </div>
 
-                <div style={{ display: "grid", gap: 4 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, opacity: 0.85 }}>
-                    <span>✅</span>
-                    <b>{p.checks}</b>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, opacity: 0.85 }}>
-                    <span>❤️</span>
-                    <b>{p.health}</b>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, opacity: 0.85 }}>
-                    <span>🔑</span>
-                    <b>{p.keys}</b>
-                  </div>
-                </div>
-
                 <div style={{ fontSize: 10, textAlign: "center", opacity: 0.7 }}>
                   {p.status !== "ACTIVE" ? (place ? `${place}` : "OUT") : `#${idx + 1}`}
                 </div>
@@ -123,9 +107,7 @@ export default function PlayerStrip(props: {
     );
   }
 
-  // FASTING: keep your existing UI behavior by reusing whatever you had before.
-  // If you previously had custom nominate/evict icons, that logic stays in your existing file.
-  // For now, we’ll render a simple row fallback if you want:
+  // FASTING fallback (unchanged from your current file)
   return (
     <div
       style={{
