@@ -204,6 +204,8 @@ model Game {
   castingLastAppleHourKey String?
   castingLastKeyHourKey   String?
   castingDropEvents       CastingDropEvent[]
+  castingDays             CastingDayResult[]
+  castingVotes            CastingVote[]
 
   @@index([state, stateEndsAt])
 }
@@ -331,4 +333,36 @@ model GamePmMessage {
 
   @@index([gameId, createdAt])
   @@index([gameId, senderUserId, recipientUserId, createdAt])
+}
+
+model CastingDayResult {
+  id             String   @id @default(cuid())
+  gameId         String
+  dayNumber      Int
+  nomineeAUserId String
+  nomineeBUserId String
+  nomineeCUserId String
+  evictedUserId  String?
+  createdAt      DateTime @default(now())
+
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@unique([gameId, dayNumber])
+  @@index([gameId, dayNumber])
+}
+
+model CastingVote {
+  id           String   @id @default(cuid())
+  gameId       String
+  dayNumber    Int
+  voterUserId  String
+  targetUserId String
+  points       Int
+  createdAt    DateTime @default(now())
+
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@unique([gameId, dayNumber, voterUserId])
+  @@index([gameId, dayNumber])
+  @@index([gameId, dayNumber, targetUserId])
 }

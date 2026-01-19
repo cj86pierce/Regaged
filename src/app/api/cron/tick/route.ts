@@ -40,9 +40,7 @@ async function runTick() {
         } else if (g.state === "ROUND_VOTE") {
           await resolveFastingEviction(g.id);
         }
-      } catch {
-        // ignore single-game errors
-      }
+      } catch {}
     }
 
     const needPov = await prisma.game.findMany({
@@ -93,16 +91,13 @@ async function runTick() {
           where: { id: g.id },
           data: {
             roundNumber: nextDay,
+            // keep placeholder state for now
+            state: "ROUND_NOMINATE",
             stateEndsAt: new Date(now.getTime() + CASTING_DAY_MS),
-            // later: reset daily counters here (healthGainedToday, plusGivenToday, etc.)
           },
         });
 
-        // Optional: system message that a new day began (comment out if you don’t want spam)
-        // const systemUserId = await getSystemUserId();
-        // await prisma.gameMessage.create({
-        //   data: { gameId: g.id, userId: systemUserId, channel: "PUBLIC", body: `[SYSTEM] Day ${nextDay} has begun.` },
-        // });
+        // NOTE: later we will create 3 nominees here and switch to ROUND_VOTE for Castings voting.
       } finally {
         await prisma.$queryRaw`SELECT pg_advisory_unlock(hashtext(${g.id}))`;
       }
@@ -139,7 +134,6 @@ export async function GET() {
   if (process.env.CRON_DISABLED === "1") {
     return NextResponse.json({ ok: true, disabled: true });
   }
-
   const r = await runTick();
   return NextResponse.json({ ok: true, ...r });
 }
@@ -148,7 +142,6 @@ export async function POST() {
   if (process.env.CRON_DISABLED === "1") {
     return NextResponse.json({ ok: true, disabled: true });
   }
-
   const r = await runTick();
   return NextResponse.json({ ok: true, ...r });
 }
