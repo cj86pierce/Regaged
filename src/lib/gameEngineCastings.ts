@@ -18,7 +18,7 @@ export async function tryStartCastingsGame(gameId: string) {
   await prisma.game.update({
     where: { id: gameId },
     data: {
-      state: "CASTING_DAY",
+      state: "ROUND_VOTE",
       roundNumber: 1,
       startsAt: now,
       castingDayStartedAt: now,
