@@ -32,6 +32,7 @@ export async function POST(req: Request) {
       emailVerifyAttempts: true,
     },
   });
+
   if (!me?.email) return bad("No email set. Request a code first.", 400);
   if (me.emailVerifiedAt) return NextResponse.json({ ok: true, alreadyVerified: true });
 
@@ -43,7 +44,6 @@ export async function POST(req: Request) {
     return bad("Code expired. Request a new one.", 400);
   }
 
-  // Limit attempts
   if ((me.emailVerifyAttempts ?? 0) >= 8) {
     return bad("Too many attempts. Request a new code.", 429);
   }
@@ -58,6 +58,7 @@ export async function POST(req: Request) {
     return bad("Incorrect code.", 400);
   }
 
+  // ✅ ONLY HERE do we mark verified
   await prisma.user.update({
     where: { id: userId },
     data: {

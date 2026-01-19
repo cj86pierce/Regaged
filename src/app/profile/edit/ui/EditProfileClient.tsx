@@ -12,10 +12,12 @@ export default function EditProfileClient(props: {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
-  const [email, setEmail] = useState(props.email);
+  const [email, setEmail] = useState(props.email ?? "");
   const [code, setCode] = useState("");
   const [emailBusy, setEmailBusy] = useState(false);
   const [emailMsg, setEmailMsg] = useState<string | null>(null);
+
+  const verified = !!props.emailVerifiedAt; // ✅ ONLY this counts as verified
 
   async function saveBio() {
     setSaving(true);
@@ -48,7 +50,7 @@ export default function EditProfileClient(props: {
     setEmailBusy(false);
 
     if (!res.ok) return setEmailMsg(json?.error ?? "Failed to send code");
-    setEmailMsg("Verification code sent. Check your email.");
+    setEmailMsg("Code sent. Check your email (spam/promotions too).");
   }
 
   async function confirmCode() {
@@ -65,11 +67,9 @@ export default function EditProfileClient(props: {
     setEmailBusy(false);
 
     if (!res.ok) return setEmailMsg(json?.error ?? "Verification failed");
-    setEmailMsg("✅ Email verified! Refreshing…");
+    setEmailMsg("✅ Verified! Refreshing…");
     setTimeout(() => window.location.reload(), 800);
   }
-
-  const verified = !!props.emailVerifiedAt;
 
   return (
     <main style={{ padding: 12, maxWidth: 760, margin: "0 auto" }}>
@@ -117,7 +117,7 @@ export default function EditProfileClient(props: {
         </div>
       </div>
 
-      {/* EMAIL CODE VERIFICATION */}
+      {/* EMAIL VERIFICATION */}
       <div style={{ marginTop: 12, border: "1px solid rgba(0,0,0,0.12)", borderRadius: 12, background: "#fff", padding: 12 }}>
         <div style={{ fontWeight: 1000, marginBottom: 8 }}>Email Verification</div>
 

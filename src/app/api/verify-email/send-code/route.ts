@@ -2,10 +2,8 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
-import { Resend } from "resend";
 import crypto from "crypto";
-
-const resend = new Resend(process.env.RESEND_API_KEY);
+import sgMail from "@sendgrid/mail";
 
 function bad(msg: string, status = 400) {
   return NextResponse.json({ error: msg }, { status });
@@ -28,6 +26,14 @@ export async function POST(req: Request) {
   const userId = (session?.user as any)?.id as string | undefined;
   if (!userId) return bad("Unauthorized", 401);
 
+  const apiKey = process.env.SENDGRID_API_KEY;
+  const from = process.env.EMAIL_FROM;
+
+  if (!apiKey) return bad("Server missing SENDGRID_API_KEY", 500);
+  if (!from) return bad("Server missing EMAIL_FROM", 500);
+
+  sgMail.setApiKey(apiKey);
+
   const body = await req.json().catch(() => null);
   const email = (body?.email ?? "").toString().trim().toLowerCase();
 
@@ -41,7 +47,7 @@ export async function POST(req: Request) {
   });
   if (existing && existing.id !== userId) return bad("That email is already in use.", 409);
 
-  // Basic resend cooldown (60s)
+  // Cooldown (60s)
   const me = await prisma.user.findUnique({
     where: { id: userId },
     select: { emailVerifySentAt: true },
@@ -54,11 +60,12 @@ export async function POST(req: Request) {
   const code = code6();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
+  // Store code hash + expiry
   await prisma.user.update({
     where: { id: userId },
     data: {
       email,
-      emailVerifiedAt: null,
+      emailVerifiedAt: null, // ✅ sending a code never verifies
       emailVerifyCodeHash: hashCode(code),
       emailVerifyExpiresAt: expiresAt,
       emailVerifySentAt: new Date(),
@@ -66,22 +73,29 @@ export async function POST(req: Request) {
     },
   });
 
-  if (!process.env.EMAIL_FROM) return bad("Server missing EMAIL_FROM", 500);
+  // Send email (HARD FAIL if it errors)
+  try {
+    await sgMail.send({
+      to: email,
+      from,
+      subject: "Your Regaged verification code",
+      text: `Your Regaged verification code is: ${code}\n\nThis code expires in 10 minutes.`,
+      html: `
+        <div style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;">
+          <h2>Regaged Email Verification</h2>
+          <p>Your verification code is:</p>
+          <div style="font-size: 28px; font-weight: 800; letter-spacing: 4px;">${code}</div>
+          <p>This code expires in 10 minutes.</p>
+          <p>If you didn’t request this, ignore this email.</p>
+        </div>
+      `,
+    });
+  } catch (err: any) {
+    // Log full SendGrid error in Vercel logs
+    console.error("SendGrid send failed:", err?.response?.body ?? err);
 
-  await resend.emails.send({
-    from: process.env.EMAIL_FROM,
-    to: email,
-    subject: "Your Regaged verification code",
-    html: `
-      <div style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;">
-        <h2>Regaged Email Verification</h2>
-        <p>Your verification code is:</p>
-        <div style="font-size: 28px; font-weight: 800; letter-spacing: 4px;">${code}</div>
-        <p>This code expires in 10 minutes.</p>
-        <p>If you didn’t request this, ignore this email.</p>
-      </div>
-    `,
-  });
+    return bad("Email send failed (SendGrid). Try again in a minute.", 502);
+  }
 
   return NextResponse.json({ ok: true });
 }
