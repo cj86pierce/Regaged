@@ -228,22 +228,62 @@ export default function GamePage({ params }: { params: { id: string } }) {
           <Tabs tab={tab} setTab={setTab} publicCount={data.pagination.totalCount} />
 
           {tab === "public" &&
-            (isCasting ? (
-              <CastingChatPanel
-                gameId={gameId}
-                meUserId={data.meUserId}
-                messages={data.messages}
-                dropEvents={data.dropEvents ?? {}}
-                chatText={chatText}
-                setChatText={setChatText}
-                onSend={sendChat}
-                onReact={react}
-                page={data.pagination.page}
-                totalPages={data.pagination.totalPages}
-                setPage={setPage}
-                onReload={load}
-              />
-            ) : (
+  (isCasting ? (
+    <>
+      <CastingChatPanel
+        gameId={gameId}
+        meUserId={data.meUserId}
+        messages={data.messages}
+        dropEvents={data.dropEvents ?? {}}
+        // CastingChatPanel can ignore these if it wants, but keep props stable
+        chatText={chatText}
+        setChatText={setChatText}
+        onSend={sendChat}
+        onReact={react}
+        page={data.pagination.page}
+        totalPages={data.pagination.totalPages}
+        setPage={setPage}
+        onReload={load}
+      />
+
+      {/* ✅ Always show chat input for CASTING */}
+      <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
+        <input
+          value={chatText}
+          onChange={(e) => setChatText(e.target.value)}
+          placeholder="Type a message…"
+          style={{ flex: 1, padding: 10, borderRadius: 12, border: "1px solid rgba(0,0,0,0.12)" }}
+        />
+        <button
+          onClick={sendChat}
+          style={{
+            padding: "10px 12px",
+            borderRadius: 12,
+            border: "1px solid rgba(0,0,0,0.12)",
+            background: "#111",
+            color: "#fff",
+            fontWeight: 1000,
+          }}
+        >
+          Send
+        </button>
+      </div>
+    </>
+  ) : (
+    <ChatPanel
+      meUserId={data.meUserId}
+      messages={data.messages}
+      chatText={chatText}
+      setChatText={setChatText}
+      onSend={sendChat}
+      onReact={react}
+      page={data.pagination.page}
+      totalPages={data.pagination.totalPages}
+      setPage={setPage}
+    />
+  ))}
+
+             : (
               <ChatPanel
                 meUserId={data.meUserId}
                 messages={data.messages}
@@ -255,7 +295,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
                 totalPages={data.pagination.totalPages}
                 setPage={setPage}
               />
-            ))}
+            )
 
           {tab === "private" && (
             <PmPanel
