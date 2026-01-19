@@ -10,7 +10,6 @@ import type { AvatarConfig } from "@/components/Avatar";
 
 // ✅ CASTING-only components
 import CastingPlayerStrip from "./components/CastingPlayerStrip";
-import CastingsPanel from "./components/CastingsPanel";
 
 type Player = {
   userId: string;
@@ -265,35 +264,20 @@ export default function GamePage({ params }: { params: { id: string } }) {
         </div>
 
         {/* ✅ CASTING uses right-side stats panel; FASTING sidebar untouched */}
-        {isCasting ? (
-          <CastingsPanel
-            gameNumber={data.game.number}
-            dayNumber={data.game.roundNumber}
-            timeLeft={timeLeft}
-            me={
-              me
-                ? {
-                    checks: me.checks ?? 0,
-                    health: me.health ?? 100,
-                    keys: me.keys ?? 0,
-                  }
-                : null
-            }
-          />
-        ) : (
-          <Sidebar
-            gameState={data.game.state}
-            roundNumber={data.game.roundNumber}
-            nomSelected={isFasting ? nomSelected : []}
-            canConfirmNoms={isFasting && data.game.state === "ROUND_NOMINATE" && !myNomLockedIn && nomSelected.length === 2}
-            onConfirmNoms={isFasting ? confirmNoms : async () => {}}
-            myNomLockedIn={isFasting ? myNomLockedIn : true}
-            evictSelected={isFasting ? evictSelected : null}
-            canConfirmVote={isFasting && data.game.state === "ROUND_VOTE" && !myVoteLockedIn && !!evictSelected}
-            onConfirmVote={isFasting ? confirmVote : async () => {}}
-            myVoteLockedIn={isFasting ? myVoteLockedIn : null}
-            messages={data.messages}
-          />
+       {/* CASTING has stats in the top box now — keep right column free of casting stats */}
+<Sidebar
+  gameState={data.game.state}
+  roundNumber={data.game.roundNumber}
+  nomSelected={isFasting ? nomSelected : []}
+  canConfirmNoms={isFasting && data.game.state === "ROUND_NOMINATE" && !myNomLockedIn && nomSelected.length === 2}
+  onConfirmNoms={isFasting ? confirmNoms : async () => {}}
+  myNomLockedIn={isFasting ? myNomLockedIn : true}
+  evictSelected={isFasting ? evictSelected : null}
+  canConfirmVote={isFasting && data.game.state === "ROUND_VOTE" && !myVoteLockedIn && !!evictSelected}
+  onConfirmVote={isFasting ? confirmVote : async () => {}}
+  myVoteLockedIn={isFasting ? myVoteLockedIn : null}
+  messages={data.messages}
+/>
         )}
       </div>
     </div>

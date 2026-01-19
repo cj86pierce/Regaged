@@ -14,7 +14,7 @@ type Player = {
 
 export default function CastingPlayerStrip(props: {
   players: Player[];
-  me: null | { checks: number; health: number; keys: number };
+  me: null | { checks?: number; health?: number; keys?: number };
 }) {
   const { players, me } = props;
 
@@ -27,9 +27,9 @@ export default function CastingPlayerStrip(props: {
         padding: 10,
       }}
     >
-      {/* top box layout: left players, right stats bubble */}
+      {/* EXACTLY like the fasting “top box”, but with a right-side bubble */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 240px", gap: 12, alignItems: "start" }}>
-        {/* LEFT: players (10 stacked over 10) */}
+        {/* LEFT: 20 players stacked 10 over 10 */}
         <div
           style={{
             display: "grid",
@@ -75,7 +75,6 @@ export default function CastingPlayerStrip(props: {
                   {p.username}
                 </Link>
 
-                {/* keep this like fasting: simple seat/OUT line */}
                 <div style={{ marginTop: 6, fontSize: 11, textAlign: "center", opacity: 0.75 }}>
                   #{seatLabel}
                 </div>
@@ -84,7 +83,7 @@ export default function CastingPlayerStrip(props: {
           })}
         </div>
 
-        {/* RIGHT: your stats bubble */}
+        {/* RIGHT: ONLY YOUR stats */}
         <div
           style={{
             border: "1px solid rgba(0,0,0,0.10)",
@@ -100,15 +99,15 @@ export default function CastingPlayerStrip(props: {
             <div style={{ display: "grid", gap: 10, fontSize: 13 }}>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span>✅ Checks</span>
-                <b>{me.checks}</b>
+                <b>{me.checks ?? 0}</b>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span>❤️ Health</span>
-                <b>{me.health}</b>
+                <b>{me.health ?? 100}</b>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span>🔑 Keys</span>
-                <b>{me.keys}</b>
+                <b>{me.keys ?? 0}</b>
               </div>
             </div>
           ) : (
