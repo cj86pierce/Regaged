@@ -85,18 +85,12 @@ export async function POST() {
 }
 
 // ✅ CASTING: spawn drops (no voting yet)
-const casting = await prisma.game.findMany({
-  where: { gameType: "CASTING", state: "ROUND_NOMINATE" },
+// ✅ CASTING: spawn drops (no voting yet)
+const castingGames = await prisma.game.findMany({
+  where: { gameType: "CASTING", state: "ROUND_NOMINATE" }, // (temporary state name)
   select: { id: true },
   take: 25,
 });
-
-for (const g of casting) {
-  try {
-    await maybeSpawnCastingsDrops(g.id);
-  } catch {}
-}
-
 
 for (const g of castingGames) {
   try {
