@@ -91,11 +91,10 @@ export default function CastingChatPanel(props: {
           const dropId = parseDropId(m.body);
           const drop = dropId ? dropEvents[dropId] : null;
 
-          // ✅ if drop exists and is claimed -> hide it completely
-          if (dropId && drop?.claimedAt) return null;
-
-          // Drop message rendering (unclaimed)
+          // Drop message rendering (always render a box; if claimed, show placeholder)
           if (dropId) {
+            const claimed = !!drop?.claimedAt;
+
             return (
               <div
                 key={m.id}
@@ -106,35 +105,45 @@ export default function CastingChatPanel(props: {
                   background: "#fff9b8",
                 }}
               >
-                <div style={{ fontWeight: 1000, marginBottom: 8 }}>Drop</div>
-
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8 }}>
-                  {(drop?.options ?? []).map((o) => (
-                    <button
-                      key={o.slotIndex}
-                      onClick={() => claim(dropId, o.slotIndex)}
-                      disabled={!meUserId}
-                      style={{
-                        padding: "10px 0",
-                        borderRadius: 12,
-                        border: "1px solid rgba(0,0,0,0.18)",
-                        background: "#fff",
-                        cursor: "pointer",
-                        fontSize: 18,
-                      }}
-                      title={o.kind}
-                    >
-                      {iconFor(o.kind)}
-                    </button>
-                  ))}
+                <div style={{ fontWeight: 1000, marginBottom: 8 }}>
+                  Drop {claimed ? <span style={{ fontSize: 12, opacity: 0.75 }}>(claimed)</span> : null}
                 </div>
 
-                {!meUserId && <div style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}>Login to claim.</div>}
+                {claimed ? (
+                  <div style={{ fontSize: 12, opacity: 0.75 }}>
+                    This drop was claimed.
+                  </div>
+                ) : (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8 }}>
+                    {(drop?.options ?? []).map((o) => (
+                      <button
+                        key={o.slotIndex}
+                        onClick={() => claim(dropId, o.slotIndex)}
+                        disabled={!meUserId}
+                        style={{
+                          padding: "10px 0",
+                          borderRadius: 12,
+                          border: "1px solid rgba(0,0,0,0.18)",
+                          background: "#fff",
+                          cursor: "pointer",
+                          fontSize: 18,
+                        }}
+                        title={o.kind}
+                      >
+                        {iconFor(o.kind)}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {!meUserId && !claimed && (
+                  <div style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}>Login to claim.</div>
+                )}
               </div>
             );
           }
 
-          // Normal message
+          // Normal message rendering
           return (
             <div
               key={m.id}
@@ -190,6 +199,7 @@ export default function CastingChatPanel(props: {
 
       {claimErr && <div style={{ marginTop: 10, color: "crimson", fontWeight: 1000 }}>{claimErr}</div>}
 
+      {/* pager */}
       <div style={{ marginTop: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <button
           onClick={() => setPage(Math.max(1, page - 1))}
@@ -212,6 +222,7 @@ export default function CastingChatPanel(props: {
         </button>
       </div>
 
+      {/* input (ALWAYS PRESENT) */}
       <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
         <input
           value={chatText}
