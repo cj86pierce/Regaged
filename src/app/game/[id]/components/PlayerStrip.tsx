@@ -1,30 +1,45 @@
 "use client";
 
 import Link from "next/link";
-import Avatar from "@/components/Avatar";
-import type { AvatarConfig } from "@/components/Avatar";
+import Avatar, { AvatarConfig } from "@/components/Avatar";
 
 type Player = {
   userId: string;
   username: string;
   status: "ACTIVE" | "ELIMINATED";
+  lastActiveAt: string | Date;
   eliminatedPlace: number | null;
   isNominee: boolean;
   avatar: AvatarConfig;
 };
 
+function trunc(name: string, max = 10) {
+  return name.length > max ? name.slice(0, max) + "…" : name;
+}
+
+function suffix(n: number) {
+  const j = n % 10, k = n % 100;
+  if (j === 1 && k !== 11) return `${n}st`;
+  if (j === 2 && k !== 12) return `${n}nd`;
+  if (j === 3 && k !== 13) return `${n}rd`;
+  return `${n}th`;
+}
+
+function minutesSince(d: string | Date) {
+  const t = typeof d === "string" ? new Date(d).getTime() : d.getTime();
+  const mins = Math.floor((Date.now() - t) / 60000);
+  return Math.max(0, Math.min(60, mins));
+}
+
 export default function PlayerStrip(props: {
   players: Player[];
   povUserId: string | null;
   gameState: string;
-
   meUserId: string | null;
 
-  // these control whether buttons show as already locked
   myNomLockedIn: boolean;
   myVoteLockedIn: string | null;
 
-  // local selections
   nomSelected: string[];
   setNomSelected: (next: string[]) => void;
 
@@ -35,7 +50,6 @@ export default function PlayerStrip(props: {
     players,
     povUserId,
     gameState,
-    meUserId,
     myNomLockedIn,
     myVoteLockedIn,
     nomSelected,
@@ -44,144 +58,140 @@ export default function PlayerStrip(props: {
     setEvictSelected,
   } = props;
 
-  const isNomPhase = gameState === "ROUND_NOMINATE";
-  const isVotePhase = gameState === "ROUND_VOTE";
+  const isNominate = gameState === "ROUND_NOMINATE";
+  const isVote = gameState === "ROUND_VOTE";
+  const isCompleted = gameState === "COMPLETED";
 
-  function toggleNom(userId: string) {
-    if (!isNomPhase) return;
-    if (myNomLockedIn) return;
-    if (userId === povUserId) return;
-
-    setNomSelected((prev) => {
-      const has = prev.includes(userId);
-      if (has) return prev.filter((x) => x !== userId);
-      if (prev.length >= 2) return prev;
-      return [...prev, userId];
-    });
+  function toggleNomPick(userId: string) {
+    const has = nomSelected.includes(userId);
+    if (has) return setNomSelected(nomSelected.filter((x) => x !== userId));
+    if (nomSelected.length >= 2) return;
+    setNomSelected([...nomSelected, userId]);
   }
 
-  function chooseEvict(userId: string) {
-    if (!isVotePhase) return;
-    if (myVoteLockedIn) return;
+  function setEvict(userId: string) {
     setEvictSelected(userId);
   }
 
   return (
-    <div
-      style={{
-        border: "1px solid rgba(0,0,0,0.10)",
-        borderRadius: 12,
-        background: "#fff",
-        padding: 10,
-      }}
-    >
-      <div style={{ display: "flex", gap: 8, overflowX: "auto", alignItems: "start" }}>
-        {players.map((p, idx) => {
-          const out = p.status !== "ACTIVE";
-          const isPov = povUserId === p.userId;
+    <div style={{ border: "1px solid #cfd7df", borderRadius: 10, padding: "6px 8px", background: "#eef7ff", overflow: "hidden" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(15, minmax(0, 1fr))", gap: 4, alignItems: "start" }}>
+        {players.map((p) => {
+          const isPov = p.userId === povUserId;
+          const mins = minutesSince(p.lastActiveAt);
+          const place = p.eliminatedPlace;
 
-          const canNominate =
-            isNomPhase && !myNomLockedIn && !out && p.userId !== povUserId;
+          const grayscale = isCompleted ? place !== 1 : p.status === "ELIMINATED";
 
-          const canEvict =
-            isVotePhase && !myVoteLockedIn && !out && p.isNominee;
+          const canNominateThisPlayer =
+            isNominate && !myNomLockedIn && p.status === "ACTIVE" && !isPov;
 
-          const selectedNom = nomSelected.includes(p.userId);
-          const selectedEvict = evictSelected === p.userId;
+          const canEvictThisPlayer =
+            isVote && !myVoteLockedIn && p.status === "ACTIVE" && p.isNominee;
+
+          const nomOn = nomSelected.includes(p.userId);
+          const evictOn = evictSelected === p.userId;
+
+          let slot: React.ReactNode = null;
+          if (place) {
+            slot = <span style={{ fontWeight: 1000, fontSize: 11 }}>{suffix(place)}</span>;
+          } else if (isPov) {
+            slot = (
+              <span
+                style={{
+                  display: "inline-block",
+                  padding: "2px 6px",
+                  borderRadius: 999,
+                  background: "#ffeb3b",
+                  border: "2px solid #ffffff",
+                  fontWeight: 1000,
+                  fontSize: 10,
+                  lineHeight: "12px",
+                }}
+              >
+                POV
+              </span>
+            );
+          } else if (canNominateThisPlayer) {
+            slot = (
+              <button
+                onClick={() => toggleNomPick(p.userId)}
+                style={{
+                  height: 18,
+                  width: "100%",
+                  borderRadius: 6,
+                  border: "1px solid rgba(0,0,0,0.25)",
+                  background: nomOn ? "#111" : "#fff",
+                  color: nomOn ? "#fff" : "#111",
+                  fontWeight: 1000,
+                  fontSize: 10,
+                  cursor: "pointer",
+                }}
+              >
+                Nominate
+              </button>
+            );
+          } else if (canEvictThisPlayer) {
+            slot = (
+              <button
+                onClick={() => setEvict(p.userId)}
+                style={{
+                  height: 18,
+                  width: "100%",
+                  borderRadius: 6,
+                  border: "1px solid rgba(0,0,0,0.25)",
+                  background: evictOn ? "#111" : "#fff",
+                  color: evictOn ? "#fff" : "#111",
+                  fontWeight: 1000,
+                  fontSize: 10,
+                  cursor: "pointer",
+                }}
+              >
+                Evict
+              </button>
+            );
+          } else if (isVote && myVoteLockedIn) {
+            slot = <span style={{ fontWeight: 1000, fontSize: 11 }}>{p.isNominee ? "❓" : "✅"}</span>;
+          } else if (isNominate && myNomLockedIn) {
+            slot = <span style={{ fontWeight: 1000, fontSize: 11 }}>✅</span>;
+          } else {
+            slot = <span style={{ fontSize: 10, opacity: 0.35 }}>•</span>;
+          }
 
           return (
-            <div
-              key={p.userId}
-              style={{
-                minWidth: 120,
-                border: "1px solid rgba(0,0,0,0.10)",
-                borderRadius: 10,
-                padding: 8,
-                background: out ? "rgba(0,0,0,0.03)" : "#fff",
-              }}
-            >
-              <div style={{ display: "grid", placeItems: "center" }}>
-                <Avatar config={p.avatar} width={64} grayscale={out} />
-              </div>
+            <div key={p.userId} style={{ minWidth: 0 }}>
+              {/* ✅ avatar clickable */}
+              <Link href={`/u/${encodeURIComponent(p.username)}`} style={{ display: "grid", placeItems: "center", textDecoration: "none" }}>
+                <Avatar config={p.avatar} width={64} grayscale={grayscale} />
+              </Link>
 
+              {/* ✅ name is black */}
               <Link
-                href={`/u/${encodeURIComponent(p.username.toLowerCase())}`}
+                href={`/u/${encodeURIComponent(p.username)}`}
                 style={{
                   display: "block",
-                  marginTop: 6,
+                  marginTop: 4,
+                  fontSize: 10,
                   fontWeight: 1000,
-                  fontSize: 12,
+                  color: "#111",
+                  textDecoration: "none",
                   textAlign: "center",
                   whiteSpace: "nowrap",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
-                  textDecoration: "none",
-                  color: "#111",
                 }}
                 title={p.username}
               >
-                {p.username}
+                {trunc(p.username, 10)}
               </Link>
 
-              {/* status row */}
-              <div style={{ marginTop: 6, display: "flex", justifyContent: "space-between", fontSize: 11, opacity: 0.85 }}>
-                <span>{out ? "OUT" : `#${idx + 1}`}</span>
-                <span>
-                  {isPov ? "⭐" : p.isNominee ? "❓" : "✅"}
-                </span>
+              <div style={{ fontSize: 10, opacity: 0.85, textAlign: "center", marginTop: 2 }}>
+                {mins >= 60 ? "offline" : `${mins}m`}
               </div>
 
-              {/* nominate button (FASTING only) */}
-              {canNominate && (
-                <button
-                  onClick={() => toggleNom(p.userId)}
-                  style={{
-                    marginTop: 6,
-                    width: "100%",
-                    padding: "6px 8px",
-                    borderRadius: 10,
-                    border: "1px solid rgba(0,0,0,0.18)",
-                    background: selectedNom ? "#111" : "#fff",
-                    color: selectedNom ? "#fff" : "#111",
-                    fontWeight: 1000,
-                    cursor: "pointer",
-                  }}
-                >
-                  Nominate
-                </button>
-              )}
-
-              {/* evict button (FASTING only) */}
-              {canEvict && (
-                <button
-                  onClick={() => chooseEvict(p.userId)}
-                  style={{
-                    marginTop: 6,
-                    width: "100%",
-                    padding: "6px 8px",
-                    borderRadius: 10,
-                    border: "1px solid rgba(0,0,0,0.18)",
-                    background: selectedEvict ? "#111" : "#fff",
-                    color: selectedEvict ? "#fff" : "#111",
-                    fontWeight: 1000,
-                    cursor: "pointer",
-                  }}
-                >
-                  Evict
-                </button>
-              )}
-
-              {/* locked indicators */}
-              {isNomPhase && myNomLockedIn && (
-                <div style={{ marginTop: 6, fontSize: 11, textAlign: "center", opacity: 0.75 }}>
-                  Nom locked in
-                </div>
-              )}
-              {isVotePhase && myVoteLockedIn && (
-                <div style={{ marginTop: 6, fontSize: 11, textAlign: "center", opacity: 0.75 }}>
-                  Vote locked in
-                </div>
-              )}
+              <div style={{ marginTop: 3, height: 18, display: "grid", placeItems: "center" }}>
+                {slot}
+              </div>
             </div>
           );
         })}
