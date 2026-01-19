@@ -10,12 +10,22 @@ type Player = {
   status: "ACTIVE" | "ELIMINATED";
   eliminatedPlace: number | null;
 
-  // ✅ allow undefined to avoid TS mismatch; default to 0
-  checks?: number;
+  // from API
+  lastActiveAt: string;
   isNominee: boolean;
 
   avatar: AvatarConfig;
 };
+
+function presenceLabel(lastActiveAtIso: string) {
+  const ms = Date.now() - new Date(lastActiveAtIso).getTime();
+  const mins = Math.floor(ms / 60000);
+
+  if (!Number.isFinite(mins)) return { text: "offline", tone: "offline" as const };
+  if (mins <= 2) return { text: "online", tone: "online" as const };
+  if (mins <= 60) return { text: `${mins}m`, tone: "away" as const };
+  return { text: "offline", tone: "offline" as const };
+}
 
 export default function CastingPlayerStrip(props: {
   players: Player[];
@@ -32,7 +42,9 @@ export default function CastingPlayerStrip(props: {
         padding: 10,
       }}
     >
+      {/* identical to fasting top box feel: players left, your stats bubble right */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 240px", gap: 12, alignItems: "start" }}>
+        {/* LEFT: players 10 over 10 */}
         <div
           style={{
             display: "grid",
@@ -43,18 +55,19 @@ export default function CastingPlayerStrip(props: {
         >
           {players.map((p) => {
             const out = p.status !== "ACTIVE";
-            const checks = p.checks ?? 0;
-            const bottomValue = p.isNominee ? "?" : `${checks}`;
+            const icon = p.isNominee ? "❓" : "✅";
+            const presence = presenceLabel(p.lastActiveAt);
+
+            const presenceColor =
+              presence.tone === "online" ? "#198754" : presence.tone === "away" ? "#b58900" : "#6c757d";
 
             return (
               <div
                 key={p.userId}
                 style={{
-                  border: "1px solid rgba(0,0,0,0.10)",
-                  borderRadius: 10,
                   padding: 8,
-                  background: out ? "rgba(0,0,0,0.06)" : "#fff",
-                  opacity: out ? 0.55 : 1,
+                  background: "transparent", // ✅ no tile box
+                  opacity: out ? 0.45 : 1,
                 }}
               >
                 <div style={{ display: "grid", placeItems: "center" }}>
@@ -80,14 +93,21 @@ export default function CastingPlayerStrip(props: {
                   {p.username}
                 </Link>
 
-                <div style={{ marginTop: 6, fontSize: 11, textAlign: "center", opacity: 0.85 }}>
-                  ✅ {bottomValue}
+                {/* ✅ presence line */}
+                <div style={{ marginTop: 4, fontSize: 11, textAlign: "center", color: presenceColor, fontWeight: 900 }}>
+                  {presence.text}
+                </div>
+
+                {/* ✅ status: checkmark if in, ? if nominated */}
+                <div style={{ marginTop: 6, fontSize: 13, textAlign: "center" }}>
+                  {icon}
                 </div>
               </div>
             );
           })}
         </div>
 
+        {/* RIGHT: your stats bubble */}
         <div
           style={{
             border: "1px solid rgba(0,0,0,0.10)",

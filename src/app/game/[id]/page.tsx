@@ -1,15 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import PlayerStrip from "./components/PlayerStrip";
+import PlayerStrip from "./components/PlayerStrip"; // FASTING (do not touch)
+import CastingPlayerStrip from "./components/CastingPlayerStrip"; // CASTING only
 import ChatPanel from "./components/ChatPanel";
 import Sidebar from "./components/Sidebar";
 import Tabs from "./components/Tabs";
 import PmPanel from "./components/PmPanel";
 import type { AvatarConfig } from "@/components/Avatar";
-
-// ✅ CASTING-only components
-import CastingPlayerStrip from "./components/CastingPlayerStrip";
 
 type Player = {
   userId: string;
@@ -18,12 +16,13 @@ type Player = {
   lastActiveAt: string;
   eliminatedPlace: number | null;
   isNominee: boolean;
-  avatar: AvatarConfig;
 
-  // ✅ CASTING stats (harmless for FASTING; they’ll just be 0/100/0 if returned)
-  checks?: number;
-  health?: number;
-  keys?: number;
+  // from API (needed for your stats bubble)
+  checks: number;
+  health: number;
+  keys: number;
+
+  avatar: AvatarConfig;
 };
 
 type Message = {
@@ -42,21 +41,21 @@ type GameState = {
   ok: boolean;
   meUserId: string | null;
   myNomLocked: boolean | null;
-  game: {
-    id: string;
-    number: number;
-    gameType: "FASTING" | "CASTING" | string;
-    state: string;
-    roundNumber: number;
-    povUserId: string | null;
-    stateEndsAt: string | null;
-  };
+  game: { id: string; number: number; gameType: string; state: string; roundNumber: number; povUserId: string | null; stateEndsAt: string | null };
   lobby: { current: number; needed: number } | null;
   voteInfo: { myVoteTargetUserId: string | null } | null;
   players: Player[];
   messages: Message[];
   pagination: { page: number; pageSize: number; totalPages: number; totalCount: number };
 };
+
+function fmtHMS(totalSeconds: number) {
+  const s = Math.max(0, Math.floor(totalSeconds));
+  const hh = String(Math.floor(s / 3600)).padStart(2, "0");
+  const mm = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
+  const ss = String(s % 60).padStart(2, "0");
+  return `${hh}:${mm}:${ss}`;
+}
 
 export default function GamePage({ params }: { params: { id: string } }) {
   const gameId = params.id;
@@ -83,16 +82,21 @@ export default function GamePage({ params }: { params: { id: string } }) {
     if (!res.ok) throw new Error(json?.error ?? "Failed to load game");
     setData(json);
 
-    // clear fasting-only selections when not in those states
-    if (json.game.state !== "ROUND_NOMINATE") setNomSelected([]);
-    if (json.game.state !== "ROUND_VOTE") setEvictSelected(null);
-    if (json.myNomLocked) setNomSelected([]);
-    if (json.voteInfo?.myVoteTargetUserId) setEvictSelected(null);
+    // keep your existing fastings selection cleanup behavior
+    if (json.game.gameType === "FASTING") {
+      if (json.game.state !== "ROUND_NOMINATE") setNomSelected([]);
+      if (json.game.state !== "ROUND_VOTE") setEvictSelected(null);
+      if (json.myNomLocked) setNomSelected([]);
+      if (json.voteInfo?.myVoteTargetUserId) setEvictSelected(null);
+    } else {
+      setNomSelected([]);
+      setEvictSelected(null);
+    }
   }
 
   useEffect(() => {
     load().catch((e) => setError(e.message));
-    const poll = setInterval(() => load().catch(() => {}), 9000);
+    const poll = setInterval(() => load().catch(() => {}), 12000); // slower for stability
     return () => clearInterval(poll);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameId, page]);
@@ -158,17 +162,14 @@ export default function GamePage({ params }: { params: { id: string } }) {
 
   if (!data) return <p style={{ padding: 16 }}>Loading game…</p>;
 
-  const isFasting = data.game.gameType === "FASTING";
   const isCasting = data.game.gameType === "CASTING";
+  const maxPlayers = isCasting ? 20 : 15;
 
   const myNomLockedIn = data.myNomLocked === true;
   const myVoteLockedIn = data.voteInfo?.myVoteTargetUserId ?? null;
 
-  // Castings player cap
-  const maxPlayers = isCasting ? 20 : 15;
-
-  // ✅ CASTING: compute only YOUR stats for the right panel
-  const me = isCasting && data.meUserId ? data.players.find((p) => p.userId === data.meUserId) ?? null : null;
+  const meStats =
+    data.meUserId ? data.players.find((p) => p.userId === data.meUserId) ?? null : null;
 
   return (
     <div style={{ padding: 12 }}>
@@ -188,51 +189,32 @@ export default function GamePage({ params }: { params: { id: string } }) {
               {timeLeft !== null && (
                 <>
                   {" "}
-                  · Ends in <b>{timeLeft}s</b>
+                  · Ends in <b>{fmtHMS(timeLeft)}</b>
                 </>
               )}
             </>
           )}
         </div>
-
-        {isCasting && (
-          <div style={{ marginTop: 6, fontSize: 12, opacity: 0.8 }}>
-            Castings mode: 12-hour days · keys win (tiebreak: checks → health)
-          </div>
-        )}
       </div>
 
-      {/* ✅ CASTING uses its own strip, FASTING stays untouched */}
-     {data.game.gameType === "CASTING" ? (
-  <CastingPlayerStrip
-    players={data.players}
-    me={
-  data.meUserId
-    ? (() => {
-        const me = data.players.find((p) => p.userId === data.meUserId);
-        return me
-          ? {
-              checks: me.checks ?? 0,
-              health: me.health ?? 100,
-              keys: me.keys ?? 0,
-            }
-          : null;
-      })()
-    : null
-}
-  />
-) : (
+      {/* ✅ CASTING has its own top box; FASTING uses existing PlayerStrip unchanged */}
+      {isCasting ? (
+        <CastingPlayerStrip
+          players={data.players}
+          me={meStats ? { checks: meStats.checks, health: meStats.health, keys: meStats.keys } : null}
+        />
+      ) : (
         <PlayerStrip
           players={data.players}
-          povUserId={isFasting ? data.game.povUserId : null}
+          povUserId={data.game.povUserId}
           gameState={data.game.state}
           meUserId={data.meUserId}
-          myNomLockedIn={isFasting ? myNomLockedIn : true}
-          myVoteLockedIn={isFasting ? myVoteLockedIn : null}
-          nomSelected={isFasting ? nomSelected : []}
-          setNomSelected={isFasting ? setNomSelected : () => {}}
-          evictSelected={isFasting ? evictSelected : null}
-          setEvictSelected={isFasting ? setEvictSelected : () => {}}
+          myNomLockedIn={myNomLockedIn}
+          myVoteLockedIn={myVoteLockedIn}
+          nomSelected={nomSelected}
+          setNomSelected={setNomSelected}
+          evictSelected={evictSelected}
+          setEvictSelected={setEvictSelected}
         />
       )}
 
@@ -269,21 +251,20 @@ export default function GamePage({ params }: { params: { id: string } }) {
           )}
         </div>
 
-        {/* ✅ CASTING uses right-side stats panel; FASTING sidebar untouched */}
-       {/* CASTING has stats in the top box now — keep right column free of casting stats */}
-<Sidebar
-  gameState={data.game.state}
-  roundNumber={data.game.roundNumber}
-  nomSelected={isFasting ? nomSelected : []}
-  canConfirmNoms={isFasting && data.game.state === "ROUND_NOMINATE" && !myNomLockedIn && nomSelected.length === 2}
-  onConfirmNoms={isFasting ? confirmNoms : async () => {}}
-  myNomLockedIn={isFasting ? myNomLockedIn : true}
-  evictSelected={isFasting ? evictSelected : null}
-  canConfirmVote={isFasting && data.game.state === "ROUND_VOTE" && !myVoteLockedIn && !!evictSelected}
-  onConfirmVote={isFasting ? confirmVote : async () => {}}
-  myVoteLockedIn={isFasting ? myVoteLockedIn : null}
-  messages={data.messages}
-/>
+        {/* ✅ Right sidebar remains your existing system; CASTING stats are already in the top box */}
+        <Sidebar
+          gameState={data.game.state}
+          roundNumber={data.game.roundNumber}
+          nomSelected={nomSelected}
+          canConfirmNoms={!isCasting && data.game.state === "ROUND_NOMINATE" && !myNomLockedIn && nomSelected.length === 2}
+          onConfirmNoms={confirmNoms}
+          myNomLockedIn={myNomLockedIn}
+          evictSelected={evictSelected}
+          canConfirmVote={!isCasting && data.game.state === "ROUND_VOTE" && !myVoteLockedIn && !!evictSelected}
+          onConfirmVote={confirmVote}
+          myVoteLockedIn={myVoteLockedIn}
+          messages={data.messages}
+        />
       </div>
     </div>
   );
