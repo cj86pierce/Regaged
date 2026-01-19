@@ -98,13 +98,12 @@ model User {
   lastSeenAt DateTime @default(now())
 
   // ✅ Email verification (beta)
-email                 String?   @unique
-emailVerifiedAt       DateTime?
-emailVerifyCodeHash   String?
-emailVerifyExpiresAt  DateTime?
-emailVerifySentAt     DateTime?
-emailVerifyAttempts   Int       @default(0)
-
+  email                String?   @unique
+  emailVerifiedAt      DateTime?
+  emailVerifyCodeHash  String?
+  emailVerifyExpiresAt DateTime?
+  emailVerifySentAt    DateTime?
+  emailVerifyAttempts  Int       @default(0)
 
   // (Optional) phone fields can stay if you want, but not required
   phoneE164       String?   @unique
@@ -237,14 +236,14 @@ model GamePlayer {
   health Int @default(100)
   keys   Int @default(0)
 
+  castingLastDecayAt       DateTime?
+  castingHealthGainedToday Int       @default(0)
+  castingHealthTickedAt    DateTime?
+
   @@unique([gameId, userId])
   @@unique([gameId, seatIndex])
   @@index([gameId, status])
   @@index([gameId, seatIndex])
-  
-  lastActiveAt DateTime @default(now())
-  castingLastDecayAt DateTime?
-  castingHealthGainedToday Int @default(0)
 }
 
 model Nomination {
