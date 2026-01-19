@@ -7,6 +7,7 @@ import Sidebar from "./components/Sidebar";
 import Tabs from "./components/Tabs";
 import PmPanel from "./components/PmPanel";
 import type { AvatarConfig } from "@/components/Avatar";
+import CastingsPanel from "./components/CastingsPanel";
 
 type Player = {
   userId: string;
@@ -194,18 +195,18 @@ export default function GamePage({ params }: { params: { id: string } }) {
 
       {/* Player strip always shows players, but only fasting uses nominate/evict UI */}
       <PlayerStrip
-        players={data.players}
-        povUserId={isFasting ? data.game.povUserId : null}
-        gameState={data.game.state}
-        meUserId={data.meUserId}
-        myNomLockedIn={isFasting ? myNomLockedIn : true}
-        myVoteLockedIn={isFasting ? myVoteLockedIn : null}
-        nomSelected={isFasting ? nomSelected : []}
-        setNomSelected={isFasting ? setNomSelected : () => {}}
-        evictSelected={isFasting ? evictSelected : null}
-        setEvictSelected={isFasting ? setEvictSelected : () => {}}
-      />
-
+  players={data.players as any}
+  povUserId={data.game.gameType === "FASTING" ? data.game.povUserId : null}
+  gameState={data.game.state}
+  gameType={data.game.gameType}
+  meUserId={data.meUserId}
+  myNomLockedIn={myNomLockedIn}
+  myVoteLockedIn={myVoteLockedIn}
+  nomSelected={nomSelected}
+  setNomSelected={setNomSelected}
+  evictSelected={evictSelected}
+  setEvictSelected={setEvictSelected}
+/>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 14, marginTop: 10 }}>
         <div>
           <Tabs tab={tab} setTab={setTab} publicCount={data.pagination.totalCount} />
@@ -240,19 +241,34 @@ export default function GamePage({ params }: { params: { id: string } }) {
         </div>
 
         {/* Sidebar confirm buttons ONLY make sense for fasting right now */}
-        <Sidebar
-          gameState={data.game.state}
-          roundNumber={data.game.roundNumber}
-          nomSelected={isFasting ? nomSelected : []}
-          canConfirmNoms={isFasting && data.game.state === "ROUND_NOMINATE" && !myNomLockedIn && nomSelected.length === 2}
-          onConfirmNoms={isFasting ? confirmNoms : async () => {}}
-          myNomLockedIn={isFasting ? myNomLockedIn : true}
-          evictSelected={isFasting ? evictSelected : null}
-          canConfirmVote={isFasting && data.game.state === "ROUND_VOTE" && !myVoteLockedIn && !!evictSelected}
-          onConfirmVote={isFasting ? confirmVote : async () => {}}
-          myVoteLockedIn={isFasting ? myVoteLockedIn : null}
-          messages={data.messages}
-        />
+        {data.game.gameType === "CASTING" ? (
+  <CastingsPanel
+    meUserId={data.meUserId}
+    gameNumber={data.game.number}
+    dayNumber={data.game.roundNumber}
+    timeLeft={timeLeft}
+    players={data.players.map((p: any) => ({
+      userId: p.userId,
+      username: p.username,
+      checks: p.checks,
+      health: p.health,
+      keys: p.keys,
+    }))}
+  />
+) : (
+  <Sidebar
+    gameState={data.game.state}
+    roundNumber={data.game.roundNumber}
+    nomSelected={nomSelected}
+    canConfirmNoms={data.game.state === "ROUND_NOMINATE" && !myNomLockedIn && nomSelected.length === 2}
+    onConfirmNoms={confirmNoms}
+    myNomLockedIn={myNomLockedIn}
+    evictSelected={evictSelected}
+    canConfirmVote={data.game.state === "ROUND_VOTE" && !myVoteLockedIn && !!evictSelected}
+    onConfirmVote={confirmVote}
+    myVoteLockedIn={myVoteLockedIn}
+    messages={data.messages}
+  />
       </div>
     </div>
   );
