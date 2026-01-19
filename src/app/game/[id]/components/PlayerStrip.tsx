@@ -8,15 +8,8 @@ type Player = {
   userId: string;
   username: string;
   status: "ACTIVE" | "ELIMINATED";
-  lastActiveAt: string;
   eliminatedPlace: number | null;
   isNominee: boolean;
-
-  // still present in API, but NOT displayed on tiles
-  checks: number;
-  health: number;
-  keys: number;
-
   avatar: AvatarConfig;
 };
 
@@ -24,90 +17,55 @@ export default function PlayerStrip(props: {
   players: Player[];
   povUserId: string | null;
   gameState: string;
-  gameType: string;
 
-  // FASTING-only props (still passed, ignored for CASTING)
   meUserId: string | null;
+
+  // these control whether buttons show as already locked
   myNomLockedIn: boolean;
   myVoteLockedIn: string | null;
 
+  // local selections
   nomSelected: string[];
   setNomSelected: (next: string[]) => void;
 
   evictSelected: string | null;
   setEvictSelected: (id: string | null) => void;
 }) {
-  const { players, gameType } = props;
-  const isCasting = gameType === "CASTING";
+  const {
+    players,
+    povUserId,
+    gameState,
+    meUserId,
+    myNomLockedIn,
+    myVoteLockedIn,
+    nomSelected,
+    setNomSelected,
+    evictSelected,
+    setEvictSelected,
+  } = props;
 
-  // ✅ CASTING: 10x2 grid (20 players), tiles unchanged except no stats shown
-  if (isCasting) {
-    return (
-      <div
-        style={{
-          border: "1px solid rgba(0,0,0,0.10)",
-          borderRadius: 12,
-          background: "#fff",
-          padding: 10,
-        }}
-      >
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(10, minmax(0, 1fr))",
-            gap: 8,
-            alignItems: "start",
-          }}
-        >
-          {players.map((p, idx) => {
-            const grayscale = p.status !== "ACTIVE";
-            const place = p.eliminatedPlace ?? (p.status === "ACTIVE" ? null : undefined);
+  const isNomPhase = gameState === "ROUND_NOMINATE";
+  const isVotePhase = gameState === "ROUND_VOTE";
 
-            return (
-              <Link
-                key={p.userId}
-                href={`/u/${encodeURIComponent(p.username.toLowerCase())}`}
-                style={{
-                  textDecoration: "none",
-                  color: "#111",
-                  borderRadius: 10,
-                  border: "1px solid rgba(0,0,0,0.10)",
-                  padding: 6,
-                  display: "grid",
-                  gap: 6,
-                  background: "#fff",
-                }}
-              >
-                <div style={{ display: "grid", placeItems: "center" }}>
-                  <Avatar config={p.avatar} width={64} grayscale={grayscale} />
-                </div>
+  function toggleNom(userId: string) {
+    if (!isNomPhase) return;
+    if (myNomLockedIn) return;
+    if (userId === povUserId) return;
 
-                <div
-                  title={p.username}
-                  style={{
-                    fontWeight: 1000,
-                    fontSize: 11,
-                    textAlign: "center",
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  {p.username}
-                </div>
-
-                <div style={{ fontSize: 10, textAlign: "center", opacity: 0.7 }}>
-                  {p.status !== "ACTIVE" ? (place ? `${place}` : "OUT") : `#${idx + 1}`}
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      </div>
-    );
+    setNomSelected((prev) => {
+      const has = prev.includes(userId);
+      if (has) return prev.filter((x) => x !== userId);
+      if (prev.length >= 2) return prev;
+      return [...prev, userId];
+    });
   }
 
-  // FASTING fallback (unchanged from your current file)
+  function chooseEvict(userId: string) {
+    if (!isVotePhase) return;
+    if (myVoteLockedIn) return;
+    setEvictSelected(userId);
+  }
+
   return (
     <div
       style={{
@@ -115,40 +73,119 @@ export default function PlayerStrip(props: {
         borderRadius: 12,
         background: "#fff",
         padding: 10,
-        display: "flex",
-        gap: 8,
-        overflowX: "auto",
       }}
     >
-      {players.map((p) => (
-        <div
-          key={p.userId}
-          style={{
-            minWidth: 120,
-            border: "1px solid rgba(0,0,0,0.10)",
-            borderRadius: 10,
-            padding: 8,
-          }}
-        >
-          <div style={{ display: "grid", placeItems: "center" }}>
-            <Avatar config={p.avatar} width={64} grayscale={p.status !== "ACTIVE"} />
-          </div>
-          <div
-            style={{
-              marginTop: 6,
-              fontWeight: 1000,
-              fontSize: 12,
-              textAlign: "center",
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}
-            title={p.username}
-          >
-            {p.username}
-          </div>
-        </div>
-      ))}
+      <div style={{ display: "flex", gap: 8, overflowX: "auto", alignItems: "start" }}>
+        {players.map((p, idx) => {
+          const out = p.status !== "ACTIVE";
+          const isPov = povUserId === p.userId;
+
+          const canNominate =
+            isNomPhase && !myNomLockedIn && !out && p.userId !== povUserId;
+
+          const canEvict =
+            isVotePhase && !myVoteLockedIn && !out && p.isNominee;
+
+          const selectedNom = nomSelected.includes(p.userId);
+          const selectedEvict = evictSelected === p.userId;
+
+          return (
+            <div
+              key={p.userId}
+              style={{
+                minWidth: 120,
+                border: "1px solid rgba(0,0,0,0.10)",
+                borderRadius: 10,
+                padding: 8,
+                background: out ? "rgba(0,0,0,0.03)" : "#fff",
+              }}
+            >
+              <div style={{ display: "grid", placeItems: "center" }}>
+                <Avatar config={p.avatar} width={64} grayscale={out} />
+              </div>
+
+              <Link
+                href={`/u/${encodeURIComponent(p.username.toLowerCase())}`}
+                style={{
+                  display: "block",
+                  marginTop: 6,
+                  fontWeight: 1000,
+                  fontSize: 12,
+                  textAlign: "center",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  textDecoration: "none",
+                  color: "#111",
+                }}
+                title={p.username}
+              >
+                {p.username}
+              </Link>
+
+              {/* status row */}
+              <div style={{ marginTop: 6, display: "flex", justifyContent: "space-between", fontSize: 11, opacity: 0.85 }}>
+                <span>{out ? "OUT" : `#${idx + 1}`}</span>
+                <span>
+                  {isPov ? "⭐" : p.isNominee ? "❓" : "✅"}
+                </span>
+              </div>
+
+              {/* nominate button (FASTING only) */}
+              {canNominate && (
+                <button
+                  onClick={() => toggleNom(p.userId)}
+                  style={{
+                    marginTop: 6,
+                    width: "100%",
+                    padding: "6px 8px",
+                    borderRadius: 10,
+                    border: "1px solid rgba(0,0,0,0.18)",
+                    background: selectedNom ? "#111" : "#fff",
+                    color: selectedNom ? "#fff" : "#111",
+                    fontWeight: 1000,
+                    cursor: "pointer",
+                  }}
+                >
+                  Nominate
+                </button>
+              )}
+
+              {/* evict button (FASTING only) */}
+              {canEvict && (
+                <button
+                  onClick={() => chooseEvict(p.userId)}
+                  style={{
+                    marginTop: 6,
+                    width: "100%",
+                    padding: "6px 8px",
+                    borderRadius: 10,
+                    border: "1px solid rgba(0,0,0,0.18)",
+                    background: selectedEvict ? "#111" : "#fff",
+                    color: selectedEvict ? "#fff" : "#111",
+                    fontWeight: 1000,
+                    cursor: "pointer",
+                  }}
+                >
+                  Evict
+                </button>
+              )}
+
+              {/* locked indicators */}
+              {isNomPhase && myNomLockedIn && (
+                <div style={{ marginTop: 6, fontSize: 11, textAlign: "center", opacity: 0.75 }}>
+                  Nom locked in
+                </div>
+              )}
+              {isVotePhase && myVoteLockedIn && (
+                <div style={{ marginTop: 6, fontSize: 11, textAlign: "center", opacity: 0.75 }}>
+                  Vote locked in
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
