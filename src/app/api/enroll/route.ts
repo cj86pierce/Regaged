@@ -15,15 +15,21 @@ export async function POST(req: Request) {
   const userId = (session?.user as any)?.id as string | undefined;
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // ✅ require email verification to enroll
+  // ✅ fetch verification status (used unless bypass flag is set)
+  const me = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { emailVerifiedAt: true },
+  });
+
+  // ✅ env flag to temporarily disable email gate
   const emailCheckDisabled = process.env.EMAIL_VERIFY_DISABLED === "1";
 
-if (!emailCheckDisabled && !me?.emailVerifiedAt) {
-  return NextResponse.json(
-    { error: "Email verification required", redirect: "/profile/edit" },
-    { status: 403 }
-  );
-}
+  if (!emailCheckDisabled && !me?.emailVerifiedAt) {
+    return NextResponse.json(
+      { error: "Email verification required", redirect: "/profile/edit" },
+      { status: 403 }
+    );
+  }
 
   const body = await req.json().catch(() => null);
   const gameType = (body?.gameType ?? "FASTING") as GameType;
