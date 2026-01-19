@@ -8,6 +8,10 @@ import Tabs from "./components/Tabs";
 import PmPanel from "./components/PmPanel";
 import type { AvatarConfig } from "@/components/Avatar";
 
+// ✅ CASTING-only components
+import CastingPlayerStrip from "./components/CastingPlayerStrip";
+import CastingsPanel from "./components/CastingsPanel";
+
 type Player = {
   userId: string;
   username: string;
@@ -16,6 +20,11 @@ type Player = {
   eliminatedPlace: number | null;
   isNominee: boolean;
   avatar: AvatarConfig;
+
+  // ✅ CASTING stats (harmless for FASTING; they’ll just be 0/100/0 if returned)
+  checks?: number;
+  health?: number;
+  keys?: number;
 };
 
 type Message = {
@@ -159,6 +168,9 @@ export default function GamePage({ params }: { params: { id: string } }) {
   // Castings player cap
   const maxPlayers = isCasting ? 20 : 15;
 
+  // ✅ CASTING: compute only YOUR stats for the right panel
+  const me = isCasting && data.meUserId ? data.players.find((p) => p.userId === data.meUserId) ?? null : null;
+
   return (
     <div style={{ padding: 12 }}>
       <div style={{ marginBottom: 8 }}>
@@ -184,27 +196,38 @@ export default function GamePage({ params }: { params: { id: string } }) {
           )}
         </div>
 
-        {/* ✅ Castings hint so it doesn’t feel like fasting */}
         {isCasting && (
           <div style={{ marginTop: 6, fontSize: 12, opacity: 0.8 }}>
-            Castings mode: 12-hour days · health + drops · keys win (tiebreak: checks → health)
+            Castings mode: 12-hour days · keys win (tiebreak: checks → health)
           </div>
         )}
       </div>
 
-      {/* Player strip always shows players, but only fasting uses nominate/evict UI */}
-      <PlayerStrip
-        players={data.players}
-        povUserId={isFasting ? data.game.povUserId : null}
-        gameState={data.game.state}
-        meUserId={data.meUserId}
-        myNomLockedIn={isFasting ? myNomLockedIn : true}
-        myVoteLockedIn={isFasting ? myVoteLockedIn : null}
-        nomSelected={isFasting ? nomSelected : []}
-        setNomSelected={isFasting ? setNomSelected : () => {}}
-        evictSelected={isFasting ? evictSelected : null}
-        setEvictSelected={isFasting ? setEvictSelected : () => {}}
-      />
+      {/* ✅ CASTING uses its own strip, FASTING stays untouched */}
+      {isCasting ? (
+        <CastingPlayerStrip
+          players={data.players.map((p) => ({
+            userId: p.userId,
+            username: p.username,
+            status: p.status,
+            eliminatedPlace: p.eliminatedPlace,
+            avatar: p.avatar,
+          }))}
+        />
+      ) : (
+        <PlayerStrip
+          players={data.players}
+          povUserId={isFasting ? data.game.povUserId : null}
+          gameState={data.game.state}
+          meUserId={data.meUserId}
+          myNomLockedIn={isFasting ? myNomLockedIn : true}
+          myVoteLockedIn={isFasting ? myVoteLockedIn : null}
+          nomSelected={isFasting ? nomSelected : []}
+          setNomSelected={isFasting ? setNomSelected : () => {}}
+          evictSelected={isFasting ? evictSelected : null}
+          setEvictSelected={isFasting ? setEvictSelected : () => {}}
+        />
+      )}
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 14, marginTop: 10 }}>
         <div>
@@ -239,20 +262,37 @@ export default function GamePage({ params }: { params: { id: string } }) {
           )}
         </div>
 
-        {/* Sidebar confirm buttons ONLY make sense for fasting right now */}
-        <Sidebar
-          gameState={data.game.state}
-          roundNumber={data.game.roundNumber}
-          nomSelected={isFasting ? nomSelected : []}
-          canConfirmNoms={isFasting && data.game.state === "ROUND_NOMINATE" && !myNomLockedIn && nomSelected.length === 2}
-          onConfirmNoms={isFasting ? confirmNoms : async () => {}}
-          myNomLockedIn={isFasting ? myNomLockedIn : true}
-          evictSelected={isFasting ? evictSelected : null}
-          canConfirmVote={isFasting && data.game.state === "ROUND_VOTE" && !myVoteLockedIn && !!evictSelected}
-          onConfirmVote={isFasting ? confirmVote : async () => {}}
-          myVoteLockedIn={isFasting ? myVoteLockedIn : null}
-          messages={data.messages}
-        />
+        {/* ✅ CASTING uses right-side stats panel; FASTING sidebar untouched */}
+        {isCasting ? (
+          <CastingsPanel
+            gameNumber={data.game.number}
+            dayNumber={data.game.roundNumber}
+            timeLeft={timeLeft}
+            me={
+              me
+                ? {
+                    checks: me.checks ?? 0,
+                    health: me.health ?? 100,
+                    keys: me.keys ?? 0,
+                  }
+                : null
+            }
+          />
+        ) : (
+          <Sidebar
+            gameState={data.game.state}
+            roundNumber={data.game.roundNumber}
+            nomSelected={isFasting ? nomSelected : []}
+            canConfirmNoms={isFasting && data.game.state === "ROUND_NOMINATE" && !myNomLockedIn && nomSelected.length === 2}
+            onConfirmNoms={isFasting ? confirmNoms : async () => {}}
+            myNomLockedIn={isFasting ? myNomLockedIn : true}
+            evictSelected={isFasting ? evictSelected : null}
+            canConfirmVote={isFasting && data.game.state === "ROUND_VOTE" && !myVoteLockedIn && !!evictSelected}
+            onConfirmVote={isFasting ? confirmVote : async () => {}}
+            myVoteLockedIn={isFasting ? myVoteLockedIn : null}
+            messages={data.messages}
+          />
+        )}
       </div>
     </div>
   );
