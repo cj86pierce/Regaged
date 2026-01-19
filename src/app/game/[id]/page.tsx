@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import PlayerStrip from "./components/PlayerStrip"; // FASTING (do not touch)
 import CastingPlayerStrip from "./components/CastingPlayerStrip"; // CASTING only
-import ChatPanel from "./components/ChatPanel";
-import CastingChatPanel from "./components/CastingChatPanel"; // ✅ CASTING chat
+import ChatPanel from "./components/ChatPanel"; // FASTING chat
+import CastingChatPanel from "./components/CastingChatPanel"; // CASTING chat
 import Sidebar from "./components/Sidebar";
 import Tabs from "./components/Tabs";
 import PmPanel from "./components/PmPanel";
@@ -46,14 +46,22 @@ type GameState = {
   ok: boolean;
   meUserId: string | null;
   myNomLocked: boolean | null;
-  game: { id: string; number: number; gameType: string; state: string; roundNumber: number; povUserId: string | null; stateEndsAt: string | null };
+  game: {
+    id: string;
+    number: number;
+    gameType: string;
+    state: string;
+    roundNumber: number;
+    povUserId: string | null;
+    stateEndsAt: string | null;
+  };
   lobby: { current: number; needed: number } | null;
   voteInfo: { myVoteTargetUserId: string | null } | null;
   players: Player[];
   messages: Message[];
   pagination: { page: number; pageSize: number; totalPages: number; totalCount: number };
 
-  // ✅ CASTING-only helper
+  // CASTING-only helper
   dropEvents?: DropEventsMap;
 };
 
@@ -90,6 +98,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
     if (!res.ok) throw new Error(json?.error ?? "Failed to load game");
     setData(json);
 
+    // FASTING-only selection cleanup
     if (json.game.gameType === "FASTING") {
       if (json.game.state !== "ROUND_NOMINATE") setNomSelected([]);
       if (json.game.state !== "ROUND_VOTE") setEvictSelected(null);
@@ -228,62 +237,22 @@ export default function GamePage({ params }: { params: { id: string } }) {
           <Tabs tab={tab} setTab={setTab} publicCount={data.pagination.totalCount} />
 
           {tab === "public" &&
-  (isCasting ? (
-    <>
-      <CastingChatPanel
-        gameId={gameId}
-        meUserId={data.meUserId}
-        messages={data.messages}
-        dropEvents={data.dropEvents ?? {}}
-        // CastingChatPanel can ignore these if it wants, but keep props stable
-        chatText={chatText}
-        setChatText={setChatText}
-        onSend={sendChat}
-        onReact={react}
-        page={data.pagination.page}
-        totalPages={data.pagination.totalPages}
-        setPage={setPage}
-        onReload={load}
-      />
-
-      {/* ✅ Always show chat input for CASTING */}
-      <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
-        <input
-          value={chatText}
-          onChange={(e) => setChatText(e.target.value)}
-          placeholder="Type a message…"
-          style={{ flex: 1, padding: 10, borderRadius: 12, border: "1px solid rgba(0,0,0,0.12)" }}
-        />
-        <button
-          onClick={sendChat}
-          style={{
-            padding: "10px 12px",
-            borderRadius: 12,
-            border: "1px solid rgba(0,0,0,0.12)",
-            background: "#111",
-            color: "#fff",
-            fontWeight: 1000,
-          }}
-        >
-          Send
-        </button>
-      </div>
-    </>
-  ) : (
-    <ChatPanel
-      meUserId={data.meUserId}
-      messages={data.messages}
-      chatText={chatText}
-      setChatText={setChatText}
-      onSend={sendChat}
-      onReact={react}
-      page={data.pagination.page}
-      totalPages={data.pagination.totalPages}
-      setPage={setPage}
-    />
-  ))}
-
-             : (
+            (isCasting ? (
+              <CastingChatPanel
+                gameId={gameId}
+                meUserId={data.meUserId}
+                messages={data.messages}
+                dropEvents={data.dropEvents ?? {}}
+                chatText={chatText}
+                setChatText={setChatText}
+                onSend={sendChat}
+                onReact={react}
+                page={data.pagination.page}
+                totalPages={data.pagination.totalPages}
+                setPage={setPage}
+                onReload={load}
+              />
+            ) : (
               <ChatPanel
                 meUserId={data.meUserId}
                 messages={data.messages}
@@ -295,7 +264,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
                 totalPages={data.pagination.totalPages}
                 setPage={setPage}
               />
-            )
+            ))}
 
           {tab === "private" && (
             <PmPanel

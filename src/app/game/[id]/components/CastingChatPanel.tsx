@@ -86,12 +86,35 @@ export default function CastingChatPanel(props: {
 
   return (
     <div>
+      {/* ✅ input at the TOP like FASTING */}
+      <div style={{ marginBottom: 10, display: "flex", gap: 8 }}>
+        <input
+          value={chatText}
+          onChange={(e) => setChatText(e.target.value)}
+          placeholder="Type a message…"
+          style={{ flex: 1, padding: 10, borderRadius: 12, border: "1px solid rgba(0,0,0,0.12)" }}
+        />
+        <button
+          onClick={onSend}
+          style={{
+            padding: "10px 12px",
+            borderRadius: 12,
+            border: "1px solid rgba(0,0,0,0.12)",
+            background: "#111",
+            color: "#fff",
+            fontWeight: 1000,
+          }}
+        >
+          Send
+        </button>
+      </div>
+
       <div style={{ display: "grid", gap: 8 }}>
         {messages.map((m) => {
           const dropId = parseDropId(m.body);
           const drop = dropId ? dropEvents[dropId] : null;
 
-          // Drop message rendering (always render a box; if claimed, show placeholder)
+          // Drop rendering (claimed -> show small placeholder, not disappearing)
           if (dropId) {
             const claimed = !!drop?.claimedAt;
 
@@ -110,9 +133,7 @@ export default function CastingChatPanel(props: {
                 </div>
 
                 {claimed ? (
-                  <div style={{ fontSize: 12, opacity: 0.75 }}>
-                    This drop was claimed.
-                  </div>
+                  <div style={{ fontSize: 12, opacity: 0.75 }}>This drop was claimed.</div>
                 ) : (
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8 }}>
                     {(drop?.options ?? []).map((o) => (
@@ -143,7 +164,7 @@ export default function CastingChatPanel(props: {
             );
           }
 
-          // Normal message rendering
+          // Normal message rendering (reactions stay inside message card)
           return (
             <div
               key={m.id}
@@ -171,6 +192,7 @@ export default function CastingChatPanel(props: {
                     border: "1px solid rgba(0,0,0,0.12)",
                     background: "#fff",
                     cursor: "pointer",
+                    fontWeight: 900,
                   }}
                 >
                   ✅
@@ -185,12 +207,15 @@ export default function CastingChatPanel(props: {
                     border: "1px solid rgba(0,0,0,0.12)",
                     background: "#fff",
                     cursor: "pointer",
+                    fontWeight: 900,
                   }}
                 >
                   ❌
                 </button>
 
-                <div style={{ fontSize: 12, opacity: 0.75 }}>{m.plus - m.minus}</div>
+                <div style={{ fontSize: 12, opacity: 0.75 }}>
+                  {m.plus - m.minus}
+                </div>
               </div>
             </div>
           );
@@ -219,29 +244,6 @@ export default function CastingChatPanel(props: {
           style={{ padding: "6px 10px", borderRadius: 10, border: "1px solid rgba(0,0,0,0.12)", background: "#fff" }}
         >
           Next ▶
-        </button>
-      </div>
-
-      {/* input (ALWAYS PRESENT) */}
-      <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
-        <input
-          value={chatText}
-          onChange={(e) => setChatText(e.target.value)}
-          placeholder="Type a message…"
-          style={{ flex: 1, padding: 10, borderRadius: 12, border: "1px solid rgba(0,0,0,0.12)" }}
-        />
-        <button
-          onClick={onSend}
-          style={{
-            padding: "10px 12px",
-            borderRadius: 12,
-            border: "1px solid rgba(0,0,0,0.12)",
-            background: "#111",
-            color: "#fff",
-            fontWeight: 1000,
-          }}
-        >
-          Send
         </button>
       </div>
     </div>
