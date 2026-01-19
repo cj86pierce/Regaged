@@ -81,7 +81,7 @@ export async function maybeSpawnCastingsDrops(gameId: string) {
     },
   });
 
-  if (!game || game.gameType !== "CASTING" || game.state !== "CASTING_DAY") return;
+ if (!game || game.gameType !== "CASTING" || game.state !== "ROUND_NOMINATE") return;
 
   // 1 per hour max
   if (game.castingLastAppleHourKey !== hk && Math.random() < APPLE_CHANCE_PER_HOUR) {
