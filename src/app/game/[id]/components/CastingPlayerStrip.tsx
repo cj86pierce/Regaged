@@ -12,7 +12,12 @@ type Player = {
   avatar: AvatarConfig;
 };
 
-export default function CastingPlayerStrip({ players }: { players: Player[] }) {
+export default function CastingPlayerStrip(props: {
+  players: Player[];
+  me: null | { checks: number; health: number; keys: number };
+}) {
+  const { players, me } = props;
+
   return (
     <div
       style={{
@@ -22,57 +27,98 @@ export default function CastingPlayerStrip({ players }: { players: Player[] }) {
         padding: 10,
       }}
     >
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(10, minmax(0, 1fr))",
-          gap: 8,
-          alignItems: "start",
-        }}
-      >
-        {players.map((p, idx) => {
-          const out = p.status !== "ACTIVE";
-          const seatLabel = out ? (p.eliminatedPlace ? `${p.eliminatedPlace}` : "OUT") : `${idx + 1}`;
+      {/* top box layout: left players, right stats bubble */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 240px", gap: 12, alignItems: "start" }}>
+        {/* LEFT: players (10 stacked over 10) */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(10, minmax(0, 1fr))",
+            gap: 8,
+            alignItems: "start",
+          }}
+        >
+          {players.map((p, idx) => {
+            const out = p.status !== "ACTIVE";
+            const seatLabel = out ? (p.eliminatedPlace ? `${p.eliminatedPlace}` : "OUT") : `${idx + 1}`;
 
-          return (
-            <Link
-              key={p.userId}
-              href={`/u/${encodeURIComponent(p.username.toLowerCase())}`}
-              style={{
-                textDecoration: "none",
-                color: "#111",
-                borderRadius: 10,
-                border: "1px solid rgba(0,0,0,0.10)",
-                padding: 8,
-                display: "grid",
-                gap: 6,
-                background: "#fff",
-              }}
-            >
-              <div style={{ display: "grid", placeItems: "center" }}>
-                <Avatar config={p.avatar} width={64} grayscale={out} />
-              </div>
-
+            return (
               <div
-                title={p.username}
+                key={p.userId}
                 style={{
-                  fontWeight: 1000,
-                  fontSize: 11,
-                  textAlign: "center",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
+                  border: "1px solid rgba(0,0,0,0.10)",
+                  borderRadius: 10,
+                  padding: 8,
+                  background: out ? "rgba(0,0,0,0.03)" : "#fff",
                 }}
               >
-                {p.username}
-              </div>
+                <div style={{ display: "grid", placeItems: "center" }}>
+                  <Avatar config={p.avatar} width={64} grayscale={out} />
+                </div>
 
-              <div style={{ fontSize: 10, textAlign: "center", opacity: 0.7 }}>
-                #{seatLabel}
+                <Link
+                  href={`/u/${encodeURIComponent(p.username.toLowerCase())}`}
+                  style={{
+                    display: "block",
+                    marginTop: 6,
+                    fontWeight: 1000,
+                    fontSize: 12,
+                    textAlign: "center",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    textDecoration: "none",
+                    color: "#111",
+                  }}
+                  title={p.username}
+                >
+                  {p.username}
+                </Link>
+
+                {/* keep this like fasting: simple seat/OUT line */}
+                <div style={{ marginTop: 6, fontSize: 11, textAlign: "center", opacity: 0.75 }}>
+                  #{seatLabel}
+                </div>
               </div>
-            </Link>
-          );
-        })}
+            );
+          })}
+        </div>
+
+        {/* RIGHT: your stats bubble */}
+        <div
+          style={{
+            border: "1px solid rgba(0,0,0,0.10)",
+            borderRadius: 12,
+            padding: 12,
+            background: "linear-gradient(#fff, #f7f9fb)",
+            minHeight: 140,
+          }}
+        >
+          <div style={{ fontWeight: 1000, marginBottom: 8 }}>Your Stats</div>
+
+          {me ? (
+            <div style={{ display: "grid", gap: 10, fontSize: 13 }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span>✅ Checks</span>
+                <b>{me.checks}</b>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span>❤️ Health</span>
+                <b>{me.health}</b>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span>🔑 Keys</span>
+                <b>{me.keys}</b>
+              </div>
+            </div>
+          ) : (
+            <div style={{ fontSize: 12, opacity: 0.7 }}>Login to see your stats.</div>
+          )}
+
+          <div style={{ marginTop: 12, fontSize: 11, opacity: 0.65, lineHeight: 1.35 }}>
+            Castings: keys win. Ties: checks → health.
+          </div>
+        </div>
       </div>
     </div>
   );

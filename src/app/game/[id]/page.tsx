@@ -204,17 +204,19 @@ export default function GamePage({ params }: { params: { id: string } }) {
       </div>
 
       {/* ✅ CASTING uses its own strip, FASTING stays untouched */}
-      {isCasting ? (
-        <CastingPlayerStrip
-          players={data.players.map((p) => ({
-            userId: p.userId,
-            username: p.username,
-            status: p.status,
-            eliminatedPlace: p.eliminatedPlace,
-            avatar: p.avatar,
-          }))}
-        />
-      ) : (
+     {data.game.gameType === "CASTING" ? (
+  <CastingPlayerStrip
+    players={data.players}
+    me={
+      data.meUserId
+        ? (() => {
+            const me = data.players.find((p) => p.userId === data.meUserId);
+            return me ? { checks: me.checks, health: me.health, keys: me.keys } : null;
+          })()
+        : null
+    }
+  />
+) : (
         <PlayerStrip
           players={data.players}
           povUserId={isFasting ? data.game.povUserId : null}
