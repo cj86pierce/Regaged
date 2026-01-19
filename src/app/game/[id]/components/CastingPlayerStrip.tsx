@@ -9,12 +9,17 @@ type Player = {
   username: string;
   status: "ACTIVE" | "ELIMINATED";
   eliminatedPlace: number | null;
+
+  // ✅ from API
+  checks: number;
+  isNominee: boolean;
+
   avatar: AvatarConfig;
 };
 
 export default function CastingPlayerStrip(props: {
   players: Player[];
-  me: null | { checks?: number; health?: number; keys?: number };
+  me: null | { checks: number; health: number; keys: number };
 }) {
   const { players, me } = props;
 
@@ -27,9 +32,8 @@ export default function CastingPlayerStrip(props: {
         padding: 10,
       }}
     >
-      {/* EXACTLY like the fasting “top box”, but with a right-side bubble */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 240px", gap: 12, alignItems: "start" }}>
-        {/* LEFT: 20 players stacked 10 over 10 */}
+        {/* LEFT: players 10 over 10 */}
         <div
           style={{
             display: "grid",
@@ -38,9 +42,9 @@ export default function CastingPlayerStrip(props: {
             alignItems: "start",
           }}
         >
-          {players.map((p, idx) => {
+          {players.map((p) => {
             const out = p.status !== "ACTIVE";
-            const seatLabel = out ? (p.eliminatedPlace ? `${p.eliminatedPlace}` : "OUT") : `${idx + 1}`;
+            const bottomValue = p.isNominee ? "?" : `${p.checks}`;
 
             return (
               <div
@@ -49,7 +53,8 @@ export default function CastingPlayerStrip(props: {
                   border: "1px solid rgba(0,0,0,0.10)",
                   borderRadius: 10,
                   padding: 8,
-                  background: out ? "rgba(0,0,0,0.03)" : "#fff",
+                  background: out ? "rgba(0,0,0,0.06)" : "#fff",
+                  opacity: out ? 0.55 : 1,
                 }}
               >
                 <div style={{ display: "grid", placeItems: "center" }}>
@@ -75,15 +80,16 @@ export default function CastingPlayerStrip(props: {
                   {p.username}
                 </Link>
 
-                <div style={{ marginTop: 6, fontSize: 11, textAlign: "center", opacity: 0.75 }}>
-                  #{seatLabel}
+                {/* ✅ bottom line: checks (or ? if nominated) */}
+                <div style={{ marginTop: 6, fontSize: 11, textAlign: "center", opacity: 0.85 }}>
+                  ✅ {bottomValue}
                 </div>
               </div>
             );
           })}
         </div>
 
-        {/* RIGHT: ONLY YOUR stats */}
+        {/* RIGHT: your stats bubble */}
         <div
           style={{
             border: "1px solid rgba(0,0,0,0.10)",
@@ -99,15 +105,15 @@ export default function CastingPlayerStrip(props: {
             <div style={{ display: "grid", gap: 10, fontSize: 13 }}>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span>✅ Checks</span>
-                <b>{me.checks ?? 0}</b>
+                <b>{me.checks}</b>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span>❤️ Health</span>
-                <b>{me.health ?? 100}</b>
+                <b>{me.health}</b>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span>🔑 Keys</span>
-                <b>{me.keys ?? 0}</b>
+                <b>{me.keys}</b>
               </div>
             </div>
           ) : (
