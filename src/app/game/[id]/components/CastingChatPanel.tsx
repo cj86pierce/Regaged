@@ -184,46 +184,49 @@ export default function CastingChatPanel(props: {
               <div style={{ marginTop: 6, display: "flex", gap: 10, alignItems: "flex-start" }}>
                 <div style={{ flex: 1, whiteSpace: "pre-wrap", fontSize: 13 }}>{m.body}</div>
 
-                {/* reactions on the right */}
+                {/* reactions on the right, horizontal ✅ ❌ */}
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-  <button
-    disabled={!meUserId || m.myReaction !== null}
-    onClick={() => onReact(m.id, "PLUS")}
-    style={{
-      padding: "4px 8px",
-      borderRadius: 10,
-      border: "1px solid rgba(0,0,0,0.12)",
-      background: "#fff",
-      cursor: "pointer",
-      fontWeight: 900,
-      minWidth: 44,
-    }}
-    title="Plus"
-  >
-    ✅
-  </button>
+                  <button
+                    disabled={!meUserId || m.myReaction !== null}
+                    onClick={() => onReact(m.id, "PLUS")}
+                    style={{
+                      padding: "4px 8px",
+                      borderRadius: 10,
+                      border: "1px solid rgba(0,0,0,0.12)",
+                      background: "#fff",
+                      cursor: "pointer",
+                      fontWeight: 900,
+                      minWidth: 44,
+                    }}
+                    title="Plus"
+                  >
+                    ✅
+                  </button>
 
-  <button
-    disabled={!meUserId || m.myReaction !== null}
-    onClick={() => onReact(m.id, "MINUS")}
-    style={{
-      padding: "4px 8px",
-      borderRadius: 10,
-      border: "1px solid rgba(0,0,0,0.12)",
-      background: "#fff",
-      cursor: "pointer",
-      fontWeight: 900,
-      minWidth: 44,
-    }}
-    title="Minus"
-  >
-    ❌
-  </button>
+                  <button
+                    disabled={!meUserId || m.myReaction !== null}
+                    onClick={() => onReact(m.id, "MINUS")}
+                    style={{
+                      padding: "4px 8px",
+                      borderRadius: 10,
+                      border: "1px solid rgba(0,0,0,0.12)",
+                      background: "#fff",
+                      cursor: "pointer",
+                      fontWeight: 900,
+                      minWidth: 44,
+                    }}
+                    title="Minus"
+                  >
+                    ❌
+                  </button>
 
-  <div style={{ fontSize: 12, opacity: 0.7 }}>
-    {m.plus - m.minus}
-  </div>
-</div>
+                  <div style={{ fontSize: 12, opacity: 0.7 }}>{m.plus - m.minus}</div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
 
       {claimErr && <div style={{ marginTop: 10, color: "crimson", fontWeight: 1000 }}>{claimErr}</div>}
 
