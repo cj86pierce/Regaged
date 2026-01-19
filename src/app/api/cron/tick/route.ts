@@ -4,6 +4,7 @@ import { assignFastingPov } from "@/lib/fastingPov";
 import { resolveFastingNominations } from "@/lib/fastingNoms";
 import { resolveFastingEviction } from "@/lib/fastingVotes";
 import { maybeSpawnCastingsDrops } from "@/lib/castingsDrops";
+import { applyCastingHealthDecay } from "@/lib/castingHealth";
 
 
 async function runTick() {
@@ -85,7 +86,6 @@ export async function POST() {
 }
 
 // ✅ CASTING: spawn drops (no voting yet)
-// ✅ CASTING: spawn drops (no voting yet)
 const castingGames = await prisma.game.findMany({
   where: { gameType: "CASTING", state: "ROUND_NOMINATE" }, // (temporary state name)
   select: { id: true },
@@ -96,4 +96,8 @@ for (const g of castingGames) {
   try {
     await maybeSpawnCastingsDrops(g.id);
   } catch {}
+  try {
+  await applyCastingHealthDecay();
+} catch {}
+
 }

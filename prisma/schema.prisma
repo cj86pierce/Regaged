@@ -241,6 +241,8 @@ model GamePlayer {
   @@unique([gameId, seatIndex])
   @@index([gameId, status])
   @@index([gameId, seatIndex])
+
+  castingHealthTickedAt DateTime?
 }
 
 model Nomination {
