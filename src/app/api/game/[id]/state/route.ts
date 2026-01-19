@@ -3,52 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 
-// (FASTING imports only used for FASTING games)
-import { assignFastingPov } from "@/lib/fastingPov";
-import { resolveFastingNominations } from "@/lib/fastingNoms";
-import { resolveFastingEviction } from "@/lib/fastingVotes";
-
-async function maybeAdvanceFasting(gameId: string) {
-  const g = await prisma.game.findUnique({
-    where: { id: gameId },
-    select: { id: true, gameType: true, state: true, stateEndsAt: true, povUserId: true },
-  });
-  if (!g || g.gameType !== "FASTING") return;
-
-  if (g.state === "ROUND_NOMINATE" && !g.povUserId) {
-    try { await assignFastingPov(gameId); } catch {}
-  }
-
-  if (!g.stateEndsAt) return;
-  if (g.state !== "ROUND_NOMINATE" && g.state !== "ROUND_VOTE") return;
-  if (g.stateEndsAt.getTime() > Date.now()) return;
-
-  const lockRows = await prisma.$queryRaw<{ locked: boolean }[]>`
-    SELECT pg_try_advisory_lock(hashtext(${gameId})) as locked
-  `;
-  if (!lockRows?.[0]?.locked) return;
-
-  try {
-    const g2 = await prisma.game.findUnique({
-      where: { id: gameId },
-      select: { state: true, stateEndsAt: true, povUserId: true },
-    });
-    if (!g2?.stateEndsAt) return;
-    if (g2.stateEndsAt.getTime() > Date.now()) return;
-
-    if (g2.state === "ROUND_NOMINATE") {
-      if (!g2.povUserId) {
-        try { await assignFastingPov(gameId); } catch {}
-      }
-      await resolveFastingNominations(gameId);
-    } else if (g2.state === "ROUND_VOTE") {
-      await resolveFastingEviction(gameId);
-    }
-  } finally {
-    await prisma.$queryRaw`SELECT pg_advisory_unlock(hashtext(${gameId}))`;
-  }
-}
-
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   const gameId = params.id;
 
@@ -62,14 +16,17 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
   const game = await prisma.game.findUnique({
     where: { id: gameId },
-    select: { id: true, number: true, gameType: true, state: true, roundNumber: true, stateEndsAt: true, povUserId: true },
+    select: {
+      id: true,
+      number: true,
+      gameType: true,
+      state: true,
+      roundNumber: true,
+      stateEndsAt: true,
+      povUserId: true,
+    },
   });
   if (!game) return NextResponse.json({ error: "Game not found" }, { status: 404 });
-
-  // ✅ Only auto-advance FASTING here
-  if (game.gameType === "FASTING" && game.state !== "ENROLLING") {
-    await maybeAdvanceFasting(gameId);
-  }
 
   const playersRaw = await prisma.gamePlayer.findMany({
     where: { gameId },
@@ -77,8 +34,20 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       user: {
         select: {
           username: true,
-          bodyStyle: true, hairStyle: true, eyesStyle: true, mouthStyle: true, shirtStyle: true, accessoryStyle: true,
-          bodyColor: true, hairColor: true, eyeColor: true, mouthColor: true, shirtColor: true, accessoryColor: true,
+
+          bodyStyle: true,
+          hairStyle: true,
+          eyesStyle: true,
+          mouthStyle: true,
+          shirtStyle: true,
+          accessoryStyle: true,
+
+          bodyColor: true,
+          hairColor: true,
+          eyeColor: true,
+          mouthColor: true,
+          shirtColor: true,
+          accessoryColor: true,
         },
       },
     },
@@ -86,9 +55,13 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   });
 
   const activeCount = playersRaw.filter((p) => p.status === "ACTIVE").length;
-  const lobby = game.state === "ENROLLING"
-    ? { current: activeCount, needed: Math.max(0, (game.gameType === "CASTING" ? 20 : 15) - activeCount) }
-    : null;
+  const lobby =
+    game.state === "ENROLLING"
+      ? {
+          current: activeCount,
+          needed: Math.max(0, (game.gameType === "CASTING" ? 20 : 15) - activeCount),
+        }
+      : null;
 
   // messages
   const totalCount = await prisma.gameMessage.count({ where: { gameId, channel: "PUBLIC" } });
@@ -102,7 +75,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     include: { user: { select: { username: true } }, reactions: true },
   });
 
-  // FASTING-specific nominee info (only compute for FASTING)
+  // FASTING-only nominee info (read only)
   let nomineeA: string | null = null;
   let nomineeB: string | null = null;
   let myNomLocked: boolean | null = null;
@@ -144,7 +117,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     game: {
       id: game.id,
       number: game.number,
-      gameType: game.gameType, // ✅ critical
+      gameType: game.gameType,
       state: game.state,
       roundNumber: game.roundNumber,
       stateEndsAt: game.stateEndsAt,
@@ -153,7 +126,6 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
     lobby,
 
-    // FASTING-only fields (Castings will just get nulls and UI will hide them)
     myNomLocked,
     voteInfo,
 
@@ -161,13 +133,22 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
     players: playersRaw.map((p) => {
       const u = p.user;
+
       return {
         userId: p.userId,
         username: u.username,
         status: p.status,
         lastActiveAt: p.lastActiveAt,
         eliminatedPlace: p.eliminatedPlace ?? null,
+
+        // ✅ CASTING stats (also useful for FASTING display)
+        checks: (p.plusCount ?? 0) - (p.minusCount ?? 0),
+        health: (p.health ?? 100),
+        keys: (p.keys ?? 0),
+
+        // FASTING-only indicator (harmless for CASTING)
         isNominee: !!(nomineeA && nomineeB && (p.userId === nomineeA || p.userId === nomineeB)),
+
         avatar: {
           bodyStyle: u.bodyStyle,
           hairStyle: u.hairStyle,
