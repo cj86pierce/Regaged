@@ -5,50 +5,64 @@ import { prisma } from "@/lib/prisma";
 import { touchUser } from "@/lib/touchUser";
 import { checkBlockedContent } from "@/lib/contentFilter";
 
+function bad(msg: string, status = 400) {
+  return NextResponse.json({ error: msg }, { status });
+}
+
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   const userId = (session?.user as any)?.id as string | undefined;
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!userId) return bad("Unauthorized", 401);
 
   const gameId = params.id;
 
   const body = await req.json().catch(() => null);
   const text = (body?.text ?? "").toString();
 
-  if (text.trim().length < 1) {
-    return NextResponse.json({ error: "Message required" }, { status: 400 });
-  }
-  if (text.length > 500) {
-    return NextResponse.json({ error: "Message too long (max 500)" }, { status: 400 });
-  }
+  if (text.trim().length < 1) return bad("Message required");
+  if (text.length > 500) return bad("Message too long (max 500)");
 
-  // ✅ content filter (INSIDE handler)
   const hit = checkBlockedContent(text);
-  if (hit) {
-    return NextResponse.json({ error: "Message contains blocked language." }, { status: 400 });
-  }
+  if (hit) return bad("Message contains blocked language.", 400);
 
-  // must be in game to chat
   const inGame = await prisma.gamePlayer.findUnique({
     where: { gameId_userId: { gameId, userId } },
     select: { status: true },
   });
-  if (!inGame || inGame.status !== "ACTIVE") {
-    return NextResponse.json({ error: "Not in this game" }, { status: 403 });
-  }
+  if (!inGame || inGame.status !== "ACTIVE") return bad("Not in this game", 403);
 
-  await prisma.$transaction(async (tx) => {
-    await tx.gameMessage.create({
+  const now = new Date();
+
+  const created = await prisma.$transaction(async (tx) => {
+    const msg = await tx.gameMessage.create({
       data: { gameId, userId, channel: "PUBLIC", body: text },
+      select: { id: true, body: true, createdAt: true, userId: true },
     });
 
     await tx.gamePlayer.update({
       where: { gameId_userId: { gameId, userId } },
-      data: { chatCount: { increment: 1 }, lastActiveAt: new Date() },
+      data: { chatCount: { increment: 1 }, lastActiveAt: now },
     });
+
+    const u = await tx.user.findUnique({
+      where: { id: userId },
+      select: { username: true },
+    });
+
+    return {
+      id: msg.id,
+      userId: msg.userId,
+      username: u?.username ?? "you",
+      body: msg.body,
+      createdAt: msg.createdAt.toISOString(),
+      plus: 0,
+      minus: 0,
+      myReaction: null as "PLUS" | "MINUS" | null,
+      isSystem: false,
+    };
   });
 
   await touchUser(userId);
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, message: created });
 }

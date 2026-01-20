@@ -39,8 +39,8 @@ export default function CastingChatPanel(props: {
 
   chatText: string;
   setChatText: (v: string) => void;
-  onSend: () => Promise<void>;
 
+  onSend: () => Promise<void>;
   onReact: (messageId: string, type: "PLUS" | "MINUS") => Promise<void>;
 
   page: number;
@@ -66,22 +66,60 @@ export default function CastingChatPanel(props: {
 
   const [claimErr, setClaimErr] = useState<string | null>(null);
 
-  async function claim(eventId: string, slotIndex: number) {
-    setClaimErr(null);
+  // ✅ prevent double send + double reacts
+  const [sending, setSending] = useState(false);
+  const [reacting, setReacting] = useState<Record<string, boolean>>({});
+  const [claiming, setClaiming] = useState<Record<string, boolean>>({}); // eventId -> true
 
-    const res = await fetch(`/api/game/${gameId}/casting/claim`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ eventId, slotIndex }),
-    });
+  async function safeSend() {
+    if (!meUserId) return;
+    if (sending) return;
+    if (!chatText.trim()) return;
 
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      setClaimErr(json?.error ?? "Claim failed");
-      return;
+    setSending(true);
+    try {
+      await onSend();
+    } finally {
+      setSending(false);
     }
+  }
 
-    await onReload();
+  async function safeReact(messageId: string, type: "PLUS" | "MINUS") {
+    if (!meUserId) return;
+    if (reacting[messageId]) return;
+
+    setReacting((p) => ({ ...p, [messageId]: true }));
+    try {
+      await onReact(messageId, type);
+    } finally {
+      setReacting((p) => ({ ...p, [messageId]: false }));
+    }
+  }
+
+  async function claim(eventId: string, slotIndex: number) {
+    if (!meUserId) return;
+    if (claiming[eventId]) return;
+
+    setClaimErr(null);
+    setClaiming((p) => ({ ...p, [eventId]: true }));
+
+    try {
+      const res = await fetch(`/api/game/${gameId}/casting/claim`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ eventId, slotIndex }),
+      });
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setClaimErr(json?.error ?? "Claim failed");
+        return;
+      }
+
+      await onReload();
+    } finally {
+      setClaiming((p) => ({ ...p, [eventId]: false }));
+    }
   }
 
   return (
@@ -92,20 +130,30 @@ export default function CastingChatPanel(props: {
           value={chatText}
           onChange={(e) => setChatText(e.target.value)}
           placeholder="Type a message…"
-          style={{ flex: 1, padding: 10, borderRadius: 12, border: "1px solid rgba(0,0,0,0.12)" }}
+          disabled={!meUserId || sending}
+          style={{
+            flex: 1,
+            padding: 10,
+            borderRadius: 12,
+            border: "1px solid rgba(0,0,0,0.12)",
+            opacity: !meUserId ? 0.6 : 1,
+          }}
         />
         <button
-          onClick={onSend}
+          onClick={safeSend}
+          disabled={!meUserId || sending || !chatText.trim()}
           style={{
             padding: "10px 12px",
             borderRadius: 12,
             border: "1px solid rgba(0,0,0,0.12)",
-            background: "#111",
-            color: "#fff",
+            background: sending ? "#f3f6f9" : "#111",
+            color: sending ? "#111" : "#fff",
             fontWeight: 1000,
+            cursor: sending ? "not-allowed" : "pointer",
+            opacity: !meUserId ? 0.6 : 1,
           }}
         >
-          Send
+          {sending ? "Sending..." : "Send"}
         </button>
       </div>
 
@@ -118,6 +166,7 @@ export default function CastingChatPanel(props: {
           // DROP message
           if (dropId) {
             const claimed = !!drop?.claimedAt;
+            const busy = claiming[dropId] === true;
 
             return (
               <div
@@ -141,13 +190,13 @@ export default function CastingChatPanel(props: {
                       <button
                         key={o.slotIndex}
                         onClick={() => claim(dropId, o.slotIndex)}
-                        disabled={!meUserId}
+                        disabled={!meUserId || busy}
                         style={{
                           padding: "10px 0",
                           borderRadius: 12,
                           border: "1px solid rgba(0,0,0,0.18)",
-                          background: "#fff",
-                          cursor: "pointer",
+                          background: busy ? "#f3f6f9" : "#fff",
+                          cursor: busy ? "not-allowed" : "pointer",
                           fontSize: 18,
                         }}
                         title={o.kind}
@@ -161,11 +210,14 @@ export default function CastingChatPanel(props: {
                 {!meUserId && !claimed && (
                   <div style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}>Login to claim.</div>
                 )}
+                {busy && <div style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}>Claiming...</div>}
               </div>
             );
           }
 
           // NORMAL message
+          const busyReact = reacting[m.id] === true;
+
           return (
             <div
               key={m.id}
@@ -187,16 +239,17 @@ export default function CastingChatPanel(props: {
                 {/* reactions on the right, horizontal ✅ ❌ */}
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                   <button
-                    disabled={!meUserId || m.myReaction !== null}
-                    onClick={() => onReact(m.id, "PLUS")}
+                    disabled={!meUserId || m.myReaction !== null || busyReact}
+                    onClick={() => safeReact(m.id, "PLUS")}
                     style={{
                       padding: "4px 8px",
                       borderRadius: 10,
                       border: "1px solid rgba(0,0,0,0.12)",
-                      background: "#fff",
-                      cursor: "pointer",
+                      background: busyReact ? "#f3f6f9" : "#fff",
+                      cursor: busyReact ? "not-allowed" : "pointer",
                       fontWeight: 900,
                       minWidth: 44,
+                      opacity: !meUserId ? 0.6 : 1,
                     }}
                     title="Plus"
                   >
@@ -204,16 +257,17 @@ export default function CastingChatPanel(props: {
                   </button>
 
                   <button
-                    disabled={!meUserId || m.myReaction !== null}
-                    onClick={() => onReact(m.id, "MINUS")}
+                    disabled={!meUserId || m.myReaction !== null || busyReact}
+                    onClick={() => safeReact(m.id, "MINUS")}
                     style={{
                       padding: "4px 8px",
                       borderRadius: 10,
                       border: "1px solid rgba(0,0,0,0.12)",
-                      background: "#fff",
-                      cursor: "pointer",
+                      background: busyReact ? "#f3f6f9" : "#fff",
+                      cursor: busyReact ? "not-allowed" : "pointer",
                       fontWeight: 900,
                       minWidth: 44,
+                      opacity: !meUserId ? 0.6 : 1,
                     }}
                     title="Minus"
                   >

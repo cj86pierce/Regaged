@@ -28,12 +28,6 @@ export async function POST(req: Request, { params }: { params: { messageId: stri
   if (msg.userId === userId) return bad("You cannot react to your own message.", 400);
   if (await isSystemUser(msg.userId)) return bad("You cannot react to system messages.", 400);
 
-  const game = await prisma.game.findUnique({
-    where: { id: msg.gameId },
-    select: { gameType: true },
-  });
-  if (!game) return bad("Game not found", 404);
-
   const gp = await prisma.gamePlayer.findUnique({
     where: { gameId_userId: { gameId: msg.gameId, userId } },
     select: { status: true },
@@ -42,63 +36,42 @@ export async function POST(req: Request, { params }: { params: { messageId: stri
 
   const existing = await prisma.messageReaction.findUnique({
     where: { messageId_reactorUserId: { messageId, reactorUserId: userId } },
+    select: { id: true },
   });
   if (existing) return bad("You already reacted to this message.", 400);
 
   const now = new Date();
 
-  await prisma.$transaction(async (tx) => {
-    // create reaction
-    await tx.messageReaction.create({ data: { messageId, reactorUserId: userId, type } });
+  const result = await prisma.$transaction(async (tx) => {
+    await tx.messageReaction.create({
+      data: { messageId, reactorUserId: userId, type },
+    });
 
-    // reactor becomes active
     await tx.gamePlayer.update({
       where: { gameId_userId: { gameId: msg.gameId, userId } },
       data: { lastActiveAt: now },
     });
 
-    // update receiver plus/minus counts (received)
-    const receiver = await tx.gamePlayer.update({
+    // Update receiver counts
+    await tx.gamePlayer.update({
       where: { gameId_userId: { gameId: msg.gameId, userId: msg.userId } },
       data: type === "PLUS" ? { plusCount: { increment: 1 } } : { minusCount: { increment: 1 } },
-      select: { plusCount: true, health: true },
     });
 
-    // ✅ CASTING health gain on PLUS only
-    if (game.gameType === "CASTING" && type === "PLUS") {
-      // 1) receiver gains +1 HP every 3 PLUS received
-      const newPlusReceived = receiver.plusCount ?? 0;
-      if (newPlusReceived % 3 === 0) {
-        await tx.gamePlayer.update({
-          where: { gameId_userId: { gameId: msg.gameId, userId: msg.userId } },
-          data: { health: Math.min(100, (receiver.health ?? 70) + 1) },
-        });
-      }
+    // Return updated net counts for this message (fast: count only for this message)
+    const counts = await tx.messageReaction.groupBy({
+      by: ["type"],
+      where: { messageId },
+      _count: { _all: true },
+    });
 
-      // 2) giver gains +1 HP every 3 PLUS given (count via reactions)
-      const givenCount = await tx.messageReaction.count({
-        where: {
-          reactorUserId: userId,
-          type: "PLUS",
-          message: { gameId: msg.gameId },
-        },
-      });
+    const plus = counts.find((c) => c.type === "PLUS")?._count._all ?? 0;
+    const minus = counts.find((c) => c.type === "MINUS")?._count._all ?? 0;
 
-      if (givenCount % 3 === 0) {
-        const giver = await tx.gamePlayer.findUnique({
-          where: { gameId_userId: { gameId: msg.gameId, userId } },
-          select: { health: true },
-        });
-
-        await tx.gamePlayer.update({
-          where: { gameId_userId: { gameId: msg.gameId, userId } },
-          data: { health: Math.min(100, (giver?.health ?? 70) + 1) },
-        });
-      }
-    }
+    return { messageId, plus, minus, myReaction: type };
   });
 
   await touchUser(userId);
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, ...result });
 }
