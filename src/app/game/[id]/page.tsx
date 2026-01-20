@@ -10,6 +10,7 @@ import Tabs from "./components/Tabs";
 import PmPanel from "./components/PmPanel";
 import CastingVoteBox from "./components/CastingVoteBox";
 import type { AvatarConfig } from "@/components/Avatar";
+import CastingSidebar from "./components/CastingSidebar";
 
 type Player = {
   userId: string;
@@ -316,20 +317,33 @@ export default function GamePage({ params }: { params: { id: string } }) {
           )}
         </div>
 
-        {/* CASTING vote box can live here as you already wired it */}
-        <Sidebar
-          gameState={data.game.state}
-          roundNumber={data.game.roundNumber}
-          nomSelected={nomSelected}
-          canConfirmNoms={!isCasting && data.game.state === "ROUND_NOMINATE" && !myNomLockedIn && nomSelected.length === 2}
-          onConfirmNoms={confirmNoms as any}
-          myNomLockedIn={myNomLockedIn}
-          evictSelected={evictSelected}
-          canConfirmVote={!isCasting && data.game.state === "ROUND_VOTE" && !myVoteLockedIn && !!evictSelected}
-          onConfirmVote={confirmVote as any}
-          myVoteLockedIn={myVoteLockedIn}
-          messages={data.messages}
-        />
+        {isCasting ? (
+  <CastingSidebar
+    gameId={gameId}
+    state={data.game.state}
+    dayNumber={data.game.roundNumber}
+    nominees={(data.casting?.nominees ?? []).map((id) => {
+      const p = data.players.find((x) => x.userId === id);
+      return { userId: id, username: p?.username ?? id };
+    })}
+    onSavedVotes={load}
+    messages={data.messages}
+  />
+) : (
+  <Sidebar
+    gameState={data.game.state}
+    roundNumber={data.game.roundNumber}
+    nomSelected={nomSelected}
+    canConfirmNoms={!isCasting && data.game.state === "ROUND_NOMINATE" && !myNomLockedIn && nomSelected.length === 2}
+    onConfirmNoms={confirmNoms}
+    myNomLockedIn={myNomLockedIn}
+    evictSelected={evictSelected}
+    canConfirmVote={!isCasting && data.game.state === "ROUND_VOTE" && !myVoteLockedIn && !!evictSelected}
+    onConfirmVote={confirmVote}
+    myVoteLockedIn={myVoteLockedIn}
+    messages={data.messages}
+  />
+)}
       </div>
     </div>
   );
