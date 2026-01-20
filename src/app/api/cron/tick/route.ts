@@ -1,25 +1,33 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+// FASTING
 import { assignFastingPov } from "@/lib/fastingPov";
 import { resolveFastingNominations } from "@/lib/fastingNoms";
 import { resolveFastingEviction } from "@/lib/fastingVotes";
 
+// CASTING
 import { maybeSpawnCastingsDrops } from "@/lib/castingsDrops";
 import { applyCastingHealthDecay } from "@/lib/castingHealth";
-import { ensureCastingVotingStarted, resolveCastingVoteDue } from "@/lib/castingDay";
+
+const CASTING_DAY_MS = 12 * 60 * 60 * 1000;
 
 async function runTick() {
   const now = new Date();
 
+  // ✅ global lock: prevents multiple ticks from running concurrently
   const lockRows = await prisma.$queryRaw<{ locked: boolean }[]>`
     SELECT pg_try_advisory_lock(hashtext('cron_tick')) as locked
   `;
-  if (!lockRows?.[0]?.locked) return { skipped: true, reason: "locked" as const };
+  if (!lockRows?.[0]?.locked) {
+    return { skipped: true, reason: "locked" as const };
+  }
 
   try {
-    // FASTING
-    const due = await prisma.game.findMany({
+    // -----------------------
+    // FASTING (unchanged)
+    // -----------------------
+    const fastingDue = await prisma.game.findMany({
       where: {
         gameType: "FASTING",
         state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] },
@@ -29,74 +37,83 @@ async function runTick() {
       take: 25,
     });
 
-    for (const g of due) {
+    for (const g of fastingDue) {
       try {
         if (g.state === "ROUND_NOMINATE") {
           await assignFastingPov(g.id);
           await resolveFastingNominations(g.id);
-        } else {
+        } else if (g.state === "ROUND_VOTE") {
           await resolveFastingEviction(g.id);
         }
-      } catch {}
+      } catch {
+        // ignore
+      }
     }
 
-    const needPov = await prisma.game.findMany({
-      where: { gameType: "FASTING", state: "ROUND_NOMINATE", povUserId: null, stateEndsAt: { not: null } },
+    const fastingNeedPov = await prisma.game.findMany({
+      where: {
+        gameType: "FASTING",
+        state: "ROUND_NOMINATE",
+        povUserId: null,
+        stateEndsAt: { not: null },
+      },
       select: { id: true },
       take: 25,
     });
-    for (const g of needPov) {
+
+    for (const g of fastingNeedPov) {
       try {
         await assignFastingPov(g.id);
       } catch {}
     }
 
-    // CASTING: resolve any voteDue games (this is what was missing)
-    const castingVoteDue = await prisma.game.findMany({
+    // -----------------------
+    // CASTING (fix stuck 00:00:00)
+    // Castings advances ONLY by time (stateEndsAt), not by vote completion.
+    // We keep state as ROUND_NOMINATE placeholder.
+    // -----------------------
+
+    // A) advance CASTING days whose timer expired
+    const castingDue = await prisma.game.findMany({
       where: {
         gameType: "CASTING",
-        state: "ROUND_VOTE",
+        state: "ROUND_NOMINATE",
         stateEndsAt: { not: null, lte: now },
       },
       select: { id: true, roundNumber: true },
       take: 25,
     });
 
-    for (const g of castingVoteDue) {
-  try {
-    await resolveCastingVoteDue(g.id, g.roundNumber ?? 1);
-  } catch (e) {
-    console.error("CASTING resolveCastingVoteDue failed", {
-      gameId: g.id,
-      day: g.roundNumber,
-      err: String(e),
-    });
-  }
-}
+    for (const g of castingDue) {
+      // per-game lock prevents double-advance
+      const lock = await prisma.$queryRaw<{ locked: boolean }[]>`
+        SELECT pg_try_advisory_lock(hashtext(${g.id})) as locked
+      `;
+      if (!lock?.[0]?.locked) continue;
 
+      try {
+        const nextDay = (g.roundNumber ?? 1) + 1;
 
-    // CASTING: ensure voting is started (nominees exist) for current day
-    const castingNeedStart = await prisma.game.findMany({
-      where: { gameType: "CASTING", state: "ROUND_NOMINATE", stateEndsAt: { not: null } },
-      select: { id: true, roundNumber: true },
-      take: 25,
-    });
+        await prisma.game.update({
+          where: { id: g.id },
+          data: {
+            roundNumber: nextDay,
+            // ✅ critical: always move the timer forward
+            stateEndsAt: new Date(Date.now() + CASTING_DAY_MS),
+            // ✅ keep state the same for now (no enum changes)
+            state: "ROUND_NOMINATE",
+          },
+        });
 
-    for (const g of castingNeedStart) {
-  try {
-    await ensureCastingVotingStarted(g.id, g.roundNumber ?? 1);
-  } catch (e) {
-    console.error("CASTING ensureCastingVotingStarted failed", {
-      gameId: g.id,
-      day: g.roundNumber,
-      err: String(e),
-    });
-  }
-}
+        // NOTE: nomination + voting resolution will be layered in later.
+      } finally {
+        await prisma.$queryRaw`SELECT pg_advisory_unlock(hashtext(${g.id}))`;
+      }
+    }
 
-    // CASTING drops in both states
+    // B) spawn drops for active CASTING games (in this placeholder state)
     const castingActive = await prisma.game.findMany({
-      where: { gameType: "CASTING", state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] } },
+      where: { gameType: "CASTING", state: "ROUND_NOMINATE" },
       select: { id: true },
       take: 25,
     });
@@ -107,14 +124,14 @@ async function runTick() {
       } catch {}
     }
 
-    // CASTING decay in both states
+    // C) apply health decay (function should include CASTING state check internally)
     try {
       await applyCastingHealthDecay();
     } catch {}
 
     return {
-      fasting: { ticked: due.length, povChecked: needPov.length },
-      casting: { voteDue: castingVoteDue.length, startDue: castingNeedStart.length, active: castingActive.length },
+      fasting: { ticked: fastingDue.length, povChecked: fastingNeedPov.length },
+      casting: { dayAdvanced: castingDue.length, active: castingActive.length },
     };
   } finally {
     await prisma.$queryRaw`SELECT pg_advisory_unlock(hashtext('cron_tick'))`;
@@ -122,11 +139,15 @@ async function runTick() {
 }
 
 export async function GET() {
-  if (process.env.CRON_DISABLED === "1") return NextResponse.json({ ok: true, disabled: true });
+  if (process.env.CRON_DISABLED === "1") {
+    return NextResponse.json({ ok: true, disabled: true });
+  }
   return NextResponse.json({ ok: true, ...(await runTick()) });
 }
 
 export async function POST() {
-  if (process.env.CRON_DISABLED === "1") return NextResponse.json({ ok: true, disabled: true });
+  if (process.env.CRON_DISABLED === "1") {
+    return NextResponse.json({ ok: true, disabled: true });
+  }
   return NextResponse.json({ ok: true, ...(await runTick()) });
 }
