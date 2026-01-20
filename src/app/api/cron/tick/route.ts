@@ -63,10 +63,17 @@ async function runTick() {
     });
 
     for (const g of castingVoteDue) {
-      try {
-        await resolveCastingVoteDue(g.id, g.roundNumber ?? 1);
-      } catch {}
-    }
+  try {
+    await resolveCastingVoteDue(g.id, g.roundNumber ?? 1);
+  } catch (e) {
+    console.error("CASTING resolveCastingVoteDue failed", {
+      gameId: g.id,
+      day: g.roundNumber,
+      err: String(e),
+    });
+  }
+}
+
 
     // CASTING: ensure voting is started (nominees exist) for current day
     const castingNeedStart = await prisma.game.findMany({
@@ -76,10 +83,16 @@ async function runTick() {
     });
 
     for (const g of castingNeedStart) {
-      try {
-        await ensureCastingVotingStarted(g.id, g.roundNumber ?? 1);
-      } catch {}
-    }
+  try {
+    await ensureCastingVotingStarted(g.id, g.roundNumber ?? 1);
+  } catch (e) {
+    console.error("CASTING ensureCastingVotingStarted failed", {
+      gameId: g.id,
+      day: g.roundNumber,
+      err: String(e),
+    });
+  }
+}
 
     // CASTING drops in both states
     const castingActive = await prisma.game.findMany({
