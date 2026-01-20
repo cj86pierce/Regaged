@@ -7,7 +7,7 @@ export async function applyCastingHealthDecay() {
 
   // CASTING day-running placeholder state (until enum adds CASTING_DAY)
   const games = await prisma.game.findMany({
-    where: { gameType: "CASTING", state: "ROUND_NOMINATE" },
+    where: { gameType: "CASTING", state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] } },
     select: { id: true },
     take: 25,
   });
