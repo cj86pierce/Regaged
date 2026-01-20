@@ -2,48 +2,55 @@ import { prisma } from "@/lib/prisma";
 
 const CASTING_DAY_MS = 12 * 60 * 60 * 1000;
 
-// simple nominee score for now (minigame later)
-// lower score => more likely nominated
-function nomineeScore(p: { checks: number; health: number; keys: number }) {
-  // checks matter most, then health, then keys
-  return p.checks * 2 + p.health + p.keys * 3;
+// lower score => more likely nominated (lowest checks first, keys immunity handled elsewhere)
+function score(p: { checks: number; keys: number }) {
+  // keys matter first (lower keys get hit), then checks
+  // we encode this by weighting keys heavily
+  return p.keys * 100000 + p.checks;
 }
 
 export async function startCastingDay(gameId: string, dayNumber: number) {
-  // compute nominees (3 lowest) among ACTIVE
+  const game = await prisma.game.findUnique({
+    where: { id: gameId },
+    select: { id: true, gameType: true, state: true },
+  });
+  if (!game || game.gameType !== "CASTING") return;
+
+  // Determine how many evictions we need to reach final 4
+  const activeCount = await prisma.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
+  const evictCount = activeCount >= 6 ? 2 : activeCount === 5 ? 1 : 0;
+  const nomineeCount = evictCount === 2 ? 4 : evictCount === 1 ? 3 : 0;
+
+  if (nomineeCount === 0) {
+    // final day or too small; keep state as-is
+    return;
+  }
+
+  // Build candidate list with keys + checks
   const players = await prisma.gamePlayer.findMany({
     where: { gameId, status: "ACTIVE" },
-    select: { userId: true, plusCount: true, minusCount: true, health: true, keys: true },
+    select: { userId: true, keys: true, plusCount: true, minusCount: true },
   });
-
-  if (players.length < 4) return; // too small to nominate safely
 
   const ranked = players
     .map((p) => ({
       userId: p.userId,
-      checks: (p.plusCount ?? 0) - (p.minusCount ?? 0),
-      health: p.health ?? 70,
       keys: p.keys ?? 0,
+      checks: (p.plusCount ?? 0) - (p.minusCount ?? 0),
     }))
-    .sort((a, b) => nomineeScore(a) - nomineeScore(b));
+    // lowest keys first; within that lowest checks first
+    .sort((a, b) => score(a) - score(b));
 
-  const [a, b, c] = ranked.slice(0, 3);
-  if (!a || !b || !c) return;
+  const nominees = ranked.slice(0, nomineeCount).map((p) => p.userId);
 
-  // create day record if missing
+  // upsert day record using nomineeUserIds array field
   await prisma.castingDayResult.upsert({
     where: { gameId_dayNumber: { gameId, dayNumber } },
-    update: { nomineeAUserId: a.userId, nomineeBUserId: b.userId, nomineeCUserId: c.userId },
-    create: {
-      gameId,
-      dayNumber,
-      nomineeAUserId: a.userId,
-      nomineeBUserId: b.userId,
-      nomineeCUserId: c.userId,
-    },
+    update: { nomineeUserIds: nominees, evictedUserIds: [] },
+    create: { gameId, dayNumber, nomineeUserIds: nominees, evictedUserIds: [] },
   });
 
-  // put game into voting state for the full day window
+  // Put game into vote phase for the day
   await prisma.game.update({
     where: { id: gameId },
     data: {
