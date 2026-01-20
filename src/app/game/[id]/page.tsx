@@ -286,8 +286,6 @@ export default function GamePage({ params }: { params: { id: string } }) {
                 totalPages={data.pagination.totalPages}
                 setPage={setPage}
                 onReload={load}
-                sending={sending}
-                reactingIds={reactingIds}
               />
             ) : (
               <ChatPanel
