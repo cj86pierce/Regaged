@@ -45,32 +45,47 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     const opt = ev.options.find((o) => o.slotIndex === slotIndex);
     if (!opt) return bad("Invalid choice");
 
-    await prisma.castingDropEvent.update({
-      where: { id: eventId },
-      data: { claimedByUserId: userId, claimedAt: new Date() },
-    });
+    const now = new Date();
 
+    // apply result
     let deltaHp = 0;
     let deltaKeys = 0;
-
     if (opt.kind === "APPLE") deltaHp = +15;
     if (opt.kind === "POISON") deltaHp = -15;
     if (opt.kind === "KEY") deltaKeys = +1;
 
-    const newHealth = Math.max(0, Math.min(100, (gp.health ?? 100) + deltaHp));
+    const newHealth = Math.max(0, Math.min(100, (gp.health ?? 70) + deltaHp));
     const newKeys = (gp.keys ?? 0) + deltaKeys;
 
-    await prisma.gamePlayer.update({
-      where: { gameId_userId: { gameId, userId } },
-      data: { health: newHealth, keys: newKeys, lastActiveAt: new Date() },
-    });
-
-    if (newHealth <= 0) {
-      await prisma.gamePlayer.update({
-        where: { gameId_userId: { gameId, userId } },
-        data: { status: "ELIMINATED", eliminatedAt: new Date() },
+    await prisma.$transaction(async (tx) => {
+      // mark claimed
+      await tx.castingDropEvent.update({
+        where: { id: eventId },
+        data: { claimedByUserId: userId, claimedAt: now },
       });
-    }
+
+      // update player stats
+      await tx.gamePlayer.update({
+        where: { gameId_userId: { gameId, userId } },
+        data: {
+          health: newHealth,
+          keys: newKeys,
+          lastActiveAt: now,
+        },
+      });
+
+      if (newHealth <= 0) {
+        await tx.gamePlayer.update({
+          where: { gameId_userId: { gameId, userId } },
+          data: { status: "ELIMINATED", eliminatedAt: now },
+        });
+      }
+
+      // ✅ delete the chat message so the claim is secret if nobody saw it
+      if (ev.messageId) {
+        await tx.gameMessage.delete({ where: { id: ev.messageId } }).catch(() => {});
+      }
+    });
 
     return NextResponse.json({ ok: true, result: opt.kind, deltaHp, deltaKeys, newHealth, newKeys });
   } finally {
