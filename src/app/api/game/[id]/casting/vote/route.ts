@@ -9,54 +9,49 @@ function bad(msg: string, status = 400) {
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
-  const userId = (session?.user as any)?.id as string | undefined;
-  if (!userId) return bad("Unauthorized", 401);
+  const voterUserId = (session?.user as any)?.id as string | undefined;
+  if (!voterUserId) return bad("Unauthorized", 401);
 
   const gameId = params.id;
 
-  const body = await req.json().catch(() => null);
-  const pointsMap = body?.pointsMap as Record<string, number>; // { nomineeUserId: 1|2|3 }
-
-  if (!pointsMap || typeof pointsMap !== "object") return bad("pointsMap required");
-
-  const game = await prisma.game.findUnique({
+  const g = await prisma.game.findUnique({
     where: { id: gameId },
     select: { gameType: true, state: true, roundNumber: true },
   });
-  if (!game || game.gameType !== "CASTING") return bad("Not a casting game", 400);
-  if (game.state !== "ROUND_VOTE") return bad("Not in voting phase", 400);
+  if (!g || g.gameType !== "CASTING") return bad("Not a casting game", 400);
+  if (g.state !== "ROUND_VOTE") return bad("Not in voting phase", 400);
 
-  // must be active in game
   const gp = await prisma.gamePlayer.findUnique({
-    where: { gameId_userId: { gameId, userId } },
+    where: { gameId_userId: { gameId, userId: voterUserId } },
     select: { status: true },
   });
   if (!gp || gp.status !== "ACTIVE") return bad("Not in this game", 403);
 
-  const dayNumber = game.roundNumber;
+  const dayNumber = g.roundNumber;
 
   const day = await prisma.castingDayResult.findUnique({
     where: { gameId_dayNumber: { gameId, dayNumber } },
-    select: { nomineeAUserId: true, nomineeBUserId: true, nomineeCUserId: true, evictedUserId: true },
+    select: { nomineeUserIds: true },
   });
-  if (!day || day.evictedUserId) return bad("No nominees", 400);
+  if (!day || !day.nomineeUserIds?.length) return bad("No nominees", 400);
 
-  const nominees = [day.nomineeAUserId, day.nomineeBUserId, day.nomineeCUserId];
+  const nominees = day.nomineeUserIds;
+  const body = await req.json().catch(() => null);
+  const pointsMap = body?.pointsMap as Record<string, number>;
+  if (!pointsMap || typeof pointsMap !== "object") return bad("pointsMap required");
 
-  // validate: must assign 1/2/3 exactly once
-  const entries = Object.entries(pointsMap).filter(([k, v]) => nominees.includes(k));
-  if (entries.length !== 3) return bad("Must assign points to all 3 nominees");
+  const entries = Object.entries(pointsMap).filter(([id]) => nominees.includes(id));
+  if (entries.length !== nominees.length) return bad("Must assign points to all nominees");
 
-  const pts = entries.map(([, v]) => v).sort();
-  if (pts.join(",") !== "1,2,3") return bad("Points must be 1,2,3");
+  const expected = nominees.length === 4 ? [0, 1, 2, 3] : [1, 2, 3];
+  const got = entries.map(([, v]) => Number(v)).sort((a, b) => a - b);
+  if (got.join(",") !== expected.join(",")) return bad(`Points must be ${expected.join(",")}`);
 
-  // store votes (one row per voter, overwrite by delete+create)
   await prisma.$transaction(async (tx) => {
-    await tx.castingVote.deleteMany({ where: { gameId, dayNumber, voterUserId: userId } });
-
+    await tx.castingVote.deleteMany({ where: { gameId, dayNumber, voterUserId } });
     for (const [targetUserId, points] of entries) {
       await tx.castingVote.create({
-        data: { gameId, dayNumber, voterUserId: userId, targetUserId, points },
+        data: { gameId, dayNumber, voterUserId, targetUserId, points: Number(points) },
       });
     }
   });

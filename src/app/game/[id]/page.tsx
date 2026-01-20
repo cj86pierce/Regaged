@@ -9,6 +9,7 @@ import Sidebar from "./components/Sidebar";
 import Tabs from "./components/Tabs";
 import PmPanel from "./components/PmPanel";
 import type { AvatarConfig } from "@/components/Avatar";
+import CastingVoteBox from "./components/CastingVoteBox";
 
 type Player = {
   userId: string;
@@ -291,6 +292,18 @@ export default function GamePage({ params }: { params: { id: string } }) {
             </div>
           )}
         </div>
+{isCasting && data.game.state === "ROUND_VOTE" && (data as any).casting?.nominees?.length ? (
+  <CastingVoteBox
+    gameId={gameId}
+    dayNumber={data.game.roundNumber}
+    nominees={(data as any).casting.nominees.map((id: string) => {
+      const p = data.players.find((x) => x.userId === id);
+      return { userId: id, username: p?.username ?? id };
+    })}
+    myVoted={(data as any).casting.myVoted}
+    onVoted={load}
+  />
+) : null}
 
         <Sidebar
           gameState={data.game.state}

@@ -235,7 +235,7 @@ model GamePlayer {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // CASTINGS
-  health Int @default(100)
+  health Int @default(70)
   keys   Int @default(0)
 
   castingLastDecayAt       DateTime?
@@ -339,10 +339,8 @@ model CastingDayResult {
   id             String   @id @default(cuid())
   gameId         String
   dayNumber      Int
-  nomineeAUserId String
-  nomineeBUserId String
-  nomineeCUserId String
-  evictedUserId  String?
+  nomineeUserIds String[] // length 3 or 4 depending on day
+  evictedUserIds String[] // length 0, 1, or 2
   createdAt      DateTime @default(now())
 
   game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
@@ -362,7 +360,7 @@ model CastingVote {
 
   game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
 
-  @@unique([gameId, dayNumber, voterUserId])
+  @@unique([gameId, dayNumber, voterUserId, targetUserId])
   @@index([gameId, dayNumber])
   @@index([gameId, dayNumber, targetUserId])
 }

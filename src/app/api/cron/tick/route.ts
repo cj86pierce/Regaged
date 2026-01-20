@@ -4,6 +4,7 @@ import { assignFastingPov } from "@/lib/fastingPov";
 import { resolveFastingNominations } from "@/lib/fastingNoms";
 import { resolveFastingEviction } from "@/lib/fastingVotes";
 
+import { startCastingDay, resolveCastingDay } from "@/lib/castingEngine";
 import { maybeSpawnCastingsDrops } from "@/lib/castingsDrops";
 import { applyCastingHealthDecay } from "@/lib/castingHealth";
 
@@ -61,13 +62,33 @@ async function runTick() {
     }
 
     // -----------------------
-    // CASTING (day roll + drops + decay)
-    // Temporary: CASTING uses state=ROUND_NOMINATE until we add a real enum
+    // CASTING (day + voting + drops + decay)
+    // NOTE: we’re temporarily using the existing enum states:
+    // ROUND_NOMINATE = "day setup / nominees chosen"
+    // ROUND_VOTE     = "voting open"
     // -----------------------
     const now = new Date();
 
-    // A) advance CASTING days whose timer expired
-    const castingDue = await prisma.game.findMany({
+    // 1) If CASTING voting window ended -> resolve day (evict + advance / finalize)
+    const castingVoteDue = await prisma.game.findMany({
+      where: {
+        gameType: "CASTING",
+        state: "ROUND_VOTE",
+        stateEndsAt: { not: null, lte: now },
+      },
+      select: { id: true, roundNumber: true },
+      take: 25,
+    });
+
+    for (const g of castingVoteDue) {
+      try {
+        // resolves evictions, sets placements, advances day, finalizes at 4
+        await resolveCastingDay(g.id, g.roundNumber ?? 1);
+      } catch {}
+    }
+
+    // 2) If CASTING day setup ended (ROUND_NOMINATE timer) -> start voting for next day
+    const castingStartDue = await prisma.game.findMany({
       where: {
         gameType: "CASTING",
         state: "ROUND_NOMINATE",
@@ -77,35 +98,31 @@ async function runTick() {
       take: 25,
     });
 
-    for (const g of castingDue) {
-      // per-game lock to prevent double-advance
-      const lock = await prisma.$queryRaw<{ locked: boolean }[]>`
-        SELECT pg_try_advisory_lock(hashtext(${g.id})) as locked
-      `;
-      if (!lock?.[0]?.locked) continue;
-
+    for (const g of castingStartDue) {
       try {
         const nextDay = (g.roundNumber ?? 1) + 1;
 
+        // move into voting for the day
         await prisma.game.update({
           where: { id: g.id },
           data: {
             roundNumber: nextDay,
-            // keep placeholder state for now
-            state: "ROUND_NOMINATE",
+            state: "ROUND_VOTE",
             stateEndsAt: new Date(now.getTime() + CASTING_DAY_MS),
           },
         });
 
-        // NOTE: later we will create 3 nominees here and switch to ROUND_VOTE for Castings voting.
-      } finally {
-        await prisma.$queryRaw`SELECT pg_advisory_unlock(hashtext(${g.id}))`;
-      }
+        // create nominees for that day
+        await startCastingDay(g.id, nextDay);
+      } catch {}
     }
 
-    // B) spawn drops for active CASTING games
+    // 3) Drops run during both day setup + voting
     const castingActive = await prisma.game.findMany({
-      where: { gameType: "CASTING", state: "ROUND_NOMINATE" },
+      where: {
+        gameType: "CASTING",
+        state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] },
+      },
       select: { id: true },
       take: 25,
     });
@@ -116,14 +133,14 @@ async function runTick() {
       } catch {}
     }
 
-    // C) apply health decay once per tick (function handles all casting games)
+    // 4) Health decay runs during both states too
     try {
       await applyCastingHealthDecay();
     } catch {}
 
     return {
       fasting: { ticked: due.length, povChecked: needPov.length },
-      casting: { dayAdvanced: castingDue.length, dropChecked: castingActive.length },
+      casting: { voteResolved: castingVoteDue.length, dayStarted: castingStartDue.length, dropChecked: castingActive.length },
     };
   } finally {
     await prisma.$queryRaw`SELECT pg_advisory_unlock(hashtext('cron_tick'))`;
