@@ -294,15 +294,13 @@ export default function GamePage({ params }: { params: { id: string } }) {
         </div>
 {isCasting && data.game.state === "ROUND_VOTE" && (data as any).casting?.nominees?.length ? (
   <CastingVoteBox
-    gameId={gameId}
-    dayNumber={data.game.roundNumber}
-    nominees={(data as any).casting.nominees.map((id: string) => {
-      const p = data.players.find((x) => x.userId === id);
-      return { userId: id, username: p?.username ?? id };
-    })}
-    myVoted={(data as any).casting.myVoted}
-    onVoted={load}
-  />
+  gameId={gameId}
+  nominees={(data as any).casting.nominees.map((id: string) => {
+    const p = data.players.find((x) => x.userId === id);
+    return { userId: id, username: p?.username ?? id };
+  })}
+  onSaved={load}
+/>
 ) : null}
 
         <Sidebar
