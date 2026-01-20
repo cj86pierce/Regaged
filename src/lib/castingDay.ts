@@ -4,17 +4,17 @@ import { getSystemUserId } from "@/lib/systemUser";
 const CASTING_DAY_MS = 12 * 60 * 60 * 1000;
 
 const PAY: Record<number, { karma: number; t: number }> = {
-  1: { karma: 80000, t: 50 },
-  2: { karma: 40000, t: 25 },
-  3: { karma: 20000, t: 15 },
-  4: { karma: 10000, t: 12 },
-  5: { karma: 8000, t: 10 },
-  6: { karma: 6000, t: 8 },
-  7: { karma: 5000, t: 7 },
-  8: { karma: 4000, t: 6 },
-  9: { karma: 3000, t: 5 },
-  10: { karma: 2000, t: 4 },
-  11: { karma: 1000, t: 3 },
+  1: { karma: 80, t: 50 },
+  2: { karma: 40, t: 25 },
+  3: { karma: 20, t: 15 },
+  4: { karma: 10, t: 12 },
+  5: { karma: 8, t: 10 },
+  6: { karma: 6, t: 8 },
+  7: { karma: 5, t: 7 },
+  8: { karma: 4, t: 6 },
+  9: { karma: 3, t: 5 },
+  10: { karma: 2, t: 4 },
+  11: { karma: 1, t: 3 },
   12: { karma: 0, t: 2 },
   13: { karma: 0, t: 2 },
 };
@@ -70,13 +70,12 @@ export async function startCastingDay(gameId: string, dayNumber: number) {
   const nCnt = nomineeCount(eCnt);
   if (nCnt === 0) return; // final 4 or fewer
 
-  // if already in vote and day record exists, do nothing
   const existing = await prisma.castingDayResult.findUnique({
     where: { gameId_dayNumber: { gameId, dayNumber } },
-    select: { nomineeUserIds: true, evictedUserIds: true },
+    select: { nomineeUserIds: true },
   });
+
   if (existing?.nomineeUserIds?.length) {
-    // ensure state is ROUND_VOTE
     if (g.state !== "ROUND_VOTE") {
       await prisma.game.update({
         where: { id: gameId },
@@ -140,6 +139,16 @@ export async function resolveCastingDayIfDue(gameId: string, dayNumber: number) 
 
     const nominees = day.nomineeUserIds;
 
+    // Get nominee health so we can “day-change kill” nominees at 0 HP (even if not voted out)
+    const nomineePlayers = await prisma.gamePlayer.findMany({
+      where: { gameId, userId: { in: nominees }, status: "ACTIVE" },
+      select: { userId: true, health: true },
+    });
+
+    const zeroHpNominees = nomineePlayers
+      .filter((p) => (p.health ?? 70) <= 0)
+      .map((p) => p.userId);
+
     // tally votes
     const votes = await prisma.castingVote.findMany({
       where: { gameId, dayNumber },
@@ -153,13 +162,23 @@ export async function resolveCastingDayIfDue(gameId: string, dayNumber: number) 
       totals.set(v.targetUserId, (totals.get(v.targetUserId) ?? 0) + (v.points ?? 0));
     }
 
-    const ranked = nominees
+    const rankedByVotes = nominees
       .map((id) => ({ id, pts: totals.get(id) ?? 0 }))
       .sort((a, b) => b.pts - a.pts);
 
-    const evicted = ranked.slice(0, eCnt).map((x) => x.id);
+    const evictedByVotes = rankedByVotes.slice(0, eCnt).map((x) => x.id);
+
+    // Final evictions this day:
+    // - always evict top vote getters
+    // - PLUS any nominees sitting at 0 HP (even if “saved” by votes)
+    const evictedSet = new Set<string>();
+    for (const id of evictedByVotes) evictedSet.add(id);
+    for (const id of zeroHpNominees) evictedSet.add(id);
+
+    const evicted = Array.from(evictedSet);
 
     await prisma.$transaction(async (tx) => {
+      // stamp eliminations one-by-one so places are unique
       for (const u of evicted) {
         await tx.gamePlayer.update({
           where: { gameId_userId: { gameId, userId: u } },
@@ -167,7 +186,7 @@ export async function resolveCastingDayIfDue(gameId: string, dayNumber: number) 
         });
 
         const remaining = await tx.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
-        const place = remaining + 1; // out of 20 placement
+        const place = remaining + 1;
         await tx.gamePlayer.update({
           where: { gameId_userId: { gameId, userId: u } },
           data: { eliminatedPlace: place },
@@ -225,7 +244,6 @@ async function finalizeCasting(gameId: string) {
   });
 
   await prisma.$transaction(async (tx) => {
-    // stamp 1..4
     for (let i = 0; i < ranked.length; i++) {
       await tx.gamePlayer.update({
         where: { gameId_userId: { gameId, userId: ranked[i].userId } },

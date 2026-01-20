@@ -36,6 +36,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   if (!day || !day.nomineeUserIds?.length) return bad("No nominees", 400);
 
   const nominees = day.nomineeUserIds;
+
   const body = await req.json().catch(() => null);
   const pointsMap = body?.pointsMap as Record<string, number>;
   if (!pointsMap || typeof pointsMap !== "object") return bad("pointsMap required");
@@ -48,6 +49,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   if (got.join(",") !== expected.join(",")) return bad(`Points must be ${expected.join(",")}`);
 
   await prisma.$transaction(async (tx) => {
+    // overwrite saved votes
     await tx.castingVote.deleteMany({ where: { gameId, dayNumber, voterUserId } });
     for (const [targetUserId, points] of entries) {
       await tx.castingVote.create({
