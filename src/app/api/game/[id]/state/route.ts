@@ -74,7 +74,10 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     take: pageSize,
     include: { user: { select: { username: true } }, reactions: true },
   });
-  // ✅ CASTING drop events for messages on this page (so chat UI can render them)
+
+  // -----------------------
+  // CASTING drop events (for messages on this page)
+  // -----------------------
   let dropEvents: Record<
     string,
     { eventId: string; claimedAt: string | null; options: { slotIndex: number; kind: "APPLE" | "KEY" | "POISON" }[] }
@@ -108,7 +111,31 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     }
   }
 
+  // -----------------------
+  // CASTING nominees + myVoted
+  // -----------------------
+  let castingNominees: string[] = [];
+  let castingMyVoted = false;
+
+  if (game.gameType === "CASTING" && game.state === "ROUND_VOTE") {
+    const day = await prisma.castingDayResult.findUnique({
+      where: { gameId_dayNumber: { gameId, dayNumber: game.roundNumber } },
+      select: { nomineeUserIds: true },
+    });
+
+    castingNominees = day?.nomineeUserIds ?? [];
+
+    if (meUserId) {
+      const cnt = await prisma.castingVote.count({
+        where: { gameId, dayNumber: game.roundNumber, voterUserId: meUserId },
+      });
+      castingMyVoted = cnt > 0;
+    }
+  }
+
+  // -----------------------
   // FASTING-only nominee info (read only)
+  // -----------------------
   let nomineeA: string | null = null;
   let nomineeB: string | null = null;
   let myNomLocked: boolean | null = null;
@@ -146,7 +173,10 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   return NextResponse.json({
     ok: true,
     meUserId: meUserId ?? null,
+
+    // CASTING helpers
     dropEvents,
+    casting: { nominees: castingNominees, myVoted: castingMyVoted },
 
     game: {
       id: game.id,
@@ -160,6 +190,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
     lobby,
 
+    // FASTING-only fields (castings ignores)
     myNomLocked,
     voteInfo,
 
@@ -168,6 +199,9 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     players: playersRaw.map((p) => {
       const u = p.user;
 
+      const isCastingNominee = game.gameType === "CASTING" && castingNominees.includes(p.userId);
+      const isFastingNominee = !!(nomineeA && nomineeB && (p.userId === nomineeA || p.userId === nomineeB));
+
       return {
         userId: p.userId,
         username: u.username,
@@ -175,13 +209,11 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         lastActiveAt: p.lastActiveAt,
         eliminatedPlace: p.eliminatedPlace ?? null,
 
-        // ✅ CASTING stats (also useful for FASTING display)
         checks: (p.plusCount ?? 0) - (p.minusCount ?? 0),
-        health: (p.health ?? 100),
-        keys: (p.keys ?? 0),
+        health: p.health ?? 100,
+        keys: p.keys ?? 0,
 
-        // FASTING-only indicator (harmless for CASTING)
-        isNominee: !!(nomineeA && nomineeB && (p.userId === nomineeA || p.userId === nomineeB)),
+        isNominee: isCastingNominee || isFastingNominee,
 
         avatar: {
           bodyStyle: u.bodyStyle,
@@ -204,12 +236,12 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       const plus = m.reactions.filter((r) => r.type === "PLUS").length;
       const minus = m.reactions.filter((r) => r.type === "MINUS").length;
       const myReaction = meUserId ? (m.reactions.find((r) => r.reactorUserId === meUserId)?.type ?? null) : null;
-      const isSystem =
-  m.user.username === "__system__" ||
-  /^\[SYSTEM\]/i.test(m.body) ||
-  /^\[DROP:/i.test(m.body) ||
-  /^\[CASTDROP:/i.test(m.body);
 
+      const isSystem =
+        m.user.username === "__system__" ||
+        /^\[SYSTEM\]/i.test(m.body) ||
+        /^\[DROP:/i.test(m.body) ||
+        /^\[CASTDROP:/i.test(m.body);
 
       return {
         id: m.id,
