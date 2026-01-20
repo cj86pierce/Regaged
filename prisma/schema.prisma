@@ -336,21 +336,21 @@ model GamePmMessage {
 }
 
 model CastingDayResult {
-  id             String   @id @default(cuid())
+  id            String   @id @default(cuid())
   gameId         String
   dayNumber      Int
-  nomineeUserIds String[] // length 3 or 4 depending on day
-  evictedUserIds String[] // length 0, 1, or 2
+  nomineeUserIds String[]
+  evictedUserIds String[]
   createdAt      DateTime @default(now())
 
-  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  game           Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
 
   @@unique([gameId, dayNumber])
   @@index([gameId, dayNumber])
 }
 
 model CastingVote {
-  id           String   @id @default(cuid())
+  id          String   @id @default(cuid())
   gameId       String
   dayNumber    Int
   voterUserId  String
@@ -358,7 +358,7 @@ model CastingVote {
   points       Int
   createdAt    DateTime @default(now())
 
-  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  game         Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
 
   @@unique([gameId, dayNumber, voterUserId, targetUserId])
   @@index([gameId, dayNumber])
