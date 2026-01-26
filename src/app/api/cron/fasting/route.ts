@@ -2,10 +2,21 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { advanceFastingIfDue } from "@/lib/fastingAdvance";
 
+function requireCronAuth(req: Request) {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return null; // allow if no secret set
+
+  const auth = req.headers.get("authorization") ?? "";
+  if (auth !== `Bearer ${secret}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  return null;
+}
+
 async function runFastingTick() {
   const now = new Date();
 
-  // lock just for fasting cron
+  // lock just for fasting
   const lockRows = await prisma.$queryRaw<{ locked: boolean }[]>`
     SELECT pg_try_advisory_lock(hashtext('cron_fasting')) as locked
   `;
@@ -23,6 +34,7 @@ async function runFastingTick() {
     });
 
     let advanced = 0;
+
     for (const g of fastingDue) {
       try {
         const r = await advanceFastingIfDue(g.id);
@@ -38,14 +50,22 @@ async function runFastingTick() {
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   if (process.env.CRON_DISABLED === "1") return NextResponse.json({ ok: true, disabled: true });
+
+  const authErr = requireCronAuth(req);
+  if (authErr) return authErr;
+
   const r = await runFastingTick();
   return NextResponse.json({ ok: true, fasting: r });
 }
 
-export async function POST() {
+export async function POST(req: Request) {
   if (process.env.CRON_DISABLED === "1") return NextResponse.json({ ok: true, disabled: true });
+
+  const authErr = requireCronAuth(req);
+  if (authErr) return authErr;
+
   const r = await runFastingTick();
   return NextResponse.json({ ok: true, fasting: r });
 }

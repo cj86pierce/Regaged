@@ -1,51 +1,69 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { advanceFastingIfDue } from "@/lib/fastingAdvance";
+import { maybeSpawnCastingsDrops } from "@/lib/castingsDrops";
+import { applyCastingHealthDecay } from "@/lib/castingHealth";
 
-async function runFastingTick() {
-  const now = new Date();
+function requireCronAuth(req: Request) {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return null;
 
-  // lock just for fasting cron
+  const auth = req.headers.get("authorization") ?? "";
+  if (auth !== `Bearer ${secret}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  return null;
+}
+
+async function runCastingTick() {
+  // lock just for casting
   const lockRows = await prisma.$queryRaw<{ locked: boolean }[]>`
-    SELECT pg_try_advisory_lock(hashtext('cron_fasting')) as locked
+    SELECT pg_try_advisory_lock(hashtext('cron_casting')) as locked
   `;
   if (!lockRows?.[0]?.locked) return { skipped: true, reason: "locked" as const };
 
   try {
-    const fastingDue = await prisma.game.findMany({
-      where: {
-        gameType: "FASTING",
-        state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] },
-        stateEndsAt: { not: null, lte: now },
-      },
+    const castingActive = await prisma.game.findMany({
+      where: { gameType: "CASTING", state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] } },
       select: { id: true },
       take: 50,
     });
 
-    let advanced = 0;
-    for (const g of fastingDue) {
+    for (const g of castingActive) {
       try {
-        const r = await advanceFastingIfDue(g.id);
-        if ((r as any)?.advanced || (r as any)?.fixed) advanced++;
+        await maybeSpawnCastingsDrops(g.id);
       } catch (e) {
-        console.error("FASTING advance failed", { gameId: g.id, err: String(e) });
+        console.error("CASTING drops failed", { gameId: g.id, err: String(e) });
       }
     }
 
-    return { due: fastingDue.length, advanced };
+    try {
+      await applyCastingHealthDecay();
+    } catch (e) {
+      console.error("CASTING decay failed", { err: String(e) });
+    }
+
+    return { active: castingActive.length };
   } finally {
-    await prisma.$queryRaw`SELECT pg_advisory_unlock(hashtext('cron_fasting'))`;
+    await prisma.$queryRaw`SELECT pg_advisory_unlock(hashtext('cron_casting'))`;
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   if (process.env.CRON_DISABLED === "1") return NextResponse.json({ ok: true, disabled: true });
-  const r = await runFastingTick();
-  return NextResponse.json({ ok: true, fasting: r });
+
+  const authErr = requireCronAuth(req);
+  if (authErr) return authErr;
+
+  const r = await runCastingTick();
+  return NextResponse.json({ ok: true, casting: r });
 }
 
-export async function POST() {
+export async function POST(req: Request) {
   if (process.env.CRON_DISABLED === "1") return NextResponse.json({ ok: true, disabled: true });
-  const r = await runFastingTick();
-  return NextResponse.json({ ok: true, fasting: r });
+
+  const authErr = requireCronAuth(req);
+  if (authErr) return authErr;
+
+  const r = await runCastingTick();
+  return NextResponse.json({ ok: true, casting: r });
 }
