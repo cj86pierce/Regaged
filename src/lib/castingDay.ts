@@ -145,11 +145,8 @@ export async function resolveCastingVoteDue(gameId: string, dayNumber: number) {
       select: { nomineeUserIds: true, evictedUserIds: true },
     });
     if (!day || !day.nomineeUserIds?.length) {
-      // hard unstick: push timer forward so it doesn't sit at 0
-      await prisma.game.update({
-        where: { id: gameId },
-        data: { stateEndsAt: new Date(Date.now() + CASTING_DAY_MS) },
-      });
+      // Unstick: advance to next day instead of just resetting timer so we don't stay stuck on this day
+      await advanceToNextDay(gameId, actualDay);
       return;
     }
 

@@ -114,6 +114,19 @@ export default function GamePage({ params }: { params: { id: string } }) {
     return Math.max(0, Math.ceil(ms / 1000));
   }, [data?.game.stateEndsAt, now]);
 
+  // When Casting timer hits 0, nudge the server to advance the day (in case cron didn't run)
+  useEffect(() => {
+    if (!data?.game || data.game.gameType !== "CASTING" || timeLeft !== 0) return;
+    let cancelled = false;
+    fetch(`/api/game/${gameId}/nudge`)
+      .then(() => {
+        if (!cancelled) load().catch(() => {});
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameId, data?.game?.gameType, data?.game?.stateEndsAt, timeLeft]);
+
   async function sendChat() {
     if (sending) return;
     setError(null);

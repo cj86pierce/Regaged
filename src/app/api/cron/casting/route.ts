@@ -23,7 +23,7 @@ function requireCronAuth(req: Request) {
   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 }
 
-async function catchUpCastingGame(gameId: string) {
+export async function catchUpCastingGame(gameId: string) {
   // per-game lock prevents double-resolve if two ticks overlap
   const lockRows = await prisma.$queryRaw<{ locked: boolean }[]>`
     SELECT pg_try_advisory_lock(hashtext(${gameId})) as locked
