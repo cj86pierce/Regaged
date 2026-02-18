@@ -261,6 +261,10 @@ export default function GamePage({ params }: { params: { id: string } }) {
             <>
               Filling: <b>{data.lobby.current}/{maxPlayers}</b> ({data.lobby.needed} needed)
             </>
+          ) : data.game.state === "COMPLETED" ? (
+            <>
+              Game ended · Final placements below
+            </>
           ) : (
             <>
               Day/Round <b>{data.game.roundNumber}</b> · State <b>{data.game.state}</b>

@@ -67,9 +67,14 @@ export default function CastingPlayerStrip(props: {
             const out = p.status !== "ACTIVE";
             const place = p.eliminatedPlace;
             const showPlacement = isCompleted && place != null;
-            const icon = showPlacement ? placeSuffix(place) : p.isNominee ? "❓" : "✅";
+            // When game is over: show placement (1st, 2nd, …) or "—" if never stamped; otherwise ✅/❓
+            const icon = isCompleted
+              ? (place != null ? placeSuffix(place) : "—")
+              : p.isNominee
+                ? "❓"
+                : "✅";
             const presence = presenceLabel(p.lastActiveAt);
-            const grayscale = isCompleted ? place !== 1 : out;
+            const grayscale = isCompleted ? (place !== 1 && place != null) : out;
 
             const presenceColor =
               presence.tone === "online" ? "#198754" : presence.tone === "away" ? "#b58900" : "#6c757d";
