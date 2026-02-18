@@ -91,6 +91,8 @@ model User {
   usernameLower String @unique
 
   passwordHash String
+  // Steam: when set, user logs in via Steam only
+  steamId      String?  @unique
   createdAt    DateTime @default(now())
 
   karma      Int      @default(0)

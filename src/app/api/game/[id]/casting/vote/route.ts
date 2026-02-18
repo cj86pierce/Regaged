@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { getCurrentUserId } from "@/lib/getCurrentUserId";
 import { prisma } from "@/lib/prisma";
 
 function bad(msg: string, status = 400) {
@@ -8,8 +7,7 @@ function bad(msg: string, status = 400) {
 }
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  const voterUserId = (session?.user as any)?.id as string | undefined;
+  const voterUserId = await getCurrentUserId(req);
   if (!voterUserId) return bad("Unauthorized", 401);
 
   const gameId = params.id;

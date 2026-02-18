@@ -22,10 +22,11 @@ export async function advanceFastingIfDue(gameId: string) {
     });
     if (!game || game.gameType !== "FASTING") return { ok: false, error: "not_fasting" as const };
 
-    // Only advance if due (or clearly stuck)
+    // Only advance if due, clearly stuck, or stateEndsAt missing (unstick)
     const due = !!game.stateEndsAt && game.stateEndsAt.getTime() <= now.getTime();
     const stuck = !!game.stateEndsAt && game.stateEndsAt.getTime() <= now.getTime() - 15_000; // 15s grace
-    if (!due && !stuck) return { ok: true, skipped: true as const, reason: "not_due" as const };
+    const missingTimer = !game.stateEndsAt && (game.state === "ROUND_NOMINATE" || game.state === "ROUND_VOTE");
+    if (!due && !stuck && !missingTimer) return { ok: true, skipped: true as const, reason: "not_due" as const };
 
     // Read round result (if exists) for recovery
     const rr = await prisma.roundResult.findUnique({

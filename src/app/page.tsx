@@ -1,13 +1,11 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { getCurrentUserIdFromHeaders } from "@/lib/getCurrentUserId";
 import { prisma } from "@/lib/prisma";
 
 export default async function HomePage() {
-  const session = await getServerSession(authOptions);
-  const userId = (session?.user as any)?.id as string | undefined;
+  const userId = await getCurrentUserIdFromHeaders();
 
   const me = userId
     ? await prisma.user.findUnique({

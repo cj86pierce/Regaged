@@ -27,11 +27,15 @@ async function runFastingTick() {
   if (!lockRows?.[0]?.locked) return { skipped: true, reason: "locked" as const };
 
   try {
+    // Due games (timer passed) + stuck games (null stateEndsAt) so we can unstick
     const fastingDue = await prisma.game.findMany({
       where: {
         gameType: "FASTING",
         state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] },
-        stateEndsAt: { not: null, lte: now },
+        OR: [
+          { stateEndsAt: { not: null, lte: now } },
+          { stateEndsAt: null },
+        ],
       },
       select: { id: true },
       take: 50,

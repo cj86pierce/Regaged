@@ -1,8 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { getCurrentUserIdFromHeaders } from "@/lib/getCurrentUserId";
 import { prisma } from "@/lib/prisma";
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
@@ -45,8 +44,7 @@ function GameBtn({ href, label, sub }: { href: string; label: string; sub: strin
 }
 
 export default async function RightRail() {
-  const session = await getServerSession(authOptions);
-  const userId = (session?.user as any)?.id as string | undefined;
+  const userId = await getCurrentUserIdFromHeaders();
 
   if (!userId) {
     return (

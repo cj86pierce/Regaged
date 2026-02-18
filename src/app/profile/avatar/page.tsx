@@ -1,7 +1,6 @@
 export const dynamic = "force-dynamic";
 
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { getCurrentUserIdFromHeaders } from "@/lib/getCurrentUserId";
 import { prisma } from "@/lib/prisma";
 import AvatarEditor from "./ui/AvatarEditor";
 import type { AvatarConfig } from "@/components/Avatar";
@@ -13,8 +12,7 @@ function oneOf(v: string, allowed: string[], fallback: string) {
 }
 
 export default async function AvatarPage() {
-  const session = await getServerSession(authOptions);
-  const userId = (session?.user as any)?.id as string | undefined;
+  const userId = await getCurrentUserIdFromHeaders();
 
   if (!userId) {
     return <main style={{ padding: 12 }}>You must be logged in.</main>;

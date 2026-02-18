@@ -2,10 +2,28 @@
 
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import { useEffect, useState } from "react";
+
+type SteamMe = { userId: string; username: string } | null;
 
 export default function NavBar() {
   const { data: session, status } = useSession();
-  const loggedIn = !!session?.user;
+  const [steamMe, setSteamMe] = useState<SteamMe>(null);
+  const loggedIn = !!session?.user || !!steamMe;
+
+  // When not using NextAuth session (e.g. Steam client with cookie), check /api/me/session
+  useEffect(() => {
+    if (session?.user) return;
+    fetch("/api/me/session", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d && setSteamMe({ userId: d.userId, username: d.username }))
+      .catch(() => {});
+  }, [session?.user]);
+
+  function logoutSteam() {
+    document.cookie = "regaged_token=; path=/; max-age=0";
+    window.location.reload();
+  }
 
   return (
     <div
@@ -56,7 +74,7 @@ export default function NavBar() {
 
           <div style={{ width: 1, height: 18, background: "rgba(0,0,0,0.15)" }} />
 
-          {status === "loading" ? (
+          {status === "loading" && !steamMe ? (
             <span style={{ fontSize: 13, fontWeight: 800, opacity: 0.8 }}>Loading…</span>
           ) : !loggedIn ? (
             <>
@@ -66,6 +84,27 @@ export default function NavBar() {
               <Link href="/login" style={{ color: "#123", textDecoration: "none", fontWeight: 800, fontSize: 13 }}>
                 Login
               </Link>
+            </>
+          ) : steamMe && !session?.user ? (
+            <>
+              <Link href="/profile" style={{ color: "#123", textDecoration: "none", fontWeight: 900, fontSize: 13 }}>
+                Profile
+              </Link>
+              <button
+                type="button"
+                onClick={logoutSteam}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#123",
+                  fontWeight: 800,
+                  fontSize: 13,
+                  cursor: "pointer",
+                  padding: 0,
+                }}
+              >
+                Logout
+              </button>
             </>
           ) : (
             <>

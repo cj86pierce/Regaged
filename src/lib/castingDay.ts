@@ -1,4 +1,3 @@
-// TEST CHANGE - FORCE DEPLOY
 import { prisma } from "@/lib/prisma";
 import { getSystemUserId } from "@/lib/systemUser";
 
@@ -58,7 +57,14 @@ export async function ensureCastingVotingStarted(gameId: string, dayNumber: numb
   const ev = evictCount(active);
   const nomCount = nomineeCountForEvict(ev);
 
-  if (nomCount === 0) return; // final 4 (no vote day)
+  if (nomCount === 0) {
+    // Final 4: no vote day, complete the game so we don't get stuck in ROUND_NOMINATE
+    await prisma.game.update({
+      where: { id: gameId },
+      data: { state: "COMPLETED", completedAt: new Date(), stateEndsAt: null },
+    });
+    return;
+  }
 
   const existing = await prisma.castingDayResult.findUnique({
     where: { gameId_dayNumber: { gameId, dayNumber } },

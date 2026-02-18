@@ -40,9 +40,17 @@ async function catchUpCastingGame(gameId: string) {
         where: { id: gameId },
         select: { id: true, state: true, roundNumber: true, stateEndsAt: true },
       });
-      if (!g || !g.stateEndsAt) break;
+      if (!g) break;
 
       const now = new Date();
+      // Unstick: if stateEndsAt is null, set to now so we process this round
+      if (!g.stateEndsAt) {
+        await prisma.game.update({
+          where: { id: gameId },
+          data: { stateEndsAt: now },
+        });
+        continue;
+      }
       if (g.stateEndsAt.getTime() > now.getTime()) break; // up to date
 
       // If voting day ended, resolve votes / eliminations

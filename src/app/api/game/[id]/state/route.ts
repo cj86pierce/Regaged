@@ -1,13 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { getCurrentUserId } from "@/lib/getCurrentUserId";
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   const gameId = params.id;
 
-  const session = await getServerSession(authOptions);
-  const meUserId = (session?.user as any)?.id as string | undefined;
+  const meUserId = await getCurrentUserId(req);
 
   const url = new URL(req.url);
   const page = Math.max(1, Number(url.searchParams.get("page") ?? "1") || 1);

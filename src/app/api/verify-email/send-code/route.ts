@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { getCurrentUserId } from "@/lib/getCurrentUserId";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 import sgMail from "@sendgrid/mail";
@@ -22,8 +21,7 @@ function hashCode(code: string) {
 }
 
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
-  const userId = (session?.user as any)?.id as string | undefined;
+  const userId = await getCurrentUserId(req);
   if (!userId) return bad("Unauthorized", 401);
 
   const apiKey = process.env.SENDGRID_API_KEY;

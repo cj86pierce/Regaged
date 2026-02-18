@@ -1,7 +1,6 @@
 export const dynamic = "force-dynamic";
 
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { getCurrentUserIdFromHeaders } from "@/lib/getCurrentUserId";
 import { prisma } from "@/lib/prisma";
 import ProfileTabs, { ProfileTabsData, ProfileGameBubble } from "@/components/ProfileTabs";
 import Link from "next/link";
@@ -12,8 +11,7 @@ function oneOf(v: string, allowed: string[], fallback: string) {
 }
 
 export default async function ProfilePage({ searchParams }: { searchParams: { page?: string } }) {
-  const session = await getServerSession(authOptions);
-  const userId = (session?.user as any)?.id as string | undefined;
+  const userId = await getCurrentUserIdFromHeaders();
 
   if (!userId) {
     return (

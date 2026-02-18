@@ -1,0 +1,35 @@
+{
+  "name": "regaged-steam",
+  "version": "0.1.0",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "build:steam": "electron-builder --win --config.steam.publish.enabled"
+  },
+  "dependencies": {
+    "steamworks.js": "^0.4.0"
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  },
+  "build": {
+    "appId": "com.regaged.game",
+    "productName": "Regaged",
+    "directories": { "output": "dist" },
+    "files": ["main.js", "preload.js", "package.json", "node_modules"],
+    "win": {
+      "target": ["nsis", "portable"],
+      "icon": "icon.ico"
+    },
+    "steam": {
+      "publish": {
+        "enabled": false
+      }
+    },
+    "publish": null
+  }
+}

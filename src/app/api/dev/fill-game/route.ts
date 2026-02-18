@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { getCurrentUserId } from "@/lib/getCurrentUserId";
 import bcrypt from "bcryptjs";
 
 export const dynamic = "force-dynamic";
@@ -26,8 +25,7 @@ export async function POST(req: Request) {
   const secret = req.headers.get("x-dev-secret") ?? "";
   if (!process.env.DEV_SECRET || secret !== process.env.DEV_SECRET) return bad("Forbidden", 403);
 
-  const session = await getServerSession(authOptions);
-  const meId = (session?.user as any)?.id as string | undefined;
+  const meId = await getCurrentUserId(req);
   if (!meId) return bad("Unauthorized", 401);
 
   const body = await req.json().catch(() => null);
