@@ -82,6 +82,8 @@ export default function CastingPlayerStrip(props: {
                   padding: 8,
                   background: "transparent",
                   opacity: out && !isCompleted ? 0.45 : 1,
+                  filter: grayscale ? "grayscale(1)" : undefined,
+                  transition: "filter 0.2s ease",
                 }}
               >
                 <div style={{ display: "grid", placeItems: "center" }}>
