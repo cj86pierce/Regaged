@@ -43,81 +43,72 @@ export default function CastingPlayerStrip(props: {
   const { players, me, gameState } = props;
   const isCompleted = gameState === "COMPLETED";
 
+  const columnCount = Math.min(Math.max(players.length, 10), 20);
   return (
     <div
       style={{
-        border: "1px solid rgba(0,0,0,0.10)",
-        borderRadius: 12,
-        background: "#fff",
-        padding: 10,
+        border: "1px solid #cfd7df",
+        borderRadius: 10,
+        padding: "6px 8px",
+        background: "#eef7ff",
+        overflow: "hidden",
       }}
     >
-      {/* identical to fasting top box feel: players left, your stats bubble right */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 240px", gap: 12, alignItems: "start" }}>
-        {/* LEFT: players 10 over 10 */}
+        {/* LEFT: same layout as Fasting – horizontal row, avatar → username → offline → placement */}
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(10, minmax(0, 1fr))",
-            gap: 8,
+            gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`,
+            gap: 4,
             alignItems: "start",
           }}
         >
           {players.map((p) => {
             const out = p.status !== "ACTIVE";
             const place = p.eliminatedPlace;
-            const showPlacement = isCompleted && place != null;
-            // When game is over: show placement (1st, 2nd, …) or "—" if never stamped; otherwise ✅/❓
-            const icon = isCompleted
+            const presence = presenceLabel(p.lastActiveAt);
+            const grayscale = isCompleted ? (place !== 1 && place != null) : out;
+            const presenceColor =
+              presence.tone === "online" ? "#198754" : presence.tone === "away" ? "#b58900" : "#6c757d";
+
+            const slotContent = isCompleted
               ? (place != null ? placeSuffix(place) : "—")
               : p.isNominee
                 ? "❓"
                 : "✅";
-            const presence = presenceLabel(p.lastActiveAt);
-            const grayscale = isCompleted ? (place !== 1 && place != null) : out;
-
-            const presenceColor =
-              presence.tone === "online" ? "#198754" : presence.tone === "away" ? "#b58900" : "#6c757d";
 
             return (
-              <div
-                key={p.userId}
-                style={{
-                  padding: 8,
-                  background: "transparent",
-                  opacity: out && !isCompleted ? 0.45 : 1,
-                }}
-              >
-                <div style={{ display: "grid", placeItems: "center" }}>
+              <div key={p.userId} style={{ minWidth: 0, opacity: out && !isCompleted ? 0.45 : 1 }}>
+                <Link href={`/u/${encodeURIComponent(p.username.toLowerCase())}`} style={{ display: "grid", placeItems: "center", textDecoration: "none" }}>
                   <Avatar config={p.avatar} width={64} grayscale={grayscale} />
-                </div>
+                </Link>
 
                 <Link
                   href={`/u/${encodeURIComponent(p.username.toLowerCase())}`}
                   style={{
                     display: "block",
-                    marginTop: 6,
+                    marginTop: 4,
+                    fontSize: 10,
                     fontWeight: 1000,
-                    fontSize: 12,
+                    color: "#111",
+                    textDecoration: "none",
                     textAlign: "center",
                     whiteSpace: "nowrap",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
-                    textDecoration: "none",
-                    color: "#111",
                   }}
                   title={p.username}
                 >
-                  {p.username}
+                  {p.username.length > 10 ? p.username.slice(0, 10) + "…" : p.username}
                 </Link>
 
-                <div style={{ marginTop: 4, fontSize: 11, textAlign: "center", color: presenceColor, fontWeight: 900 }}>
-                  {!isCompleted && presence.text}
+                <div style={{ fontSize: 10, opacity: 0.85, textAlign: "center", marginTop: 2 }}>
+                  {presence.text}
                 </div>
 
-                {/* Placement (1st, 2nd, …) when game over; otherwise checkmark or nominee ? */}
-                <div style={{ marginTop: 6, fontSize: showPlacement ? 12 : 13, textAlign: "center", fontWeight: showPlacement ? 800 : undefined }}>
-                  {icon}
+                <div style={{ marginTop: 3, height: 18, display: "grid", placeItems: "center" }}>
+                  <span style={{ fontWeight: 1000, fontSize: 11 }}>{slotContent}</span>
                 </div>
               </div>
             );
