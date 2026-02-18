@@ -110,17 +110,12 @@ export async function ensureCastingVotingStarted(gameId: string, dayNumber: numb
 export async function resolveCastingVoteDue(gameId: string, dayNumber: number) {
   const now = new Date();
 
-  // lock per game
-  const lockRows = await prisma.$queryRaw<{ locked: boolean }[]>`
-    SELECT pg_try_advisory_lock(hashtext(${gameId})) as locked
-  `;
-  if (!lockRows?.[0]?.locked) return;
-
-  try {
-    const game = await prisma.game.findUnique({
-      where: { id: gameId },
-      select: { gameType: true, state: true, roundNumber: true, stateEndsAt: true },
-    });
+  // Caller (cron catchUpCastingGame) already holds the per-game lock; no nested lock here
+  // or we'd never acquire it and days would never advance.
+  const game = await prisma.game.findUnique({
+    where: { id: gameId },
+    select: { gameType: true, state: true, roundNumber: true, stateEndsAt: true },
+  });
     if (!game || game.gameType !== "CASTING") return;
     if (game.state !== "ROUND_VOTE") return;
 
@@ -233,9 +228,6 @@ export async function resolveCastingVoteDue(gameId: string, dayNumber: number) {
 
     // advance to next day no matter what
     await advanceToNextDay(gameId, actualDay);
-  } finally {
-    await prisma.$queryRaw`SELECT pg_advisory_unlock(hashtext(${gameId}))`;
-  }
 }
 
 async function advanceToNextDay(gameId: string, dayNumber: number) {
