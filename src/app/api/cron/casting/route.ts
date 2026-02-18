@@ -3,8 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { maybeSpawnCastingsDrops } from "@/lib/castingsDrops";
 import { applyCastingHealthDecay } from "@/lib/castingHealth";
 import { ensureCastingVotingStarted, resolveCastingVoteDue } from "@/lib/castingDay";
-
-const CASTING_DAY_MS = 12 * 60 * 60 * 1000;
+import { getCastingDayMs } from "@/lib/castingDayLength";
 
 function requireCronAuth(req: Request) {
   const secret = process.env.CRON_SECRET;
@@ -70,7 +69,7 @@ export async function catchUpCastingGame(gameId: string) {
           data: {
             roundNumber: nextDay,
             state: "ROUND_NOMINATE",
-            stateEndsAt: new Date(Date.now() + CASTING_DAY_MS),
+            stateEndsAt: new Date(Date.now() + getCastingDayMs()),
           },
         });
 
@@ -82,7 +81,7 @@ export async function catchUpCastingGame(gameId: string) {
       // if some unexpected state, just push timer forward so it doesn’t stick
       await prisma.game.update({
         where: { id: gameId },
-        data: { stateEndsAt: new Date(Date.now() + CASTING_DAY_MS) },
+        data: { stateEndsAt: new Date(Date.now() + getCastingDayMs()) },
       });
       break;
     }

@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
+import { getCastingDayMs } from "@/lib/castingDayLength";
 
 const CASTING_MAX = 20;
-const CASTING_DAY_MS = 12 * 60 * 60 * 1000;
 
 export async function tryStartCastingsGame(gameId: string) {
   const g = await prisma.game.findUnique({
@@ -22,7 +22,7 @@ export async function tryStartCastingsGame(gameId: string) {
       roundNumber: 1,
       startsAt: now,
       castingDayStartedAt: now,
-      stateEndsAt: new Date(now.getTime() + CASTING_DAY_MS),
+      stateEndsAt: new Date(now.getTime() + getCastingDayMs()),
     },
   });
 }

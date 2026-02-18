@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
-    "deploy": "vercel --prod"
+    "deploy": "npx vercel --prod"
   },
   "dependencies": {
     "@prisma/client": "^6.19.1",

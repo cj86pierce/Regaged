@@ -1,7 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getSystemUserId } from "@/lib/systemUser";
-
-const CASTING_DAY_MS = 12 * 60 * 60 * 1000;
+import { getCastingDayMs } from "@/lib/castingDayLength";
 
 function netChecks(plus: number | null, minus: number | null) {
   return (plus ?? 0) - (minus ?? 0);
@@ -89,7 +88,7 @@ export async function ensureCastingVotingStarted(gameId: string, dayNumber: numb
   if (game.state !== "ROUND_VOTE") {
     await prisma.game.update({
       where: { id: gameId },
-      data: { state: "ROUND_VOTE", stateEndsAt: new Date(Date.now() + CASTING_DAY_MS) },
+      data: { state: "ROUND_VOTE", stateEndsAt: new Date(Date.now() + getCastingDayMs()) },
     });
   } else {
     // If already in vote but timer missing, set one
@@ -97,7 +96,7 @@ export async function ensureCastingVotingStarted(gameId: string, dayNumber: numb
     if (!g2?.stateEndsAt) {
       await prisma.game.update({
         where: { id: gameId },
-        data: { stateEndsAt: new Date(Date.now() + CASTING_DAY_MS) },
+        data: { stateEndsAt: new Date(Date.now() + getCastingDayMs()) },
       });
     }
   }
@@ -244,7 +243,7 @@ async function advanceToNextDay(gameId: string, dayNumber: number) {
     data: {
       state: "ROUND_NOMINATE",
       roundNumber: nextDay,
-      stateEndsAt: new Date(Date.now() + CASTING_DAY_MS),
+      stateEndsAt: new Date(Date.now() + getCastingDayMs()),
     },
   });
 

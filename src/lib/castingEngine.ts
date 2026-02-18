@@ -1,7 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getSystemUserId } from "@/lib/systemUser";
-
-const CASTING_DAY_MS = 12 * 60 * 60 * 1000;
+import { getCastingDayMs } from "@/lib/castingDayLength";
 
 // CASTING SLOW payouts (Karma = “K”)
 const CASTING_SLOW_PAYOUT: Record<number, { karma: number; tMoney: number }> = {
@@ -88,7 +87,7 @@ export async function startCastingDay(gameId: string, dayNumber: number) {
     where: { id: gameId },
     data: {
       state: "ROUND_VOTE",
-      stateEndsAt: new Date(Date.now() + CASTING_DAY_MS),
+      stateEndsAt: new Date(Date.now() + getCastingDayMs()),
     },
   });
 
@@ -203,7 +202,7 @@ export async function resolveCastingDay(gameId: string, dayNumber: number) {
     }
 
     const nextDay = dayNumber + 1;
-    const end = new Date(Date.now() + CASTING_DAY_MS);
+    const end = new Date(Date.now() + getCastingDayMs());
 
     await prisma.game.update({
       where: { id: gameId },

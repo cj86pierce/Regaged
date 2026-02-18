@@ -26,6 +26,14 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   });
   if (!game) return NextResponse.json({ error: "Game not found" }, { status: 404 });
 
+  // Casting: viewing the game counts as activity so health doesn't decay while you're watching
+  if (game.gameType === "CASTING" && meUserId) {
+    await prisma.gamePlayer.updateMany({
+      where: { gameId, userId: meUserId, status: "ACTIVE" },
+      data: { lastActiveAt: new Date() },
+    });
+  }
+
   const playersRaw = await prisma.gamePlayer.findMany({
     where: { gameId },
     include: {

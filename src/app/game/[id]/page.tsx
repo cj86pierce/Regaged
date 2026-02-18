@@ -114,16 +114,25 @@ export default function GamePage({ params }: { params: { id: string } }) {
     return Math.max(0, Math.ceil(ms / 1000));
   }, [data?.game.stateEndsAt, now]);
 
-  // When Casting timer hits 0, nudge the server to advance the day (in case cron didn't run)
+  // When Casting timer hits 0, nudge the server to advance the day (cron or nudge does the work)
   useEffect(() => {
     if (!data?.game || data.game.gameType !== "CASTING" || timeLeft !== 0) return;
     let cancelled = false;
+    let refetchTimer: ReturnType<typeof setTimeout> | undefined;
     fetch(`/api/game/${gameId}/nudge`)
       .then(() => {
-        if (!cancelled) load().catch(() => {});
+        if (cancelled) return;
+        load().catch(() => {});
+        refetchTimer = setTimeout(() => {
+          if (!cancelled) load().catch(() => {});
+          refetchTimer = undefined;
+        }, 1500);
       })
       .catch(() => {});
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      if (refetchTimer) clearTimeout(refetchTimer);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameId, data?.game?.gameType, data?.game?.stateEndsAt, timeLeft]);
 
