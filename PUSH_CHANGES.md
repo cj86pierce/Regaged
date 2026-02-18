@@ -53,11 +53,30 @@ git push
 
 ---
 
-**One-liner:**
+**One-liner (push only):**
 
 ```powershell
 cd c:\dev\regaged\tengaged-mvp
 git add -A
 git commit -m "Describe your change here"
 git push
+```
+
+**If Vercel doesn’t auto redeploy – deploy yourself:**
+
+```powershell
+cd c:\dev\regaged\tengaged-mvp
+npm run deploy
+```
+
+(First time: run `npx vercel link` in that folder, pick your existing Regaged project, then `npm run deploy`.)
+
+**Push + deploy in one go:**
+
+```powershell
+cd c:\dev\regaged\tengaged-mvp
+git add -A
+git commit -m "Describe your change here"
+git push
+npm run deploy
 ```
