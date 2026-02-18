@@ -128,12 +128,9 @@ export async function resolveCastingVoteDue(gameId: string, dayNumber: number) {
     const activeBefore = await prisma.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
     const ev = evictCount(activeBefore);
 
-    // Final 4 reached
+    // Final 4 reached: ensure placements 1–4 are set and game is COMPLETED
     if (ev === 0) {
-      await prisma.game.update({
-        where: { id: gameId },
-        data: { state: "COMPLETED", completedAt: now, stateEndsAt: null },
-      });
+      await finalizeCastingGame(gameId);
       return;
     }
 

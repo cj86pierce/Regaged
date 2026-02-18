@@ -65,7 +65,8 @@ export default function CastingPlayerStrip(props: {
             const out = p.status !== "ACTIVE";
             const place = p.eliminatedPlace;
             const presence = presenceLabel(p.lastActiveAt);
-            const grayscale = isCompleted ? (place !== 1 && place != null) : out;
+            // When completed: grey everyone except 1st place (place === 1). If place is null we still grey.
+            const grayscale = isCompleted ? place !== 1 : out;
             const presenceColor =
               presence.tone === "online" ? "#198754" : presence.tone === "away" ? "#b58900" : "#6c757d";
 
@@ -81,9 +82,10 @@ export default function CastingPlayerStrip(props: {
                 style={{
                   padding: 8,
                   background: "transparent",
-                  opacity: out && !isCompleted ? 0.45 : 1,
-                  filter: grayscale ? "grayscale(1)" : undefined,
-                  transition: "filter 0.2s ease",
+                  opacity: grayscale ? 0.7 : out && !isCompleted ? 0.45 : 1,
+                  filter: grayscale ? "grayscale(100%)" : undefined,
+                  WebkitFilter: grayscale ? "grayscale(100%)" : undefined,
+                  transition: "filter 0.2s ease, opacity 0.2s ease",
                 }}
               >
                 <div style={{ display: "grid", placeItems: "center" }}>
