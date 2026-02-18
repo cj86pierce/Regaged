@@ -43,24 +43,21 @@ export default function CastingPlayerStrip(props: {
   const { players, me, gameState } = props;
   const isCompleted = gameState === "COMPLETED";
 
-  const columnCount = Math.min(Math.max(players.length, 10), 20);
   return (
     <div
       style={{
-        border: "1px solid #cfd7df",
-        borderRadius: 10,
-        padding: "6px 8px",
-        background: "#eef7ff",
-        overflow: "hidden",
+        border: "1px solid rgba(0,0,0,0.10)",
+        borderRadius: 12,
+        background: "#fff",
+        padding: 10,
       }}
     >
       <div style={{ display: "grid", gridTemplateColumns: "1fr 240px", gap: 12, alignItems: "start" }}>
-        {/* LEFT: same layout as Fasting – horizontal row, avatar → username → offline → placement */}
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`,
-            gap: 4,
+            gridTemplateColumns: "repeat(10, minmax(0, 1fr))",
+            gap: 8,
             alignItems: "start",
           }}
         >
@@ -72,43 +69,50 @@ export default function CastingPlayerStrip(props: {
             const presenceColor =
               presence.tone === "online" ? "#198754" : presence.tone === "away" ? "#b58900" : "#6c757d";
 
-            const slotContent = isCompleted
+            const icon = isCompleted
               ? (place != null ? placeSuffix(place) : "—")
               : p.isNominee
                 ? "❓"
                 : "✅";
 
             return (
-              <div key={p.userId} style={{ minWidth: 0, opacity: out && !isCompleted ? 0.45 : 1 }}>
-                <Link href={`/u/${encodeURIComponent(p.username.toLowerCase())}`} style={{ display: "grid", placeItems: "center", textDecoration: "none" }}>
+              <div
+                key={p.userId}
+                style={{
+                  padding: 8,
+                  background: "transparent",
+                  opacity: out && !isCompleted ? 0.45 : 1,
+                }}
+              >
+                <div style={{ display: "grid", placeItems: "center" }}>
                   <Avatar config={p.avatar} width={64} grayscale={grayscale} />
-                </Link>
+                </div>
 
                 <Link
                   href={`/u/${encodeURIComponent(p.username.toLowerCase())}`}
                   style={{
                     display: "block",
-                    marginTop: 4,
-                    fontSize: 10,
+                    marginTop: 6,
                     fontWeight: 1000,
-                    color: "#111",
-                    textDecoration: "none",
+                    fontSize: 12,
                     textAlign: "center",
                     whiteSpace: "nowrap",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
+                    textDecoration: "none",
+                    color: "#111",
                   }}
                   title={p.username}
                 >
-                  {p.username.length > 10 ? p.username.slice(0, 10) + "…" : p.username}
+                  {p.username}
                 </Link>
 
-                <div style={{ fontSize: 10, opacity: 0.85, textAlign: "center", marginTop: 2 }}>
-                  {presence.text}
+                <div style={{ marginTop: 4, fontSize: 11, textAlign: "center", color: presenceColor, fontWeight: 900 }}>
+                  {!isCompleted && presence.text}
                 </div>
 
-                <div style={{ marginTop: 3, height: 18, display: "grid", placeItems: "center" }}>
-                  <span style={{ fontWeight: 1000, fontSize: 11 }}>{slotContent}</span>
+                <div style={{ marginTop: 6, fontSize: 13, textAlign: "center", fontWeight: isCompleted && place != null ? 800 : undefined }}>
+                  {icon}
                 </div>
               </div>
             );
