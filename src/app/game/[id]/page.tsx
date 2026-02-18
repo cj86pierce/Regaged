@@ -274,6 +274,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
         <CastingPlayerStrip
           players={data.players}
           me={meStats ? { checks: meStats.checks, health: meStats.health, keys: meStats.keys } : null}
+          gameState={data.game.state}
         />
       ) : (
         <PlayerStrip

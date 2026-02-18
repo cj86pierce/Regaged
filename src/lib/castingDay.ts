@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getSystemUserId } from "@/lib/systemUser";
 import { getCastingDayMs } from "@/lib/castingDayLength";
+import { finalizeCastingGame } from "@/lib/castingEngine";
 
 function netChecks(plus: number | null, minus: number | null) {
   return (plus ?? 0) - (minus ?? 0);
@@ -57,11 +58,8 @@ export async function ensureCastingVotingStarted(gameId: string, dayNumber: numb
   const nomCount = nomineeCountForEvict(ev);
 
   if (nomCount === 0) {
-    // Final 4: no vote day, complete the game so we don't get stuck in ROUND_NOMINATE
-    await prisma.game.update({
-      where: { id: gameId },
-      data: { state: "COMPLETED", completedAt: new Date(), stateEndsAt: null },
-    });
+    // Final 4: assign placements 1–4 and complete the game
+    await finalizeCastingGame(gameId);
     return;
   }
 
@@ -229,10 +227,7 @@ export async function resolveCastingVoteDue(gameId: string, dayNumber: number) {
 async function advanceToNextDay(gameId: string, dayNumber: number) {
   const activeAfter = await prisma.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
   if (activeAfter <= 4) {
-    await prisma.game.update({
-      where: { id: gameId },
-      data: { state: "COMPLETED", completedAt: new Date(), stateEndsAt: null },
-    });
+    await finalizeCastingGame(gameId);
     return;
   }
 

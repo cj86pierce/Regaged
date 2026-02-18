@@ -27,11 +27,21 @@ function presenceLabel(lastActiveAtIso: string) {
   return { text: "offline", tone: "offline" as const };
 }
 
+function placeSuffix(n: number) {
+  const j = n % 10, k = n % 100;
+  if (j === 1 && k !== 11) return `${n}st`;
+  if (j === 2 && k !== 12) return `${n}nd`;
+  if (j === 3 && k !== 13) return `${n}rd`;
+  return `${n}th`;
+}
+
 export default function CastingPlayerStrip(props: {
   players: Player[];
   me: null | { checks: number; health: number; keys: number };
+  gameState: string;
 }) {
-  const { players, me } = props;
+  const { players, me, gameState } = props;
+  const isCompleted = gameState === "COMPLETED";
 
   return (
     <div
@@ -55,8 +65,11 @@ export default function CastingPlayerStrip(props: {
         >
           {players.map((p) => {
             const out = p.status !== "ACTIVE";
-            const icon = p.isNominee ? "❓" : "✅";
+            const place = p.eliminatedPlace;
+            const showPlacement = isCompleted && place != null;
+            const icon = showPlacement ? placeSuffix(place) : p.isNominee ? "❓" : "✅";
             const presence = presenceLabel(p.lastActiveAt);
+            const grayscale = isCompleted ? place !== 1 : out;
 
             const presenceColor =
               presence.tone === "online" ? "#198754" : presence.tone === "away" ? "#b58900" : "#6c757d";
@@ -66,12 +79,12 @@ export default function CastingPlayerStrip(props: {
                 key={p.userId}
                 style={{
                   padding: 8,
-                  background: "transparent", // ✅ no tile box
-                  opacity: out ? 0.45 : 1,
+                  background: "transparent",
+                  opacity: out && !isCompleted ? 0.45 : 1,
                 }}
               >
                 <div style={{ display: "grid", placeItems: "center" }}>
-                  <Avatar config={p.avatar} width={64} grayscale={out} />
+                  <Avatar config={p.avatar} width={64} grayscale={grayscale} />
                 </div>
 
                 <Link
@@ -93,13 +106,12 @@ export default function CastingPlayerStrip(props: {
                   {p.username}
                 </Link>
 
-                {/* ✅ presence line */}
                 <div style={{ marginTop: 4, fontSize: 11, textAlign: "center", color: presenceColor, fontWeight: 900 }}>
-                  {presence.text}
+                  {!isCompleted && presence.text}
                 </div>
 
-                {/* ✅ status: checkmark if in, ? if nominated */}
-                <div style={{ marginTop: 6, fontSize: 13, textAlign: "center" }}>
+                {/* Placement (1st, 2nd, …) when game over; otherwise checkmark or nominee ? */}
+                <div style={{ marginTop: 6, fontSize: showPlacement ? 12 : 13, textAlign: "center", fontWeight: showPlacement ? 800 : undefined }}>
                   {icon}
                 </div>
               </div>
