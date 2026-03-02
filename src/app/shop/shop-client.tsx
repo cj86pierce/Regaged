@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 type Me = { username: string; karma: number; tMoney: number; pMoney: number };
 
@@ -74,7 +75,16 @@ export default function ShopClient({
   levels: ColorLevel[];
   ownedColorIds: number[];
 }) {
-  const [tab, setTab] = useState<"colors" | "items" | "designs">("colors");
+  const searchParams = useSearchParams();
+  const initialTabParam = searchParams.get("tab");
+  const initialTab: "colors" | "items" | "designs" =
+    initialTabParam === "designs"
+      ? "designs"
+      : initialTabParam === "items"
+      ? "items"
+      : "colors";
+
+  const [tab, setTab] = useState<"colors" | "items" | "designs">(initialTab);
 
   const [designsRecent, setDesignsRecent] = useState<DesignDto[]>([]);
   const [designsTop, setDesignsTop] = useState<DesignDto[]>([]);
@@ -244,7 +254,7 @@ export default function ShopClient({
           Items (soon)
         </TabButton>
         <TabButton active={tab === "designs"} onClick={() => setTab("designs")}>
-          Designs
+          Auction House
         </TabButton>
       </div>
 

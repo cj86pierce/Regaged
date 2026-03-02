@@ -66,7 +66,7 @@ export default function NavBar() {
           <Link href="/blogs" style={{ color: "#123", textDecoration: "none", fontWeight: 700, fontSize: 13 }}>
             Blogs
           </Link>
-          <Link href="/" style={{ color: "#123", textDecoration: "none", fontWeight: 700, fontSize: 13 }}>
+          <Link href="/shop?tab=designs" style={{ color: "#123", textDecoration: "none", fontWeight: 700, fontSize: 13 }}>
             Designs
           </Link>
           <Link href="/shop" style={{ color: "#123", textDecoration: "none", fontWeight: 700, fontSize: 13 }}>
