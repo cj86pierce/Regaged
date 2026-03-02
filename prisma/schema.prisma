@@ -147,6 +147,9 @@ model User {
   blogComments   BlogComment[]
   commentVotes   CommentVote[]
 
+  designs     Design[]
+  designVotes DesignVote[]
+
   friendsAsUser   Friendship[] @relation("UserFriends")
   friendsAsFriend Friendship[] @relation("FriendOf")
 
