@@ -42,7 +42,7 @@ export type ProfileTabsData = {
 
   blogPosts: { id: string; title: string }[];
 
-  friends: { id: string; username: string; avatar: AvatarConfig }[];
+  friends: { id: string; username: string; avatar: AvatarConfig; isMutual: boolean }[];
   isFriend?: boolean;
   canAddFriend?: boolean;
   profileUserId?: string;
@@ -92,6 +92,150 @@ function AddFriendButton({
         {loading ? "Adding..." : "Add friend"}
       </button>
       {error && <div style={{ fontSize: 12, color: "#c00", marginTop: 4 }}>{error}</div>}
+    </div>
+  );
+}
+
+function ReorderFriendsButton({
+  friends,
+  onReordered,
+}: {
+  friends: { id: string; username: string }[];
+  onReordered: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [order, setOrder] = useState<string[]>(() => friends.map((f) => f.id));
+  const [saving, setSaving] = useState(false);
+
+  function moveUp(i: number) {
+    if (i <= 0) return;
+    const next = [...order];
+    [next[i - 1], next[i]] = [next[i], next[i - 1]];
+    setOrder(next);
+  }
+  function moveDown(i: number) {
+    if (i >= order.length - 1) return;
+    const next = [...order];
+    [next[i], next[i + 1]] = [next[i + 1], next[i]];
+    setOrder(next);
+  }
+  async function save() {
+    setSaving(true);
+    const res = await fetch("/api/friends/reorder", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ friendIds: order }),
+    });
+    setSaving(false);
+    if (res.ok) {
+      setEditing(false);
+      onReordered();
+    }
+  }
+  if (!editing) {
+    return (
+      <button
+        onClick={() => {
+          setEditing(true);
+          setOrder(friends.map((f) => f.id));
+        }}
+        style={{
+          marginTop: 8,
+          padding: "4px 8px",
+          borderRadius: 6,
+          border: "1px solid rgba(0,0,0,0.12)",
+          background: "#f3f6f9",
+          fontSize: 11,
+          fontWeight: 700,
+          cursor: "pointer",
+        }}
+      >
+        Reorder
+      </button>
+    );
+  }
+  return (
+    <div style={{ marginTop: 8, display: "grid", gap: 4 }}>
+      {order.map((id, i) => {
+        const f = friends.find((x) => x.id === id);
+        if (!f) return null;
+        return (
+          <div
+            key={id}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "4px 8px",
+              borderRadius: 6,
+              background: "#fff",
+              border: "1px solid rgba(0,0,0,0.08)",
+            }}
+          >
+            <button
+              onClick={() => moveUp(i)}
+              disabled={i === 0}
+              style={{
+                padding: "2px 6px",
+                borderRadius: 4,
+                border: "1px solid rgba(0,0,0,0.1)",
+                background: i === 0 ? "#eee" : "#fff",
+                cursor: i === 0 ? "not-allowed" : "pointer",
+                fontSize: 12,
+              }}
+            >
+              ↑
+            </button>
+            <button
+              onClick={() => moveDown(i)}
+              disabled={i === order.length - 1}
+              style={{
+                padding: "2px 6px",
+                borderRadius: 4,
+                border: "1px solid rgba(0,0,0,0.1)",
+                background: i === order.length - 1 ? "#eee" : "#fff",
+                cursor: i === order.length - 1 ? "not-allowed" : "pointer",
+                fontSize: 12,
+              }}
+            >
+              ↓
+            </button>
+            <span style={{ flex: 1, fontSize: 12, fontWeight: 700 }}>{f.username}</span>
+          </div>
+        );
+      })}
+      <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+        <button
+          onClick={save}
+          disabled={saving}
+          style={{
+            padding: "6px 10px",
+            borderRadius: 6,
+            border: "none",
+            background: saving ? "#ccc" : "#2e7d32",
+            color: "#fff",
+            fontWeight: 800,
+            fontSize: 12,
+            cursor: saving ? "not-allowed" : "pointer",
+          }}
+        >
+          {saving ? "Saving..." : "Save"}
+        </button>
+        <button
+          onClick={() => setEditing(false)}
+          style={{
+            padding: "6px 10px",
+            borderRadius: 6,
+            border: "1px solid rgba(0,0,0,0.15)",
+            background: "#fff",
+            fontWeight: 800,
+            fontSize: 12,
+            cursor: "pointer",
+          }}
+        >
+          Cancel
+        </button>
+      </div>
     </div>
   );
 }
@@ -496,23 +640,32 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
           {/* Friends */}
           <Card title="Friends">
               {data.friends.length > 0 && (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: (data.canAddFriend || data.isFriend) ? 10 : 0 }}>
-                  {data.friends.map((f) => (
-                    <Link
-                      key={f.id}
-                      href={`/u/${f.username.toLowerCase()}`}
-                      title={f.username}
-                      style={{
-                        display: "block",
-                        textDecoration: "none",
-                        color: "inherit",
-                        textAlign: "center",
-                      }}
-                    >
-                      <Avatar config={f.avatar} width={48} />
-                      <div style={{ fontSize: 11, fontWeight: 700, marginTop: 4 }}>{f.username}</div>
-                    </Link>
-                  ))}
+                <div style={{ marginBottom: (data.canAddFriend || data.isFriend) ? 10 : 0 }}>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                    {data.friends.map((f) => (
+                      <Link
+                        key={f.id}
+                        href={`/u/${f.username.toLowerCase()}`}
+                        title={f.username + (f.isMutual ? " (mutual)" : "")}
+                        style={{
+                          display: "block",
+                          textDecoration: "none",
+                          color: "inherit",
+                          textAlign: "center",
+                          padding: 6,
+                          borderRadius: 10,
+                          background: f.isMutual ? "linear-gradient(#e8f5e9, #c8e6c9)" : "transparent",
+                          border: f.isMutual ? "1px solid #81c784" : "1px solid transparent",
+                        }}
+                      >
+                        <Avatar config={f.avatar} width={48} />
+                        <div style={{ fontSize: 11, fontWeight: 700, marginTop: 4, color: f.isMutual ? "#1b5e20" : "inherit" }}>{f.username}</div>
+                      </Link>
+                    ))}
+                  </div>
+                  {data.isOwnProfile && data.friends.length > 1 && (
+                    <ReorderFriendsButton friends={data.friends} onReordered={() => window.location.reload()} />
+                  )}
                 </div>
               )}
               {data.canAddFriend && data.profileUserId && (

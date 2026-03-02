@@ -109,6 +109,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
 
   const friendRows = await prisma.friendship.findMany({
     where: { userId },
+    orderBy: { position: "asc" },
     include: {
       friend: {
         select: {
@@ -130,9 +131,21 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
       },
     },
   });
+  const friendIds = friendRows.map((r) => r.friend.id);
+  const mutualSet = new Set(
+    friendIds.length > 0
+      ? (
+          await prisma.friendship.findMany({
+            where: { friendId: userId, userId: { in: friendIds } },
+            select: { userId: true },
+          })
+        ).map((m) => m.userId)
+      : []
+  );
   const friends = friendRows.map((f) => ({
     id: f.friend.id,
     username: f.friend.username,
+    isMutual: mutualSet.has(f.friend.id),
     avatar: {
       bodyStyle: oneOf(f.friend.bodyStyle, ["body_m", "body_f"], "body_m") as "body_m" | "body_f",
       hairStyle: oneOf(f.friend.hairStyle, ["hair_m_01","hair_m_02","hair_m_03","hair_f_01","hair_f_02","hair_f_03"], "hair_m_01"),

@@ -24,12 +24,15 @@ export async function POST(req: Request) {
   const existing = await prisma.friendship.findUnique({
     where: { userId_friendId: { userId, friendId: target.id } },
   });
-  if (existing) return bad("Already friends", 400);
+  if (existing) return bad("Already on your list", 400);
 
-  await prisma.$transaction([
-    prisma.friendship.create({ data: { userId, friendId: target.id } }),
-    prisma.friendship.create({ data: { userId: target.id, friendId: userId } }),
-  ]);
+  // One-way: only add to your list. They appear on yours; you don't appear on theirs until they add you.
+  const maxPos = await prisma.friendship
+    .aggregate({ where: { userId }, _max: { position: true } })
+    .then((r) => (r._max.position ?? -1) + 1);
+  await prisma.friendship.create({
+    data: { userId, friendId: target.id, position: maxPos },
+  });
 
   return NextResponse.json({ ok: true, friend: { id: target.id, username: target.username } });
 }

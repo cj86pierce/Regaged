@@ -14,10 +14,8 @@ export async function POST(req: Request) {
   const friendId = typeof body?.friendId === "string" ? body.friendId : "";
   if (!friendId) return bad("friendId required", 400);
 
-  await prisma.$transaction([
-    prisma.friendship.deleteMany({ where: { userId, friendId } }),
-    prisma.friendship.deleteMany({ where: { userId: friendId, friendId: userId } }),
-  ]);
+  // One-way: only remove from your list
+  await prisma.friendship.deleteMany({ where: { userId, friendId } });
 
   return NextResponse.json({ ok: true });
 }
