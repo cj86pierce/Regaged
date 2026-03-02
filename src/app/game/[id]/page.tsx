@@ -79,7 +79,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
 
   const [now, setNow] = useState<number>(() => Date.now());
   useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 250);
+    const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, []);
 

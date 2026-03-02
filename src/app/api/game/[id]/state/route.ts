@@ -27,45 +27,55 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   });
   if (!game) return NextResponse.json({ error: "Game not found" }, { status: 404 });
 
-  // Having the tab open counts as activity (Casting: health; both: presence)
+  // Having the tab open counts as activity - fire and forget so response is faster
   const isActiveGame =
     game.gameType === "CASTING" ||
     game.gameType === "FASTING" ||
     game.gameType === "FASTING_BOT" ||
     game.gameType === "CASTING_BOT";
   if (meUserId && isActiveGame) {
-    await prisma.gamePlayer.updateMany({
-      where: { gameId, userId: meUserId, status: "ACTIVE" },
-      data: { lastActiveAt: new Date() },
-    });
-    await touchUser(meUserId);
+    void prisma.gamePlayer
+      .updateMany({
+        where: { gameId, userId: meUserId, status: "ACTIVE" },
+        data: { lastActiveAt: new Date() },
+      })
+      .then(() => touchUser(meUserId))
+      .catch(() => {});
   }
 
-  const playersRaw = await prisma.gamePlayer.findMany({
-    where: { gameId },
-    include: {
-      user: {
-        select: {
-          username: true,
-
-          bodyStyle: true,
-          hairStyle: true,
-          eyesStyle: true,
-          mouthStyle: true,
-          shirtStyle: true,
-          accessoryStyle: true,
-
-          bodyColor: true,
-          hairColor: true,
-          eyeColor: true,
-          mouthColor: true,
-          shirtColor: true,
-          accessoryColor: true,
+  const [playersRaw, totalCount, messagesRaw] = await Promise.all([
+    prisma.gamePlayer.findMany({
+      where: { gameId },
+      include: {
+        user: {
+          select: {
+            username: true,
+            bodyStyle: true,
+            hairStyle: true,
+            eyesStyle: true,
+            mouthStyle: true,
+            shirtStyle: true,
+            accessoryStyle: true,
+            bodyColor: true,
+            hairColor: true,
+            eyeColor: true,
+            mouthColor: true,
+            shirtColor: true,
+            accessoryColor: true,
+          },
         },
       },
-    },
-    orderBy: { joinedAt: "asc" },
-  });
+      orderBy: { joinedAt: "asc" },
+    }),
+    prisma.gameMessage.count({ where: { gameId, channel: "PUBLIC" } }),
+    prisma.gameMessage.findMany({
+      where: { gameId, channel: "PUBLIC" },
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: pageSize,
+      include: { user: { select: { username: true } }, reactions: true },
+    }),
+  ]);
 
   const activeCount = playersRaw.filter((p) => p.status === "ACTIVE").length;
   const lobby =
@@ -79,17 +89,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         }
       : null;
 
-  // messages
-  const totalCount = await prisma.gameMessage.count({ where: { gameId, channel: "PUBLIC" } });
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
-
-  const messagesRaw = await prisma.gameMessage.findMany({
-    where: { gameId, channel: "PUBLIC" },
-    orderBy: { createdAt: "desc" },
-    skip,
-    take: pageSize,
-    include: { user: { select: { username: true } }, reactions: true },
-  });
 
   // -----------------------
   // CASTING drop events (for messages on this page)

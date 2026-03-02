@@ -53,7 +53,7 @@ export default function PmPanel({
 
   useEffect(() => {
     load().catch(() => {});
-    const t = setInterval(() => load().catch(() => {}), 3000);
+    const t = setInterval(() => load().catch(() => {}), 10000);
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameId, toUserId, meUserId]);

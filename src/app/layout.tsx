@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Providers } from "@/app/providers";
 import NavBar from "@/components/NavBar";
 import RightRail from "@/components/RightRail";
@@ -24,9 +25,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Providers>
           <NavBar />
 
-          {/* Floating rail that does NOT push game UI */}
+          {/* Floating rail - Suspense so page content loads first */}
           <div className="rightRail">
-            <RightRail />
+            <Suspense fallback={<div style={{ minWidth: 180 }} />}>
+              <RightRail />
+            </Suspense>
           </div>
 
           <div style={{ padding: "16px 12px 40px" }}>

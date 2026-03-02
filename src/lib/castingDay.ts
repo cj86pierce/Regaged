@@ -123,8 +123,9 @@ export async function resolveCastingVoteDue(gameId: string, dayNumber: number) {
     // If dayNumber mismatch, use actual
     const actualDay = game.roundNumber ?? dayNumber;
 
-    // If not actually due yet, bail
-    if (game.stateEndsAt && game.stateEndsAt.getTime() > now.getTime()) return;
+    // If not actually due yet, bail (5s grace for clock skew)
+    const graceMs = 5000;
+    if (game.stateEndsAt && game.stateEndsAt.getTime() > now.getTime() + graceMs) return;
 
     // ✅ ALWAYS ensure nominees exist so resolution can proceed
     await ensureCastingVotingStarted(gameId, actualDay);

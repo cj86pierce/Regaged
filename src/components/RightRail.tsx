@@ -64,7 +64,7 @@ export default async function RightRail() {
     take: 10,
     select: {
       gameId: true,
-      game: { select: { number: true, gameType: true, state: true } },
+      game: { select: { number: true, gameType: true, state: true, roundNumber: true } },
     },
   });
 
@@ -77,7 +77,13 @@ export default async function RightRail() {
               key={g.gameId}
               href={`/game/${g.gameId}`}
               label={`${g.game.gameType} #${g.game.number}`}
-              sub={`${g.gameId}`}
+              sub={
+                g.game.state === "ENROLLING"
+                  ? "Lobby"
+                  : g.game.gameType.startsWith("CASTING")
+                    ? `Day ${g.game.roundNumber ?? 1}`
+                    : `Round ${g.game.roundNumber ?? 1}`
+              }
             />
           ))}
         </div>

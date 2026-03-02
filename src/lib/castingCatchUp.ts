@@ -32,7 +32,8 @@ export async function catchUpCastingGame(gameId: string) {
         });
         continue;
       }
-      if (g.stateEndsAt.getTime() > now.getTime()) break;
+      const graceMs = 5000; // 5s grace for clock skew
+      if (g.stateEndsAt.getTime() > now.getTime() + graceMs) break;
 
       if (g.state === "ROUND_VOTE") {
         await resolveCastingVoteDue(gameId, g.roundNumber ?? 1);
