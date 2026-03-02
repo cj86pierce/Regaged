@@ -30,20 +30,13 @@ async function runTick() {
     // -----------------------
     // CASTING_BOT first (60s rounds - time-sensitive)
     // -----------------------
-    const castingBotDue = await prisma.game.findMany({
-      where: {
-        gameType: "CASTING_BOT",
-        state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] },
-        OR: [
-          { stateEndsAt: { not: null, lte: now } },
-          { stateEndsAt: null },
-        ],
-      },
+    const castingBotActive = await prisma.game.findMany({
+      where: { gameType: "CASTING_BOT", state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] } },
       select: { id: true },
       take: 50,
     });
 
-    for (const g of castingBotDue) {
+    for (const g of castingBotActive) {
       try {
         await catchUpCastingBotGame(g.id);
       } catch (e) {
@@ -130,7 +123,7 @@ async function runTick() {
     return {
       fasting: { due: fastingDue.length, advanced: fastingAdvanced },
       fastingBot: { due: fastingBotDue.length, advanced: fastingBotAdvanced },
-      castingBot: { due: castingBotDue.length },
+      castingBot: { active: castingBotActive.length },
       casting: { active: castingActive.length },
     };
   } finally {
