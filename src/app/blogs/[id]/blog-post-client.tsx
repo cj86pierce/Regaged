@@ -24,7 +24,8 @@ type Post = {
   minus: number;
   score: number;
   myVote: "PLUS" | "MINUS" | null;
-  comments: Comment[];
+  canVote: boolean;
+  comments: (Comment & { canVote: boolean })[];
 };
 
 export default function BlogPostClient({ initialPost }: { initialPost: Post }) {
@@ -116,32 +117,40 @@ export default function BlogPostClient({ initialPost }: { initialPost: Post }) {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-          <button
-            onClick={() => votePost("PLUS")}
-            style={{
-              padding: "6px 12px",
-              borderRadius: 8,
-              border: post.myVote === "PLUS" ? "2px solid #2e7d32" : "1px solid rgba(0,0,0,0.15)",
-              background: post.myVote === "PLUS" ? "#e8f5e9" : "#fff",
-              fontWeight: 1000,
-              cursor: "pointer",
-            }}
-          >
-            ✅ {post.plus}
-          </button>
-          <button
-            onClick={() => votePost("MINUS")}
-            style={{
-              padding: "6px 12px",
-              borderRadius: 8,
-              border: post.myVote === "MINUS" ? "2px solid #c62828" : "1px solid rgba(0,0,0,0.15)",
-              background: post.myVote === "MINUS" ? "#ffebee" : "#fff",
-              fontWeight: 1000,
-              cursor: "pointer",
-            }}
-          >
-            ❌ {post.minus}
-          </button>
+          {post.canVote ? (
+            <>
+              <button
+                onClick={() => votePost("PLUS")}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: 8,
+                  border: post.myVote === "PLUS" ? "2px solid #2e7d32" : "1px solid rgba(0,0,0,0.15)",
+                  background: post.myVote === "PLUS" ? "#e8f5e9" : "#fff",
+                  fontWeight: 1000,
+                  cursor: "pointer",
+                }}
+              >
+                ✅ {post.plus}
+              </button>
+              <button
+                onClick={() => votePost("MINUS")}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: 8,
+                  border: post.myVote === "MINUS" ? "2px solid #c62828" : "1px solid rgba(0,0,0,0.15)",
+                  background: post.myVote === "MINUS" ? "#ffebee" : "#fff",
+                  fontWeight: 1000,
+                  cursor: "pointer",
+                }}
+              >
+                ❌ {post.minus}
+              </button>
+            </>
+          ) : (
+            <div style={{ fontSize: 13, color: "#888" }}>
+              Voting closed (post older than 3 days) · ✅ {post.plus} ❌ {post.minus}
+            </div>
+          )}
           <span style={{ fontSize: 16, fontWeight: 1000 }}>Score: {post.score}</span>
         </div>
 
@@ -212,6 +221,8 @@ export default function BlogPostClient({ initialPost }: { initialPost: Post }) {
                 </span>
               </div>
               <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                {c.canVote ? (
+                <>
                 <button
                   onClick={() => voteComment(c.id, "PLUS")}
                   style={{
@@ -241,6 +252,10 @@ export default function BlogPostClient({ initialPost }: { initialPost: Post }) {
                   ❌ {c.minus}
                 </button>
                 <span style={{ fontSize: 12, fontWeight: 800 }}>{c.score}</span>
+                </>
+                ) : (
+                  <span style={{ fontSize: 12, color: "#888" }}>✅ {c.plus} ❌ {c.minus} · {c.score}</span>
+                )}
               </div>
             </div>
             <div style={{ marginTop: 8, whiteSpace: "pre-wrap", fontSize: 14, lineHeight: 1.4 }}>

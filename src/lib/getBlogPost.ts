@@ -37,6 +37,10 @@ export async function getBlogPost(id: string, userId: string | null) {
     };
   });
 
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 3);
+  const canVote = post.createdAt >= cutoff;
+
   return {
     id: post.id,
     title: post.title,
@@ -47,6 +51,7 @@ export async function getBlogPost(id: string, userId: string | null) {
     minus,
     score: plus - minus,
     myVote: myPostVote,
-    comments,
+    canVote,
+    comments: comments.map((c) => ({ ...c, canVote })),
   };
 }

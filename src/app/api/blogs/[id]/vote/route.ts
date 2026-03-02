@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { getCurrentUserId } from "@/lib/getCurrentUserId";
 import { prisma } from "@/lib/prisma";
 import { getUserColorStrength } from "@/lib/blogStrength";
+import { grantBlogR$ } from "@/lib/blogR$";
+
+const BLOG_VOTE_DAYS = 3;
 
 function bad(msg: string, status = 400) {
   return NextResponse.json({ error: msg }, { status });
@@ -21,10 +24,14 @@ export async function POST(
 
   const post = await prisma.blogPost.findUnique({
     where: { id: postId },
-    select: { id: true, authorId: true },
+    select: { id: true, authorId: true, createdAt: true },
   });
   if (!post) return bad("Post not found", 404);
   if (post.authorId === userId) return bad("Cannot vote on own post", 400);
+
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - BLOG_VOTE_DAYS);
+  if (post.createdAt < cutoff) return bad("Voting closed for this post (older than 3 days)", 400);
 
   const points = await getUserColorStrength(userId);
 
@@ -48,6 +55,11 @@ export async function POST(
   const votes = await prisma.postVote.findMany({ where: { postId } });
   const plus = votes.filter((v) => v.type === "PLUS").reduce((s, v) => s + v.points, 0);
   const minus = votes.filter((v) => v.type === "MINUS").reduce((s, v) => s + v.points, 0);
+
+  // Grant minimal R$ to post author (only on PLUS votes, super minimal)
+  if (type === "PLUS") {
+    await grantBlogR$(post.authorId, points);
+  }
 
   return NextResponse.json({
     ok: true,

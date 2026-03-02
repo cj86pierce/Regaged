@@ -232,7 +232,7 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
               {data.isOwnProfile && (
                 <>
                   <StatLine label="Money:" value={data.tMoney} suffixText="R$" />
-                  <StatLine label="P$:" value={data.pMoney} suffixText="(Premium)" />
+                  <StatLine label="Premium" value={data.pMoney} suffixText="P$" />
                 </>
               )}
               <StatLine label="Played:" value={data.stats.gamesPlayed} suffixText="times" />

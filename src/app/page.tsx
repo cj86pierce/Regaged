@@ -127,7 +127,7 @@ export default async function HomePage() {
                   <div>
                     Karma: <b>{me.karma}</b> · R$: <b>{me.tMoney}</b>
                   <div>
-                    P$: <b>{me.pMoney}</b> <span style={{ fontSize: 10, opacity: 0.7 }}>(Premium)</span>
+                    Premium <b>{me.pMoney}</b> P$
                   </div>
                   </div>
                   <div style={{ marginTop: 8, display: "flex", gap: 10, flexWrap: "wrap" }}>

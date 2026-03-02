@@ -111,7 +111,7 @@ export default function ShopClient({
           </div>
           <div style={{ padding: "6px 10px", borderRadius: 10, border: "1px solid rgba(0,0,0,0.10)" }}>
             Money: <b>{me.tMoney}</b> R$
-            <div style={{ fontSize: 11, opacity: 0.85 }}>P$: <b>{me.pMoney}</b></div>
+            <div style={{ fontSize: 11, opacity: 0.85 }}>Premium <b>{me.pMoney}</b> P$</div>
           </div>
         </div>
       </div>

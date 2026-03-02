@@ -13,6 +13,7 @@ type Post = {
   minus: number;
   score: number;
   commentCount: number;
+  placement: number | null;
 };
 
 export default function BlogsClient({ userId }: { userId: string | null }) {
@@ -194,7 +195,23 @@ export default function BlogsClient({ userId }: { userId: string | null }) {
                 boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
               }}
             >
-              <div style={{ fontWeight: 1000, fontSize: 18, marginBottom: 6 }}>{p.title}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                {p.placement !== null && (
+                  <span
+                    style={{
+                      padding: "2px 8px",
+                      borderRadius: 6,
+                      background: "linear-gradient(#ffd85a, #ffb703)",
+                      color: "#3a2b00",
+                      fontWeight: 1000,
+                      fontSize: 12,
+                    }}
+                  >
+                    #{p.placement}
+                  </span>
+                )}
+                <span style={{ fontWeight: 1000, fontSize: 18 }}>{p.title}</span>
+              </div>
               {p.content && (
                 <div
                   style={{

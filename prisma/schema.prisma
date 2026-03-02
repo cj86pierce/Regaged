@@ -98,6 +98,8 @@ model User {
   karma      Int      @default(0)
   tMoney     Int      @default(0)
   pMoney     Int      @default(0)
+  blogREarnedToday  Int      @default(0)
+  blogRResetDate    String?  // YYYY-MM-DD
   lastSeenAt DateTime @default(now())
 
   // ✅ Email verification (beta)
