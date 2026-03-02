@@ -88,7 +88,7 @@ export async function ensureCastingVotingStarted(gameId: string, dayNumber: numb
   if (game.state !== "ROUND_VOTE") {
     await prisma.game.update({
       where: { id: gameId },
-      data: { state: "ROUND_VOTE", stateEndsAt: new Date(Date.now() + getCastingDayMs()) },
+      data: { state: "ROUND_VOTE", stateEndsAt: new Date(Date.now() + dayMs) },
     });
   } else {
     // If already in vote but timer missing, set one
