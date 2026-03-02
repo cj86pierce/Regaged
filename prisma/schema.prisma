@@ -149,6 +149,7 @@ model User {
 
   designs     Design[]
   designVotes DesignVote[]
+  auctionBids AuctionBid[]
 
   friendsAsUser   Friendship[] @relation("UserFriends")
   friendsAsFriend Friendship[] @relation("FriendOf")
@@ -243,6 +244,8 @@ model Design {
   user  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   votes DesignVote[]
 
+  auctions Auction[]
+
   @@index([createdAt])
 }
 
@@ -257,6 +260,35 @@ model DesignVote {
 
   @@unique([designId, userId])
   @@index([designId])
+}
+
+model Auction {
+  id               String   @id @default(cuid())
+  designId         String
+  startsAt         DateTime
+  endsAt           DateTime
+  currentBid       Int      @default(0)
+  currentBidUserId String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  design Design @relation(fields: [designId], references: [id], onDelete: Cascade)
+  bids   AuctionBid[]
+
+  @@index([endsAt])
+}
+
+model AuctionBid {
+  id        String   @id @default(cuid())
+  auctionId String
+  userId    String
+  amount    Int
+  createdAt DateTime @default(now())
+
+  auction Auction @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([auctionId])
 }
 
 model ColorLevel {

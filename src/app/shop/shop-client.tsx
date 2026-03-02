@@ -23,6 +23,16 @@ type DesignDto = {
   voteCount: number;
 };
 
+type AuctionDto = {
+  id: string;
+  designId: string;
+  designTitle: string;
+  designDescription: string;
+  designAuthorUsername: string;
+  endsAt: string;
+  currentBid: number;
+};
+
 const SWATCH: Record<string, string> = {
   white: "#ffffff",
   yellow: "#ffeb3b",
@@ -77,14 +87,16 @@ export default function ShopClient({
 }) {
   const searchParams = useSearchParams();
   const initialTabParam = searchParams.get("tab");
-  const initialTab: "colors" | "items" | "designs" =
+  const initialTab: "colors" | "items" | "designs" | "auctions" =
     initialTabParam === "designs"
       ? "designs"
       : initialTabParam === "items"
       ? "items"
+      : initialTabParam === "auctions"
+      ? "auctions"
       : "colors";
 
-  const [tab, setTab] = useState<"colors" | "items" | "designs">(initialTab);
+  const [tab, setTab] = useState<"colors" | "items" | "designs" | "auctions">(initialTab);
 
   const [designsRecent, setDesignsRecent] = useState<DesignDto[]>([]);
   const [designsTop, setDesignsTop] = useState<DesignDto[]>([]);
@@ -95,6 +107,10 @@ export default function ShopClient({
   const [uploadDescription, setUploadDescription] = useState("");
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+
+  const [auctions, setAuctions] = useState<AuctionDto[]>([]);
+  const [auctionsLoading, setAuctionsLoading] = useState(false);
+  const [auctionsError, setAuctionsError] = useState<string | null>(null);
 
   const owned = useMemo(() => new Set([0, ...ownedColorIds]), [ownedColorIds]);
   const highestOwnedId = useMemo(() => {
@@ -216,6 +232,58 @@ export default function ShopClient({
     }
   }
 
+  async function refreshAuctions() {
+    setAuctionsLoading(true);
+    setAuctionsError(null);
+    try {
+      const res = await fetch("/api/auctions", { cache: "no-store" });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setAuctionsError(json?.error ?? "Failed to load auctions");
+        setAuctions([]);
+        return;
+      }
+      setAuctions(json.auctions ?? []);
+    } catch {
+      setAuctionsError("Failed to load auctions");
+      setAuctions([]);
+    } finally {
+      setAuctionsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (tab === "auctions") {
+      void refreshAuctions();
+    }
+  }, [tab]);
+
+  async function bid(auctionId: string, delta: number) {
+    const auction = auctions.find((a) => a.id === auctionId);
+    if (!auction) return;
+    const newAmount = auction.currentBid + delta;
+    if (newAmount <= auction.currentBid) return;
+    try {
+      const res = await fetch(`/api/auctions/${auctionId}/bid`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ amount: newAmount }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(json?.error ?? "Bid failed");
+        return;
+      }
+      const currentBid = json.currentBid as number | undefined;
+      if (typeof currentBid !== "number") return;
+      setAuctions((prev) =>
+        prev.map((a) => (a.id === auctionId ? { ...a, currentBid } : a)),
+      );
+    } catch {
+      alert("Bid failed");
+    }
+  }
+
   return (
     <main style={{ padding: 12 }}>
       <h1 style={{ marginTop: 0 }}>Shop</h1>
@@ -254,6 +322,9 @@ export default function ShopClient({
           Items (soon)
         </TabButton>
         <TabButton active={tab === "designs"} onClick={() => setTab("designs")}>
+          Designs
+        </TabButton>
+        <TabButton active={tab === "auctions"} onClick={() => setTab("auctions")}>
           Auction House
         </TabButton>
       </div>
@@ -579,6 +650,119 @@ export default function ShopClient({
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {tab === "auctions" && (
+        <div
+          style={{
+            padding: 12,
+            borderRadius: 12,
+            border: "1px solid rgba(0,0,0,0.12)",
+            background: "#fff",
+          }}
+        >
+          <div style={{ fontWeight: 1000, marginBottom: 8 }}>Active auctions</div>
+          {auctionsLoading && <div style={{ fontSize: 12 }}>Loading auctions…</div>}
+          {auctionsError && (
+            <div style={{ fontSize: 12, color: "#b02a37", fontWeight: 900, marginBottom: 4 }}>
+              {auctionsError}
+            </div>
+          )}
+          {!auctionsLoading && auctions.length === 0 && (
+            <div style={{ fontSize: 12, opacity: 0.8 }}>No active auctions right now.</div>
+          )}
+          <div style={{ display: "grid", gap: 10, marginTop: 4 }}>
+            {auctions.map((a) => (
+              <div
+                key={a.id}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "120px minmax(0, 1fr)",
+                  gap: 10,
+                  padding: 8,
+                  borderRadius: 10,
+                  border: "1px solid rgba(0,0,0,0.08)",
+                  background: "#fdfdfd",
+                }}
+              >
+                <div
+                  style={{
+                    width: 120,
+                    height: Math.round((120 * 230) / 200),
+                    borderRadius: 8,
+                    overflow: "hidden",
+                    border: "1px solid rgba(0,0,0,0.08)",
+                    background: "#eee",
+                  }}
+                >
+                  <img
+                    src={`/api/designs/${a.designId}/image`}
+                    alt={a.designTitle}
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                </div>
+                <div style={{ display: "grid", gap: 4, alignContent: "space-between" }}>
+                  <div>
+                    <div style={{ fontWeight: 1000 }}>{a.designTitle}</div>
+                    <div style={{ fontSize: 11, opacity: 0.75 }}>
+                      by {a.designAuthorUsername} · ends{" "}
+                      {new Date(a.endsAt).toLocaleString(undefined, {
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </div>
+                    <div style={{ marginTop: 4, fontSize: 12, opacity: 0.9 }}>
+                      {a.designDescription}
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 8,
+                      alignItems: "center",
+                      justifyContent: "flex-start",
+                      marginTop: 4,
+                    }}
+                  >
+                    <button
+                      onClick={() => bid(a.id, 1)}
+                      style={{
+                        padding: "4px 8px",
+                        borderRadius: 8,
+                        border: "1px solid rgba(0,0,0,0.15)",
+                        background: "linear-gradient(#ffd85a,#ffb703)",
+                        fontSize: 12,
+                        fontWeight: 900,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Bid +1
+                    </button>
+                    <button
+                      onClick={() => bid(a.id, 5)}
+                      style={{
+                        padding: "4px 8px",
+                        borderRadius: 8,
+                        border: "1px solid rgba(0,0,0,0.15)",
+                        background: "linear-gradient(#ffd85a,#ffb703)",
+                        fontSize: 12,
+                        fontWeight: 900,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Bid +5
+                    </button>
+                    <div style={{ fontSize: 12 }}>
+                      Current bid: <b>{a.currentBid}</b>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
