@@ -45,7 +45,7 @@ export async function advanceFastingBotIfDue(gameId: string) {
     if (game.state === "ROUND_NOMINATE") {
       if (!game.povUserId) {
         try {
-          await assignFastingPov(gameId);
+          await assignFastingPov(gameId, { skipLock: true });
         } catch {}
       }
 
@@ -86,7 +86,7 @@ export async function advanceFastingBotIfDue(gameId: string) {
         });
 
         try {
-          await assignFastingPov(gameId);
+          await assignFastingPov(gameId, { skipLock: true });
         } catch {}
 
         return { ok: true, fixed: "evicted_exists_forced_next_round" as const };

@@ -18,12 +18,14 @@ function pickWeighted(items: { userId: string; username: string; weight: number 
 // 65/35 model you picked (top3 vs chaos)
 const TOP_SHARE = 0.65;
 
-export async function assignFastingPov(gameId: string) {
-  // 🔒 per-game lock to reduce races (not the only guard)
-  const lockRows = await prisma.$queryRaw<{ locked: boolean }[]>`
-    SELECT pg_try_advisory_lock(hashtext(${gameId})) as locked
-  `;
-  if (!lockRows?.[0]?.locked) return { ok: true, skipped: true as const, reason: "locked" };
+/** When caller already holds the per-game lock (e.g. advanceFastingIfDue), pass skipLock: true */
+export async function assignFastingPov(gameId: string, opts?: { skipLock?: boolean }) {
+  if (!opts?.skipLock) {
+    const lockRows = await prisma.$queryRaw<{ locked: boolean }[]>`
+      SELECT pg_try_advisory_lock(hashtext(${gameId + "_pov"})) as locked
+    `;
+    if (!lockRows?.[0]?.locked) return { ok: true, skipped: true as const, reason: "locked" };
+  }
 
   try {
     const game = await prisma.game.findUnique({
@@ -116,6 +118,8 @@ export async function assignFastingPov(gameId: string) {
 
     return result;
   } finally {
-    await prisma.$queryRaw`SELECT pg_advisory_unlock(hashtext(${gameId}))`;
+    if (!opts?.skipLock) {
+      await prisma.$queryRaw`SELECT pg_advisory_unlock(hashtext(${gameId + "_pov"}))`;
+    }
   }
 }

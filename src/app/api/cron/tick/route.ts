@@ -138,16 +138,27 @@ async function runTick() {
   }
 }
 
-export async function GET(req: Request) {
+async function handleTick(req: Request) {
   if (process.env.CRON_DISABLED === "1") return NextResponse.json({ ok: true, disabled: true });
   const authErr = requireCronAuth(req);
   if (authErr) return authErr;
-  return NextResponse.json({ ok: true, ...(await runTick()) });
+
+  try {
+    const result = await runTick();
+    return NextResponse.json({ ok: true, ...result });
+  } catch (e) {
+    console.error("Cron tick failed", e);
+    return NextResponse.json(
+      { ok: false, error: String(e instanceof Error ? e.message : e) },
+      { status: 500 }
+    );
+  }
+}
+
+export async function GET(req: Request) {
+  return handleTick(req);
 }
 
 export async function POST(req: Request) {
-  if (process.env.CRON_DISABLED === "1") return NextResponse.json({ ok: true, disabled: true });
-  const authErr = requireCronAuth(req);
-  if (authErr) return authErr;
-  return NextResponse.json({ ok: true, ...(await runTick()) });
+  return handleTick(req);
 }

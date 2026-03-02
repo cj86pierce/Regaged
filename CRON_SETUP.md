@@ -29,3 +29,8 @@ node scripts/dev-cron.js
 ```
 
 The script hits `/api/cron/tick`, which handles fasting, casting, and bot games.
+
+## Troubleshooting
+
+- **401 Unauthorized:** Ensure `CRON_SECRET` in Vercel matches the `?secret=` value in your cron URL (no extra spaces or quotes).
+- **500 error:** Check Vercel Function logs. The tick returns the error message in the response body for debugging.

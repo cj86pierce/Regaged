@@ -41,7 +41,7 @@ export async function advanceFastingIfDue(gameId: string) {
     if (game.state === "ROUND_NOMINATE") {
       // Ensure POV exists before nominations
       if (!game.povUserId) {
-        try { await assignFastingPov(gameId); } catch {}
+        try { await assignFastingPov(gameId, { skipLock: true }); } catch {}
       }
 
       // If nominees already exist but game didn't move to vote, fix it
@@ -88,7 +88,7 @@ export async function advanceFastingIfDue(gameId: string) {
         });
 
         // Assign POV immediately (best-effort)
-        try { await assignFastingPov(gameId); } catch {}
+        try { await assignFastingPov(gameId, { skipLock: true }); } catch {}
 
         return { ok: true, fixed: "evicted_exists_forced_next_round" as const };
       }
