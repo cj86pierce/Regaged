@@ -79,7 +79,7 @@ export default async function PublicProfilePage({
   const raw = await prisma.gamePlayer.findMany({
     where: { userId: user.id },
     orderBy: { joinedAt: "desc" },
-    take: 70,
+    take: 6,
     select: {
       gameId: true,
       status: true,
@@ -99,11 +99,7 @@ export default async function PublicProfilePage({
     eliminatedPlace: r.eliminatedPlace ?? null,
   }));
 
-  const page = Math.max(1, Number(searchParams?.page ?? "1") || 1);
-  const pageSize = 7;
-  const totalPages = Math.max(1, Math.ceil(all.length / pageSize));
-  const start = (page - 1) * pageSize;
-  const recentGames = all.slice(start, start + pageSize);
+  const recentGames = all.slice(0, 6);
 
   const blogPosts = await prisma.blogPost.findMany({
     where: { authorId: user.id },
@@ -209,8 +205,8 @@ export default async function PublicProfilePage({
       totalPov: gpAgg._sum.povWins ?? 0,
     },
     recentGames,
-    recentGamesPage: page,
-    recentGamesTotalPages: totalPages,
+    recentGamesPage: 1,
+    recentGamesTotalPages: 1,
     blogPosts,
     friends,
     isFriend,
