@@ -1,6 +1,7 @@
 {
   "crons": [
     { "path": "/api/cron/fasting", "schedule": "*/1 * * * *" },
-    { "path": "/api/cron/casting", "schedule": "*/1 * * * *" }
+    { "path": "/api/cron/casting", "schedule": "*/1 * * * *" },
+    { "path": "/api/cron/bot", "schedule": "*/1 * * * *" }
   ]
 }
