@@ -45,7 +45,11 @@ export default async function AvatarPage() {
   const initial: Initial = {
     username: u.username,
 
-    bodyStyle: oneOf(u.bodyStyle, ["body_m", "body_f"], "body_m") as "body_m" | "body_f",
+    bodyStyle: oneOf(u.bodyStyle, ["body_m", "body_f", "body_m2", "body_f2"], "body_m") as
+      | "body_m"
+      | "body_f"
+      | "body_m2"
+      | "body_f2",
     hairStyle: oneOf(
       u.hairStyle,
       ["hair_m_01", "hair_m_02", "hair_m_03", "hair_f_01", "hair_f_02", "hair_f_03"],
