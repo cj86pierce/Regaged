@@ -114,11 +114,9 @@ export default function GamePage({ params }: { params: { id: string } }) {
     return Math.max(0, Math.ceil(ms / 1000));
   }, [data?.game.stateEndsAt, now]);
 
-  // When Casting/CastingBot timer hits 0, nudge the server to advance the day
+  // When timer hits 0, nudge the server to advance (Casting/Fasting/bot modes)
   useEffect(() => {
-    const isCastingType =
-      data?.game?.gameType === "CASTING" || data?.game?.gameType === "CASTING_BOT";
-    if (!data?.game || !isCastingType || timeLeft !== 0) return;
+    if (!data?.game || timeLeft !== 0) return;
     let cancelled = false;
     let refetchTimer: ReturnType<typeof setTimeout> | undefined;
     fetch(`/api/game/${gameId}/nudge`)
@@ -237,9 +235,39 @@ export default function GamePage({ params }: { params: { id: string } }) {
     });
   }
 
-  // FASTING nominate/vote unchanged (still calls APIs and then load)
-  async function confirmNoms() { /* leave your existing code here */ }
-  async function confirmVote() { /* leave your existing code here */ }
+  async function confirmNoms() {
+    if (nomSelected.length !== 2) return;
+    setError(null);
+    const res = await fetch(`/api/game/${gameId}/nominations`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ targets: nomSelected }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(json?.error ?? "Nomination failed");
+      return;
+    }
+    setNomSelected([]);
+    load().catch((e) => setError(e.message));
+  }
+
+  async function confirmVote() {
+    if (!evictSelected) return;
+    setError(null);
+    const res = await fetch(`/api/game/${gameId}/vote`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ targetUserId: evictSelected }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(json?.error ?? "Vote failed");
+      return;
+    }
+    setEvictSelected(null);
+    load().catch((e) => setError(e.message));
+  }
 
   if (!data) return <p style={{ padding: 16 }}>Loading game…</p>;
 

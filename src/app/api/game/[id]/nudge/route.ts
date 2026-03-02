@@ -3,10 +3,12 @@ import { getCurrentUserId } from "@/lib/getCurrentUserId";
 import { prisma } from "@/lib/prisma";
 import { catchUpCastingGame } from "@/lib/castingCatchUp";
 import { catchUpCastingBotGame } from "@/lib/castingBotEngine";
+import { advanceFastingIfDue } from "@/lib/fastingAdvance";
+import { advanceFastingBotIfDue } from "@/lib/fastingBotAdvance";
 
 /**
  * GET /api/game/[id]/nudge
- * For Casting/CastingBot: runs catch-up logic when timer expired.
+ * Advances the game when timer expired (Casting, Fasting, and bot modes).
  */
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   const gameId = params.id;
@@ -18,8 +20,6 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     select: { gameType: true },
   });
   if (!game) return NextResponse.json({ error: "Game not found" }, { status: 404 });
-  if (game.gameType !== "CASTING" && game.gameType !== "CASTING_BOT")
-    return NextResponse.json({ ok: true, skipped: "not casting" });
 
   const inGame = await prisma.gamePlayer.findUnique({
     where: { gameId_userId: { gameId, userId } },
@@ -28,10 +28,18 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   if (!inGame) return NextResponse.json({ error: "Not in this game" }, { status: 403 });
 
   try {
-    const result =
-      game.gameType === "CASTING_BOT"
-        ? await catchUpCastingBotGame(gameId)
-        : await catchUpCastingGame(gameId);
+    let result: unknown;
+    if (game.gameType === "CASTING") {
+      result = await catchUpCastingGame(gameId);
+    } else if (game.gameType === "CASTING_BOT") {
+      result = await catchUpCastingBotGame(gameId);
+    } else if (game.gameType === "FASTING") {
+      result = await advanceFastingIfDue(gameId);
+    } else if (game.gameType === "FASTING_BOT") {
+      result = await advanceFastingBotIfDue(gameId);
+    } else {
+      return NextResponse.json({ ok: true, skipped: "no nudge for this game type" });
+    }
     return NextResponse.json({ ok: true, nudge: result });
   } catch (e) {
     console.error("Nudge failed", { gameId, err: String(e) });
