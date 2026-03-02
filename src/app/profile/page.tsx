@@ -75,7 +75,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
   const raw = await prisma.gamePlayer.findMany({
     where: { userId },
     orderBy: { joinedAt: "desc" },
-    take: 6,
+    take: 70,
     select: {
       gameId: true,
       status: true,
@@ -95,7 +95,11 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
     eliminatedPlace: r.eliminatedPlace ?? null,
   }));
 
-  const recentGames = all.slice(0, 6);
+  const pageSize = 6;
+  const page = Math.max(1, Number(searchParams?.page ?? "1") || 1);
+  const totalPages = Math.max(1, Math.ceil(all.length / pageSize));
+  const start = (page - 1) * pageSize;
+  const recentGames = all.slice(start, start + pageSize);
 
   const blogPosts = await prisma.blogPost.findMany({
     where: { authorId: userId },
@@ -194,8 +198,8 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
       totalPov: gpAgg._sum.povWins ?? 0,
     },
     recentGames,
-    recentGamesPage: 1,
-    recentGamesTotalPages: 1,
+    recentGamesPage: page,
+    recentGamesTotalPages: totalPages,
     blogPosts,
     friends,
   };

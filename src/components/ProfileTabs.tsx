@@ -546,6 +546,51 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
                   <Bubble key={g.gameId} g={g} />
                 ))}
               </div>
+              {data.recentGamesTotalPages > 1 && (
+                <div style={{ display: "flex", gap: 8, marginTop: 12, alignItems: "center", flexWrap: "wrap" }}>
+                  {data.recentGamesPage > 1 ? (
+                    <Link
+                      href={data.isOwnProfile ? `/profile?page=${data.recentGamesPage - 1}` : `/u/${data.username.toLowerCase()}?page=${data.recentGamesPage - 1}`}
+                      style={{
+                        padding: "6px 10px",
+                        borderRadius: 8,
+                        border: "1px solid rgba(0,0,0,0.12)",
+                        background: "#fff",
+                        textDecoration: "none",
+                        color: "#111",
+                        fontWeight: 800,
+                        fontSize: 12,
+                      }}
+                    >
+                      ← Prev
+                    </Link>
+                  ) : (
+                    <span style={{ padding: "6px 10px", borderRadius: 8, background: "#f3f6f9", color: "#888", fontSize: 12 }}>← Prev</span>
+                  )}
+                  <span style={{ fontSize: 13 }}>
+                    Page {data.recentGamesPage} of {data.recentGamesTotalPages}
+                  </span>
+                  {data.recentGamesPage < data.recentGamesTotalPages ? (
+                    <Link
+                      href={data.isOwnProfile ? `/profile?page=${data.recentGamesPage + 1}` : `/u/${data.username.toLowerCase()}?page=${data.recentGamesPage + 1}`}
+                      style={{
+                        padding: "6px 10px",
+                        borderRadius: 8,
+                        border: "1px solid rgba(0,0,0,0.12)",
+                        background: "#fff",
+                        textDecoration: "none",
+                        color: "#111",
+                        fontWeight: 800,
+                        fontSize: 12,
+                      }}
+                    >
+                      Next →
+                    </Link>
+                  ) : (
+                    <span style={{ padding: "6px 10px", borderRadius: 8, background: "#f3f6f9", color: "#888", fontSize: 12 }}>Next →</span>
+                  )}
+                </div>
+              )}
             </Card>
           </div>
 
