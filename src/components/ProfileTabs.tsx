@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import Avatar, { AvatarConfig } from "@/components/Avatar";
+import { formatLastSeen } from "@/lib/lastSeenLabel";
 
 export type ProfileGameBubble = {
   gameId: string;
@@ -300,14 +301,6 @@ function suffix(n: number) {
   return `${n}th`;
 }
 
-function onlineLabel(lastSeenAtIso: string) {
-  const ms = Date.now() - new Date(lastSeenAtIso).getTime();
-  const mins = Math.floor(ms / 60000);
-  if (mins <= 2) return "online";
-  if (mins <= 60) return `${mins} min ago`;
-  return "offline";
-}
-
 const COLOR_SWATCH: Record<string, string> = {
   white: "#ffffff",
   yellow: "#ffeb3b",
@@ -395,7 +388,7 @@ function Bubble({ g }: { g: ProfileGameBubble }) {
 
 export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
   const joinedLabel = useMemo(() => new Date(data.joinedAt).toLocaleDateString(), [data.joinedAt]);
-  const last = useMemo(() => onlineLabel(data.lastSeenAt), [data.lastSeenAt]);
+  const last = useMemo(() => formatLastSeen(data.lastSeenAt), [data.lastSeenAt]);
   const swatch = colorToSwatch(data.colorName);
 
   const [editingBio, setEditingBio] = useState(false);

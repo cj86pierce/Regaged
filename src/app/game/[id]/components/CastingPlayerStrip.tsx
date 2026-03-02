@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import Link from "next/link";
 import Avatar from "@/components/Avatar";
 import type { AvatarConfig } from "@/components/Avatar";
+import { formatLastSeen } from "@/lib/lastSeenLabel";
 
 type Player = {
   userId: string;
@@ -19,13 +20,10 @@ type Player = {
 };
 
 function presenceLabel(lastActiveAtIso: string) {
-  const ms = Date.now() - new Date(lastActiveAtIso).getTime();
-  const mins = Math.floor(ms / 60000);
-
-  if (!Number.isFinite(mins)) return { text: "offline", tone: "offline" as const };
-  if (mins <= 2) return { text: "online", tone: "online" as const };
-  if (mins <= 60) return { text: `${mins}m`, tone: "away" as const };
-  return { text: "offline", tone: "offline" as const };
+  const text = formatLastSeen(lastActiveAtIso);
+  if (text === "online") return { text: "online", tone: "online" as const };
+  if (text === "offline") return { text: "offline", tone: "offline" as const };
+  return { text, tone: "away" as const };
 }
 
 function placeSuffix(n: number) {

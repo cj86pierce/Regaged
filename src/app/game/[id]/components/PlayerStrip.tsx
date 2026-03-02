@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Avatar, { AvatarConfig } from "@/components/Avatar";
+import { formatLastSeen } from "@/lib/lastSeenLabel";
 
 type Player = {
   userId: string;
@@ -23,12 +24,6 @@ function suffix(n: number) {
   if (j === 2 && k !== 12) return `${n}nd`;
   if (j === 3 && k !== 13) return `${n}rd`;
   return `${n}th`;
-}
-
-function minutesSince(d: string | Date) {
-  const t = typeof d === "string" ? new Date(d).getTime() : d.getTime();
-  const mins = Math.floor((Date.now() - t) / 60000);
-  return Math.max(0, Math.min(60, mins));
 }
 
 export default function PlayerStrip(props: {
@@ -78,7 +73,7 @@ export default function PlayerStrip(props: {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(15, minmax(0, 1fr))", gap: 4, alignItems: "start" }}>
         {players.map((p) => {
           const isPov = p.userId === povUserId;
-          const mins = minutesSince(p.lastActiveAt);
+          const lastSeenLabel = formatLastSeen(typeof p.lastActiveAt === "string" ? p.lastActiveAt : p.lastActiveAt.toISOString());
           const place = p.eliminatedPlace;
 
           const grayscale = isCompleted ? place !== 1 : p.status === "ELIMINATED";
@@ -186,7 +181,7 @@ export default function PlayerStrip(props: {
               </Link>
 
               <div style={{ fontSize: 10, opacity: 0.85, textAlign: "center", marginTop: 2 }}>
-                {mins >= 60 ? "offline" : `${mins}m`}
+                {lastSeenLabel}
               </div>
 
               <div style={{ marginTop: 3, height: 18, display: "grid", placeItems: "center" }}>
