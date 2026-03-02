@@ -145,7 +145,24 @@ model User {
   blogComments   BlogComment[]
   commentVotes   CommentVote[]
 
+  friendsAsUser   Friendship[] @relation("UserFriends")
+  friendsAsFriend Friendship[] @relation("FriendOf")
+
   @@index([usernameLower])
+}
+
+model Friendship {
+  id       String   @id @default(cuid())
+  userId   String
+  friendId String
+  createdAt DateTime @default(now())
+
+  user   User @relation("UserFriends", fields: [userId], references: [id], onDelete: Cascade)
+  friend User @relation("FriendOf", fields: [friendId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, friendId])
+  @@index([userId])
+  @@index([friendId])
 }
 
 model BlogPost {

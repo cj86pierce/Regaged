@@ -41,7 +41,93 @@ export type ProfileTabsData = {
   recentGamesTotalPages: number;
 
   blogPosts: { id: string; title: string }[];
+
+  friends: { id: string; username: string; avatar: AvatarConfig }[];
+  isFriend?: boolean;
+  canAddFriend?: boolean;
+  profileUserId?: string;
 };
+
+function AddFriendButton({
+  username,
+  profileUserId,
+  onAdded,
+}: {
+  username: string;
+  profileUserId: string;
+  onAdded: () => void;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  async function add() {
+    setLoading(true);
+    setError(null);
+    const res = await fetch("/api/friends/add", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ username }),
+    });
+    const json = await res.json().catch(() => ({}));
+    setLoading(false);
+    if (!res.ok) return setError(json?.error ?? "Failed");
+    onAdded();
+  }
+  return (
+    <div>
+      <button
+        onClick={add}
+        disabled={loading}
+        style={{
+          width: "100%",
+          padding: "8px 12px",
+          borderRadius: 8,
+          border: "1px solid rgba(0,0,0,0.12)",
+          background: loading ? "#f3f6f9" : "linear-gradient(#e8f5e9, #c8e6c9)",
+          color: "#1b5e20",
+          fontWeight: 800,
+          fontSize: 13,
+          cursor: loading ? "not-allowed" : "pointer",
+        }}
+      >
+        {loading ? "Adding..." : "Add friend"}
+      </button>
+      {error && <div style={{ fontSize: 12, color: "#c00", marginTop: 4 }}>{error}</div>}
+    </div>
+  );
+}
+
+function RemoveFriendButton({ friendId, onRemoved }: { friendId: string; onRemoved: () => void }) {
+  const [loading, setLoading] = useState(false);
+  async function remove() {
+    setLoading(true);
+    const res = await fetch("/api/friends/remove", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ friendId }),
+    });
+    setLoading(false);
+    if (res.ok) onRemoved();
+  }
+  return (
+    <button
+      onClick={remove}
+      disabled={loading}
+      style={{
+        width: "100%",
+        padding: "8px 12px",
+        borderRadius: 8,
+        border: "1px solid rgba(0,0,0,0.12)",
+        background: loading ? "#f3f6f9" : "#ffebee",
+        color: "#c62828",
+        fontWeight: 800,
+        fontSize: 13,
+        cursor: loading ? "not-allowed" : "pointer",
+      }}
+    >
+      {loading ? "Removing..." : "Remove friend"}
+    </button>
+  );
+}
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -406,6 +492,43 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
               )}
             </div>
           </Card>
+
+          {/* Friends */}
+          <Card title="Friends">
+              {data.friends.length > 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: (data.canAddFriend || data.isFriend) ? 10 : 0 }}>
+                  {data.friends.map((f) => (
+                    <Link
+                      key={f.id}
+                      href={`/u/${f.username.toLowerCase()}`}
+                      title={f.username}
+                      style={{
+                        display: "block",
+                        textDecoration: "none",
+                        color: "inherit",
+                        textAlign: "center",
+                      }}
+                    >
+                      <Avatar config={f.avatar} width={48} />
+                      <div style={{ fontSize: 11, fontWeight: 700, marginTop: 4 }}>{f.username}</div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+              {data.canAddFriend && data.profileUserId && (
+                <AddFriendButton
+                  username={data.username}
+                  profileUserId={data.profileUserId}
+                  onAdded={() => window.location.reload()}
+                />
+              )}
+              {data.isFriend && data.profileUserId && (
+                <RemoveFriendButton friendId={data.profileUserId} onRemoved={() => window.location.reload()} />
+              )}
+              {data.friends.length === 0 && !data.canAddFriend && !data.isFriend && (
+                <div style={{ fontSize: 13, color: "#888" }}>No friends yet</div>
+              )}
+            </Card>
 
           <Card title="Stats">
             <div style={{ display: "grid", gap: 10 }}>

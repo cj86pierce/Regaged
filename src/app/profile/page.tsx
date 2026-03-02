@@ -107,6 +107,48 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
     select: { id: true, title: true },
   });
 
+  const friendRows = await prisma.friendship.findMany({
+    where: { userId },
+    include: {
+      friend: {
+        select: {
+          id: true,
+          username: true,
+          bodyStyle: true,
+          hairStyle: true,
+          eyesStyle: true,
+          mouthStyle: true,
+          shirtStyle: true,
+          accessoryStyle: true,
+          bodyColor: true,
+          hairColor: true,
+          eyeColor: true,
+          mouthColor: true,
+          shirtColor: true,
+          accessoryColor: true,
+        },
+      },
+    },
+  });
+  const friends = friendRows.map((f) => ({
+    id: f.friend.id,
+    username: f.friend.username,
+    avatar: {
+      bodyStyle: oneOf(f.friend.bodyStyle, ["body_m", "body_f"], "body_m") as "body_m" | "body_f",
+      hairStyle: oneOf(f.friend.hairStyle, ["hair_m_01","hair_m_02","hair_m_03","hair_f_01","hair_f_02","hair_f_03"], "hair_m_01"),
+      eyesStyle: oneOf(f.friend.eyesStyle, ["eyes_01","eyes_02","eyes_03","eyes_04","eyes_05","eyes_06"], "eyes_01"),
+      mouthStyle: oneOf(f.friend.mouthStyle, ["mouth_01","mouth_02","mouth_03","mouth_04","mouth_05","mouth_06"], "mouth_01"),
+      shirtStyle: oneOf(f.friend.shirtStyle, ["shirt_01","shirt_02","shirt_03","shirt_04","shirt_05","shirt_06"], "shirt_01"),
+      accessoryStyle: oneOf(f.friend.accessoryStyle, ["none","accessory_01"], "none"),
+      bodyColor: f.friend.bodyColor,
+      hairColor: f.friend.hairColor,
+      eyeColor: f.friend.eyeColor,
+      mouthColor: f.friend.mouthColor,
+      shirtColor: f.friend.shirtColor,
+      accessoryColor: f.friend.accessoryColor,
+    },
+  }));
+
   const avatar: AvatarConfig = {
     bodyStyle: oneOf(user.bodyStyle, ["body_m", "body_f"], "body_m") as "body_m" | "body_f",
     hairStyle: oneOf(user.hairStyle, ["hair_m_01","hair_m_02","hair_m_03","hair_f_01","hair_f_02","hair_f_03"], "hair_m_01"),
@@ -146,6 +188,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
     recentGamesPage: page,
     recentGamesTotalPages: totalPages,
     blogPosts,
+    friends,
   };
 
   return <ProfileTabs data={data} />;
