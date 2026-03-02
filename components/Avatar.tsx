@@ -1,3 +1,5 @@
+import { colorToFilter } from "./utils";
+
 type AvatarProps = {
   gender: "M" | "F";
   shirtColor: string; // hex, e.g. "#ff0000"

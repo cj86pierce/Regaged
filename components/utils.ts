@@ -1,4 +1,4 @@
-function colorToFilter(hex: string) {
+export function colorToFilter(hex: string) {
   // TEMP SIMPLE VERSION (works well for MVP)
   // Converts grayscale base → color
   return `
