@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/getCurrentUserId";
+import { touchUser } from "@/lib/touchUser";
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   const gameId = params.id;
@@ -26,12 +27,13 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   });
   if (!game) return NextResponse.json({ error: "Game not found" }, { status: 404 });
 
-  // Casting: viewing the game counts as activity so health doesn't decay while you're watching
-  if (game.gameType === "CASTING" && meUserId) {
+  // Having the tab open counts as activity (Casting: health; both: presence)
+  if (meUserId && (game.gameType === "CASTING" || game.gameType === "FASTING")) {
     await prisma.gamePlayer.updateMany({
       where: { gameId, userId: meUserId, status: "ACTIVE" },
       data: { lastActiveAt: new Date() },
     });
+    await touchUser(meUserId);
   }
 
   const playersRaw = await prisma.gamePlayer.findMany({
