@@ -34,7 +34,7 @@ export async function catchUpCastingBotGame(gameId: string) {
         });
         continue;
       }
-      const graceMs = 5000; // 5s grace for clock skew
+      const graceMs = 20000; // 20s grace for clock skew / cold starts
       if (g.stateEndsAt.getTime() > now.getTime() + graceMs) break;
 
       // Trigger bot actions before advancing

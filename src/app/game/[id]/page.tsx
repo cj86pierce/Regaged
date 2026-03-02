@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import PlayerStrip from "./components/PlayerStrip";
 import CastingPlayerStrip from "./components/CastingPlayerStrip";
 import ChatPanel from "./components/ChatPanel";
@@ -78,6 +78,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
   const [reactingIds, setReactingIds] = useState<Record<string, boolean>>({});
 
   const [now, setNow] = useState<number>(() => Date.now());
+  const lastNudgeRef = useRef<number>(0);
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
@@ -100,9 +101,10 @@ export default function GamePage({ params }: { params: { id: string } }) {
     }
   }
 
+  const pollInterval = 5000; // 5s for faster real-time updates
   useEffect(() => {
     load().catch((e) => setError(e.message));
-    const poll = setInterval(() => load().catch(() => {}), 12000);
+    const poll = setInterval(() => load().catch(() => {}), pollInterval);
     return () => clearInterval(poll);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameId, page]);
@@ -114,25 +116,25 @@ export default function GamePage({ params }: { params: { id: string } }) {
     return Math.max(0, Math.ceil(ms / 1000));
   }, [data?.game.stateEndsAt, now]);
 
-  // When timer hits 0, nudge the server to advance (Casting/Fasting/bot modes)
+  // When timer is low, nudge server and reload aggressively (throttle: max 1 nudge per 8s)
   useEffect(() => {
-    if (!data?.game || timeLeft !== 0) return;
+    if (!data?.game || timeLeft === null || timeLeft > 5) return;
+    const now = Date.now();
+    if (now - lastNudgeRef.current < 8000) return;
+    lastNudgeRef.current = now;
     let cancelled = false;
-    let refetchTimer: ReturnType<typeof setTimeout> | undefined;
+    const delays = [0, 400, 1200, 2500, 5000];
     fetch(`/api/game/${gameId}/nudge`)
       .then(() => {
         if (cancelled) return;
-        load().catch(() => {});
-        refetchTimer = setTimeout(() => {
-          if (!cancelled) load().catch(() => {});
-          refetchTimer = undefined;
-        }, 1500);
+        for (const d of delays) {
+          setTimeout(() => {
+            if (!cancelled) load().catch(() => {});
+          }, d);
+        }
       })
       .catch(() => {});
-    return () => {
-      cancelled = true;
-      if (refetchTimer) clearTimeout(refetchTimer);
-    };
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameId, data?.game?.gameType, data?.game?.stateEndsAt, timeLeft]);
 
