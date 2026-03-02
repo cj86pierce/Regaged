@@ -24,11 +24,7 @@ async function run(path) {
 }
 
 async function tick() {
-  await Promise.all([
-    run("/api/cron/fasting"),
-    run("/api/cron/casting"),
-    run("/api/cron/bot"),
-  ]);
+  await run("/api/cron/tick");
 }
 
 console.log(`Dev cron: pinging every ${INTERVAL_MS / 1000}s (BASE_URL=${BASE_URL})`);

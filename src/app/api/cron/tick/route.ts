@@ -3,10 +3,19 @@ import { prisma } from "@/lib/prisma";
 import { advanceFastingIfDue } from "@/lib/fastingAdvance";
 import { advanceFastingBotIfDue } from "@/lib/fastingBotAdvance";
 import { catchUpCastingBotGame } from "@/lib/castingBotEngine";
-
-// CASTING pieces you already have
+import { catchUpCastingGame } from "@/lib/castingCatchUp";
 import { maybeSpawnCastingsDrops } from "@/lib/castingsDrops";
 import { applyCastingHealthDecay } from "@/lib/castingHealth";
+
+function requireCronAuth(req: Request) {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return null;
+  if (req.headers.get("x-vercel-cron") === "1") return null;
+  const auth = req.headers.get("authorization") ?? "";
+  const url = new URL(req.url);
+  if (auth === `Bearer ${secret}` || url.searchParams.get("secret") === secret) return null;
+  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+}
 
 async function runTick() {
   const now = new Date();
@@ -19,13 +28,40 @@ async function runTick() {
 
   try {
     // -----------------------
+    // CASTING_BOT first (60s rounds - time-sensitive)
+    // -----------------------
+    const castingBotDue = await prisma.game.findMany({
+      where: {
+        gameType: "CASTING_BOT",
+        state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] },
+        OR: [
+          { stateEndsAt: { not: null, lte: now } },
+          { stateEndsAt: null },
+        ],
+      },
+      select: { id: true },
+      take: 50,
+    });
+
+    for (const g of castingBotDue) {
+      try {
+        await catchUpCastingBotGame(g.id);
+      } catch (e) {
+        console.error("CASTING_BOT advance failed", { gameId: g.id, err: String(e) });
+      }
+    }
+
+    // -----------------------
     // FASTING: advance anything due (robust)
     // -----------------------
     const fastingDue = await prisma.game.findMany({
       where: {
         gameType: "FASTING",
         state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] },
-        stateEndsAt: { not: null, lte: now },
+        OR: [
+          { stateEndsAt: { not: null, lte: now } },
+          { stateEndsAt: null },
+        ],
       },
       select: { id: true },
       take: 50,
@@ -48,7 +84,10 @@ async function runTick() {
       where: {
         gameType: "FASTING_BOT",
         state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] },
-        stateEndsAt: { not: null, lte: now },
+        OR: [
+          { stateEndsAt: { not: null, lte: now } },
+          { stateEndsAt: null },
+        ],
       },
       select: { id: true },
       take: 50,
@@ -64,20 +103,6 @@ async function runTick() {
       }
     }
 
-    const castingBotActive = await prisma.game.findMany({
-      where: { gameType: "CASTING_BOT", state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] } },
-      select: { id: true },
-      take: 50,
-    });
-
-    for (const g of castingBotActive) {
-      try {
-        await catchUpCastingBotGame(g.id);
-      } catch (e) {
-        console.error("CASTING_BOT advance failed", { gameId: g.id, err: String(e) });
-      }
-    }
-
     // -----------------------
     // CASTING: keep your existing active behaviors
     // -----------------------
@@ -87,6 +112,11 @@ async function runTick() {
       take: 25,
     });
 
+    for (const g of castingActive) {
+      try { await catchUpCastingGame(g.id); } catch (e) {
+        console.error("CASTING catchUp failed", { gameId: g.id, err: String(e) });
+      }
+    }
     for (const g of castingActive) {
       try { await maybeSpawnCastingsDrops(g.id); } catch (e) {
         console.error("CASTING drops failed", { gameId: g.id, err: String(e) });
@@ -100,7 +130,7 @@ async function runTick() {
     return {
       fasting: { due: fastingDue.length, advanced: fastingAdvanced },
       fastingBot: { due: fastingBotDue.length, advanced: fastingBotAdvanced },
-      castingBot: { active: castingBotActive.length },
+      castingBot: { due: castingBotDue.length },
       casting: { active: castingActive.length },
     };
   } finally {
@@ -108,12 +138,16 @@ async function runTick() {
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   if (process.env.CRON_DISABLED === "1") return NextResponse.json({ ok: true, disabled: true });
+  const authErr = requireCronAuth(req);
+  if (authErr) return authErr;
   return NextResponse.json({ ok: true, ...(await runTick()) });
 }
 
-export async function POST() {
+export async function POST(req: Request) {
   if (process.env.CRON_DISABLED === "1") return NextResponse.json({ ok: true, disabled: true });
+  const authErr = requireCronAuth(req);
+  if (authErr) return authErr;
   return NextResponse.json({ ok: true, ...(await runTick()) });
 }
