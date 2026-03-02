@@ -110,7 +110,7 @@ export default function ShopClient({
             Karma: <b>{me.karma}</b>
           </div>
           <div style={{ padding: "6px 10px", borderRadius: 10, border: "1px solid rgba(0,0,0,0.10)" }}>
-            Money: <b>{me.tMoney}</b> T$
+            Money: <b>{me.tMoney}</b> R$
           </div>
         </div>
       </div>
@@ -172,7 +172,7 @@ export default function ShopClient({
                     </div>
 
                     <div style={{ marginTop: 6, fontSize: 12, opacity: 0.85 }}>
-                      Requires <b>{lvl.karmaNeeded}</b> karma · Costs <b>{lvl.priceT}</b> T$ · Strength <b>{lvl.strength}</b>
+                      Requires <b>{lvl.karmaNeeded}</b> karma · Costs <b>{lvl.priceT}</b> R$ · Strength <b>{lvl.strength}</b>
                     </div>
 
                     {lvl.id === 0 && <div style={{ marginTop: 6, fontSize: 12, fontWeight: 1000, color: "#198754" }}>Default</div>}
@@ -187,7 +187,7 @@ export default function ShopClient({
                     {!has && isNext && (!canKarma || !canMoney) && (
                       <div style={{ marginTop: 6, fontSize: 12, fontWeight: 900, color: "#b02a37" }}>
                         {canKarma ? "" : "Not enough karma. "}
-                        {canMoney ? "" : "Not enough T$."}
+                        {canMoney ? "" : "Not enough R$."}
                       </div>
                     )}
                   </div>

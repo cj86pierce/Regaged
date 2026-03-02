@@ -47,7 +47,7 @@ if (!me?.emailVerifiedAt) return NextResponse.json({ error: "Email verification 
     if (colorId !== nextBuyable) throw new Error("Locked — buy levels in order");
 
     if (me2.karma < level.karmaNeeded) throw new Error("Not enough karma");
-    if (me2.tMoney < level.priceT) throw new Error("Not enough T$");
+    if (me2.tMoney < level.priceT) throw new Error("Not enough R$");
 
     await tx.user.update({
       where: { id: userId },

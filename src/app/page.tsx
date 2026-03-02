@@ -125,7 +125,7 @@ export default async function HomePage() {
                     Logged in as <b>{me.username}</b>
                   </div>
                   <div>
-                    Karma: <b>{me.karma}</b> · T$: <b>{me.tMoney}</b>
+                    Karma: <b>{me.karma}</b> · R$: <b>{me.tMoney}</b>
                   </div>
                   <div style={{ marginTop: 8, display: "flex", gap: 10, flexWrap: "wrap" }}>
                     <Link href="/profile" style={{ fontWeight: 900, fontSize: 12, color: "#0b5ed7" }}>

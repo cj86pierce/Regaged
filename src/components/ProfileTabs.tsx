@@ -226,7 +226,7 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
               </div>
 
               <StatLine label="Karma:" value={data.karma} />
-              {data.isOwnProfile && <StatLine label="Money:" value={data.tMoney} suffixText="T$" />}
+              {data.isOwnProfile && <StatLine label="Money:" value={data.tMoney} suffixText="R$" />}
               <StatLine label="Played:" value={data.stats.gamesPlayed} suffixText="times" />
 
               <div style={{ marginTop: 8, fontSize: 14, color: "#666" }}>

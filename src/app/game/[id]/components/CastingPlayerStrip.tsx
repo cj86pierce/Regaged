@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import Link from "next/link";
 import Avatar from "@/components/Avatar";
 import type { AvatarConfig } from "@/components/Avatar";
@@ -43,6 +44,15 @@ export default function CastingPlayerStrip(props: {
   const { players, me, gameState } = props;
   const isCompleted = gameState === "COMPLETED";
 
+  // When completed, build display place for each player (use eliminatedPlace when set; else final-4 get 1–4 by order)
+  const placeByUserId = useMemo(() => {
+    if (!isCompleted || players.length === 0) return new Map<string, number>();
+    const sorted = [...players].sort((a, b) => (a.eliminatedPlace ?? 0) - (b.eliminatedPlace ?? 0));
+    const map = new Map<string, number>();
+    sorted.forEach((p, i) => map.set(p.userId, p.eliminatedPlace ?? i + 1));
+    return map;
+  }, [isCompleted, players]);
+
   return (
     <div
       style={{
@@ -63,7 +73,7 @@ export default function CastingPlayerStrip(props: {
         >
           {players.map((p) => {
             const out = p.status !== "ACTIVE";
-            const place = p.eliminatedPlace;
+            const place = p.eliminatedPlace ?? (isCompleted ? placeByUserId.get(p.userId) ?? null : null);
             const presence = presenceLabel(p.lastActiveAt);
             // When completed: grey everyone except 1st place (place === 1). If place is null we still grey.
             const grayscale = isCompleted ? place !== 1 : out;
@@ -111,11 +121,20 @@ export default function CastingPlayerStrip(props: {
                   {p.username}
                 </Link>
 
-                <div style={{ marginTop: 4, fontSize: 11, textAlign: "center", color: presenceColor, fontWeight: 900 }}>
+                <div style={{ marginTop: 4, fontSize: 11, textAlign: "center", color: presenceColor, fontWeight: 900, minHeight: 16 }}>
                   {!isCompleted && presence.text}
                 </div>
 
-                <div style={{ marginTop: 6, fontSize: 13, textAlign: "center", fontWeight: isCompleted && place != null ? 800 : undefined }}>
+                <div
+                  style={{
+                    marginTop: 6,
+                    minHeight: 20,
+                    fontSize: isCompleted ? 14 : 13,
+                    fontWeight: isCompleted ? 800 : undefined,
+                    textAlign: "center",
+                    color: "#111",
+                  }}
+                >
                   {icon}
                 </div>
               </div>
