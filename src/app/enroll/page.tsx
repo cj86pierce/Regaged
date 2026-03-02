@@ -43,6 +43,16 @@ export default function EnrollHub() {
           desc="Slow mode (12-hour days). Health decay + drops (apples/keys/poison)."
           href="/enroll/casting"
         />
+        <GameCard
+          title="Fastings (Bot)"
+          desc="60s rounds. Bots fill slots. No payouts. Practice mode."
+          href="/enroll/fasting-bot"
+        />
+        <GameCard
+          title="Castings (Bot)"
+          desc="60s days. Bots fill slots. No payouts. Practice mode."
+          href="/enroll/casting-bot"
+        />
       </div>
     </main>
   );

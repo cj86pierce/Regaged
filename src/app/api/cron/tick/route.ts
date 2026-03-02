@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { advanceFastingIfDue } from "@/lib/fastingAdvance";
+import { advanceFastingBotIfDue } from "@/lib/fastingBotAdvance";
+import { catchUpCastingBotGame } from "@/lib/castingBotEngine";
 
 // CASTING pieces you already have
 import { maybeSpawnCastingsDrops } from "@/lib/castingsDrops";
@@ -40,6 +42,43 @@ async function runTick() {
     }
 
     // -----------------------
+    // FASTING_BOT / CASTING_BOT
+    // -----------------------
+    const fastingBotDue = await prisma.game.findMany({
+      where: {
+        gameType: "FASTING_BOT",
+        state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] },
+        stateEndsAt: { not: null, lte: now },
+      },
+      select: { id: true },
+      take: 50,
+    });
+
+    let fastingBotAdvanced = 0;
+    for (const g of fastingBotDue) {
+      try {
+        const r = await advanceFastingBotIfDue(g.id);
+        if ((r as any)?.advanced || (r as any)?.fixed) fastingBotAdvanced++;
+      } catch (e) {
+        console.error("FASTING_BOT advance failed", { gameId: g.id, err: String(e) });
+      }
+    }
+
+    const castingBotActive = await prisma.game.findMany({
+      where: { gameType: "CASTING_BOT", state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] } },
+      select: { id: true },
+      take: 50,
+    });
+
+    for (const g of castingBotActive) {
+      try {
+        await catchUpCastingBotGame(g.id);
+      } catch (e) {
+        console.error("CASTING_BOT advance failed", { gameId: g.id, err: String(e) });
+      }
+    }
+
+    // -----------------------
     // CASTING: keep your existing active behaviors
     // -----------------------
     const castingActive = await prisma.game.findMany({
@@ -60,6 +99,8 @@ async function runTick() {
 
     return {
       fasting: { due: fastingDue.length, advanced: fastingAdvanced },
+      fastingBot: { due: fastingBotDue.length, advanced: fastingBotAdvanced },
+      castingBot: { active: castingBotActive.length },
       casting: { active: castingActive.length },
     };
   } finally {

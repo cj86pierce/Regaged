@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { getCurrentUserId } from "@/lib/getCurrentUserId";
 import { prisma } from "@/lib/prisma";
-import { catchUpCastingGame } from "@/app/api/cron/casting/route";
+import { catchUpCastingGame } from "@/lib/castingCatchUp";
+import { catchUpCastingBotGame } from "@/lib/castingBotEngine";
 
 /**
  * GET /api/game/[id]/nudge
- * For Casting games: runs the same catch-up logic as the cron (advance day when timer expired).
- * Call this when the client sees the timer at 0 so the day advances even if the cron didn't run.
+ * For Casting/CastingBot: runs catch-up logic when timer expired.
  */
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   const gameId = params.id;
@@ -18,7 +18,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     select: { gameType: true },
   });
   if (!game) return NextResponse.json({ error: "Game not found" }, { status: 404 });
-  if (game.gameType !== "CASTING") return NextResponse.json({ ok: true, skipped: "not casting" });
+  if (game.gameType !== "CASTING" && game.gameType !== "CASTING_BOT")
+    return NextResponse.json({ ok: true, skipped: "not casting" });
 
   const inGame = await prisma.gamePlayer.findUnique({
     where: { gameId_userId: { gameId, userId } },
@@ -27,7 +28,10 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   if (!inGame) return NextResponse.json({ error: "Not in this game" }, { status: 403 });
 
   try {
-    const result = await catchUpCastingGame(gameId);
+    const result =
+      game.gameType === "CASTING_BOT"
+        ? await catchUpCastingBotGame(gameId)
+        : await catchUpCastingGame(gameId);
     return NextResponse.json({ ok: true, nudge: result });
   } catch (e) {
     console.error("Nudge failed", { gameId, err: String(e) });

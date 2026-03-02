@@ -1,0 +1,101 @@
+/**
+ * Cron tick for bot games: advance rounds + trigger bot actions.
+ * Handles FASTING_BOT and CASTING_BOT games.
+ */
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { advanceFastingBotIfDue } from "@/lib/fastingBotAdvance";
+import { catchUpCastingBotGame } from "@/lib/castingBotEngine";
+
+function requireCronAuth(req: Request) {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return null;
+
+  if (req.headers.get("x-vercel-cron") === "1") return null;
+
+  const auth = req.headers.get("authorization") ?? "";
+  const url = new URL(req.url);
+  const qs = url.searchParams.get("secret");
+
+  if (auth === `Bearer ${secret}`) return null;
+  if (qs === secret) return null;
+
+  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+}
+
+async function runBotTick() {
+  const now = new Date();
+
+  const lockRows = await prisma.$queryRaw<{ locked: boolean }[]>`
+    SELECT pg_try_advisory_lock(hashtext('cron_bot')) as locked
+  `;
+  if (!lockRows?.[0]?.locked) return { skipped: true, reason: "locked" as const };
+
+  try {
+    // FASTING_BOT: advance games that are due
+    const fastingBotDue = await prisma.game.findMany({
+      where: {
+        gameType: "FASTING_BOT",
+        state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] },
+        stateEndsAt: { not: null, lte: now },
+      },
+      select: { id: true },
+      take: 50,
+    });
+
+    let fastingAdvanced = 0;
+    for (const g of fastingBotDue) {
+      try {
+        const r = await advanceFastingBotIfDue(g.id);
+        if ((r as any)?.advanced || (r as any)?.fixed) fastingAdvanced++;
+      } catch (e) {
+        console.error("FASTING_BOT advance failed", { gameId: g.id, err: String(e) });
+      }
+    }
+
+    // CASTING_BOT: catch up games that are due
+    const castingBotActive = await prisma.game.findMany({
+      where: {
+        gameType: "CASTING_BOT",
+        state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] },
+      },
+      select: { id: true },
+      take: 50,
+    });
+
+    let castingAdvanced = 0;
+    for (const g of castingBotActive) {
+      try {
+        const r = await catchUpCastingBotGame(g.id);
+        if (!(r as any)?.skipped) castingAdvanced++;
+      } catch (e) {
+        console.error("CASTING_BOT advance failed", { gameId: g.id, err: String(e) });
+      }
+    }
+
+    return {
+      fasting: { due: fastingBotDue.length, advanced: fastingAdvanced },
+      casting: { active: castingBotActive.length, advanced: castingAdvanced },
+    };
+  } finally {
+    await prisma.$queryRaw`SELECT pg_advisory_unlock(hashtext('cron_bot'))`;
+  }
+}
+
+export async function GET(req: Request) {
+  if (process.env.CRON_DISABLED === "1") return NextResponse.json({ ok: true, disabled: true });
+  const authErr = requireCronAuth(req);
+  if (authErr) return authErr;
+
+  const r = await runBotTick();
+  return NextResponse.json({ ok: true, bot: r });
+}
+
+export async function POST(req: Request) {
+  if (process.env.CRON_DISABLED === "1") return NextResponse.json({ ok: true, disabled: true });
+  const authErr = requireCronAuth(req);
+  if (authErr) return authErr;
+
+  const r = await runBotTick();
+  return NextResponse.json({ ok: true, bot: r });
+}

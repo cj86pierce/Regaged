@@ -11,6 +11,8 @@ enum GameType {
   FASTING
   FASTING_LITE
   CASTING
+  FASTING_BOT
+  CASTING_BOT
 }
 
 enum GameState {

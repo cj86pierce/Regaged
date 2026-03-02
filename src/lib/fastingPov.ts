@@ -31,7 +31,7 @@ export async function assignFastingPov(gameId: string) {
       select: { id: true, gameType: true, state: true, roundNumber: true, povUserId: true },
     });
     if (!game) throw new Error("Game not found");
-    if (game.gameType !== "FASTING") return { ok: true, skipped: true as const, reason: "not_fasting" };
+    if (game.gameType !== "FASTING" && game.gameType !== "FASTING_BOT") return { ok: true, skipped: true as const, reason: "not_fasting" };
     if (game.state !== "ROUND_NOMINATE") return { ok: true, skipped: true as const, reason: "wrong_state" };
 
     // ✅ hard guard
@@ -84,7 +84,7 @@ export async function assignFastingPov(gameId: string) {
       const updated = await tx.game.updateMany({
         where: {
           id: gameId,
-          gameType: "FASTING",
+          gameType: { in: ["FASTING", "FASTING_BOT"] },
           state: "ROUND_NOMINATE",
           povUserId: null,
         },

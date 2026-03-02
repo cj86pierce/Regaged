@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getSystemUserId } from "@/lib/systemUser";
-import { getCastingDayMs } from "@/lib/castingDayLength";
+import { getCastingDayMs, getDayMsForGame } from "@/lib/castingDayLength";
 import { finalizeCastingGame } from "@/lib/castingEngine";
 
 function netChecks(plus: number | null, minus: number | null) {
@@ -51,7 +51,9 @@ export async function ensureCastingVotingStarted(gameId: string, dayNumber: numb
     where: { id: gameId },
     select: { gameType: true, state: true, roundNumber: true },
   });
-  if (!game || game.gameType !== "CASTING") return;
+  if (!game || (game.gameType !== "CASTING" && game.gameType !== "CASTING_BOT")) return;
+
+  const dayMs = await getDayMsForGame(gameId);
 
   const active = await prisma.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
   const ev = evictCount(active);
@@ -94,7 +96,7 @@ export async function ensureCastingVotingStarted(gameId: string, dayNumber: numb
     if (!g2?.stateEndsAt) {
       await prisma.game.update({
         where: { id: gameId },
-        data: { stateEndsAt: new Date(Date.now() + getCastingDayMs()) },
+        data: { stateEndsAt: new Date(Date.now() + dayMs) },
       });
     }
   }
@@ -113,8 +115,10 @@ export async function resolveCastingVoteDue(gameId: string, dayNumber: number) {
     where: { id: gameId },
     select: { gameType: true, state: true, roundNumber: true, stateEndsAt: true },
   });
-    if (!game || game.gameType !== "CASTING") return;
-    if (game.state !== "ROUND_VOTE") return;
+  if (!game || (game.gameType !== "CASTING" && game.gameType !== "CASTING_BOT")) return;
+  if (game.state !== "ROUND_VOTE") return;
+
+  const dayMs = await getDayMsForGame(gameId);
 
     // If dayNumber mismatch, use actual
     const actualDay = game.roundNumber ?? dayNumber;
@@ -140,14 +144,13 @@ export async function resolveCastingVoteDue(gameId: string, dayNumber: number) {
     });
     if (!day || !day.nomineeUserIds?.length) {
       // Unstick: advance to next day instead of just resetting timer so we don't stay stuck on this day
-      await advanceToNextDay(gameId, actualDay);
+      await advanceToNextDay(gameId, actualDay, dayMs);
       return;
     }
 
     // already resolved
     if (day.evictedUserIds?.length) {
-      // if already resolved but game still stuck, advance day anyway
-      await advanceToNextDay(gameId, actualDay);
+      await advanceToNextDay(gameId, actualDay, dayMs);
       return;
     }
 
@@ -218,10 +221,10 @@ export async function resolveCastingVoteDue(gameId: string, dayNumber: number) {
     });
 
     // advance to next day no matter what
-    await advanceToNextDay(gameId, actualDay);
+    await advanceToNextDay(gameId, actualDay, dayMs);
 }
 
-async function advanceToNextDay(gameId: string, dayNumber: number) {
+async function advanceToNextDay(gameId: string, dayNumber: number, dayMs?: number) {
   const activeAfter = await prisma.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
   if (activeAfter <= 4) {
     await finalizeCastingGame(gameId);
@@ -229,16 +232,16 @@ async function advanceToNextDay(gameId: string, dayNumber: number) {
   }
 
   const nextDay = dayNumber + 1;
+  const ms = dayMs ?? getCastingDayMs();
 
   await prisma.game.update({
     where: { id: gameId },
     data: {
       state: "ROUND_NOMINATE",
       roundNumber: nextDay,
-      stateEndsAt: new Date(Date.now() + getCastingDayMs()),
+      stateEndsAt: new Date(Date.now() + ms),
     },
   });
 
-  // immediately start voting for the new day (your current design)
   await ensureCastingVotingStarted(gameId, nextDay);
 }

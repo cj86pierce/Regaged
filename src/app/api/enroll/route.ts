@@ -3,11 +3,14 @@ import { getCurrentUserId } from "@/lib/getCurrentUserId";
 import { prisma } from "@/lib/prisma";
 import { tryStartFastingGame } from "@/lib/gameEngine";
 import { tryStartCastingsGame } from "@/lib/gameEngineCastings";
+import { tryStartFastingBotGame } from "@/lib/gameEngineBot";
+import { tryStartCastingBotGame } from "@/lib/gameEngineBot";
+import { fillGameWithBots } from "@/lib/botUsers";
 
 const FASTING_MAX = 15;
 const CASTING_MAX = 20;
 
-type GameType = "FASTING" | "CASTING";
+type GameType = "FASTING" | "CASTING" | "FASTING_BOT" | "CASTING_BOT";
 
 export async function POST(req: Request) {
   const userId = await getCurrentUserId(req);
@@ -32,11 +35,11 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   const gameType = (body?.gameType ?? "FASTING") as GameType;
 
-  if (gameType !== "FASTING" && gameType !== "CASTING") {
+  if (gameType !== "FASTING" && gameType !== "CASTING" && gameType !== "FASTING_BOT" && gameType !== "CASTING_BOT") {
     return NextResponse.json({ error: "Invalid gameType" }, { status: 400 });
   }
 
-  const MAX = gameType === "CASTING" ? CASTING_MAX : FASTING_MAX;
+  const MAX = gameType === "CASTING" || gameType === "CASTING_BOT" ? CASTING_MAX : FASTING_MAX;
 
   // ✅ Only redirect if already ACTIVE in THIS requested gameType
   const alreadySameType = await prisma.gamePlayer.findFirst({
@@ -67,6 +70,9 @@ export async function POST(req: Request) {
     });
   }
 
+  // For bot modes: when human joins, immediately fill with bots and start
+  const isBotMode = gameType === "FASTING_BOT" || gameType === "CASTING_BOT";
+
   // Join lobby if not already
   const existing = await prisma.gamePlayer.findUnique({
     where: { gameId_userId: { gameId: lobby.id, userId } },
@@ -90,11 +96,19 @@ export async function POST(req: Request) {
     });
   }
 
-  // Start if full
+  // Start if full (or for bot modes, fill with bots then start)
+  if (isBotMode) {
+    await fillGameWithBots(lobby.id, MAX);
+  }
+
   if (gameType === "FASTING") {
     await tryStartFastingGame(lobby.id);
-  } else {
+  } else if (gameType === "CASTING") {
     await tryStartCastingsGame(lobby.id);
+  } else if (gameType === "FASTING_BOT") {
+    await tryStartFastingBotGame(lobby.id);
+  } else {
+    await tryStartCastingBotGame(lobby.id);
   }
 
   return NextResponse.json({ ok: true, gameId: lobby.id });

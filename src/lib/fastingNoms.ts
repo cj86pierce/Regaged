@@ -3,11 +3,12 @@ import { getSystemUserId } from "@/lib/systemUser";
 import { assignFastingPov } from "@/lib/fastingPov";
 
 const VOTE_PHASE_MS = 2 * 60 * 1000;
+const BOT_ROUND_MS = 60 * 1000;
 
 export async function resolveFastingNominations(gameId: string) {
   const game = await prisma.game.findUnique({
     where: { id: gameId },
-    select: { id: true, state: true, roundNumber: true, povUserId: true },
+    select: { id: true, state: true, roundNumber: true, povUserId: true, gameType: true },
   });
   if (!game) return;
   if (game.state !== "ROUND_NOMINATE") return;
@@ -78,9 +79,10 @@ export async function resolveFastingNominations(gameId: string) {
       create: { gameId, roundNumber: game.roundNumber, nomineeAUserId: nomineeA, nomineeBUserId: nomineeB, evictedUserId: null },
     });
 
+    const voteMs = game.gameType === "FASTING_BOT" ? BOT_ROUND_MS : VOTE_PHASE_MS;
     await tx.game.update({
       where: { id: gameId },
-      data: { state: "ROUND_VOTE", stateEndsAt: new Date(Date.now() + VOTE_PHASE_MS) },
+      data: { state: "ROUND_VOTE", stateEndsAt: new Date(Date.now() + voteMs) },
     });
 
     // Only skip if THIS round already posted

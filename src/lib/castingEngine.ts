@@ -226,6 +226,12 @@ export async function finalizeCastingGame(gameId: string) {
   const now = new Date();
   const systemUserId = await getSystemUserId();
 
+  const game = await prisma.game.findUnique({
+    where: { id: gameId },
+    select: { gameType: true },
+  });
+  const skipPayout = game?.gameType === "CASTING_BOT";
+
   const actives = await prisma.gamePlayer.findMany({
     where: { gameId, status: "ACTIVE" },
     select: { userId: true, health: true, keys: true, plusCount: true, minusCount: true },
@@ -283,23 +289,25 @@ export async function finalizeCastingGame(gameId: string) {
     });
   });
 
-  // payouts for places 1..13 only
-  const placements = await prisma.gamePlayer.findMany({
-    where: { gameId },
-    select: { userId: true, eliminatedPlace: true },
-  });
-
-  for (const p of placements) {
-    const place = p.eliminatedPlace ?? 999;
-    const pay = CASTING_SLOW_PAYOUT[place];
-    if (!pay) continue;
-
-    await prisma.user.update({
-      where: { id: p.userId },
-      data: {
-        karma: { increment: pay.karma },
-        tMoney: { increment: pay.tMoney },
-      },
+  // payouts for places 1..13 only - block for CASTING_BOT
+  if (!skipPayout) {
+    const placements = await prisma.gamePlayer.findMany({
+      where: { gameId },
+      select: { userId: true, eliminatedPlace: true },
     });
+
+    for (const p of placements) {
+      const place = p.eliminatedPlace ?? 999;
+      const pay = CASTING_SLOW_PAYOUT[place];
+      if (!pay) continue;
+
+      await prisma.user.update({
+        where: { id: p.userId },
+        data: {
+          karma: { increment: pay.karma },
+          tMoney: { increment: pay.tMoney },
+        },
+      });
+    }
   }
 }

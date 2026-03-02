@@ -89,7 +89,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
     if (!res.ok) throw new Error(json?.error ?? "Failed to load game");
     setData(json);
 
-    if (json.game.gameType === "FASTING") {
+    if (json.game.gameType === "FASTING" || json.game.gameType === "FASTING_BOT") {
       if (json.game.state !== "ROUND_NOMINATE") setNomSelected([]);
       if (json.game.state !== "ROUND_VOTE") setEvictSelected(null);
       if (json.myNomLocked) setNomSelected([]);
@@ -114,9 +114,11 @@ export default function GamePage({ params }: { params: { id: string } }) {
     return Math.max(0, Math.ceil(ms / 1000));
   }, [data?.game.stateEndsAt, now]);
 
-  // When Casting timer hits 0, nudge the server to advance the day (cron or nudge does the work)
+  // When Casting/CastingBot timer hits 0, nudge the server to advance the day
   useEffect(() => {
-    if (!data?.game || data.game.gameType !== "CASTING" || timeLeft !== 0) return;
+    const isCastingType =
+      data?.game?.gameType === "CASTING" || data?.game?.gameType === "CASTING_BOT";
+    if (!data?.game || !isCastingType || timeLeft !== 0) return;
     let cancelled = false;
     let refetchTimer: ReturnType<typeof setTimeout> | undefined;
     fetch(`/api/game/${gameId}/nudge`)
@@ -241,7 +243,8 @@ export default function GamePage({ params }: { params: { id: string } }) {
 
   if (!data) return <p style={{ padding: 16 }}>Loading game…</p>;
 
-  const isCasting = data.game.gameType === "CASTING";
+  const isCasting =
+    data.game.gameType === "CASTING" || data.game.gameType === "CASTING_BOT";
   const maxPlayers = isCasting ? 20 : 15;
 
   const myNomLockedIn = data.myNomLocked === true;

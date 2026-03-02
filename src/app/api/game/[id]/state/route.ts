@@ -28,7 +28,12 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   if (!game) return NextResponse.json({ error: "Game not found" }, { status: 404 });
 
   // Having the tab open counts as activity (Casting: health; both: presence)
-  if (meUserId && (game.gameType === "CASTING" || game.gameType === "FASTING")) {
+  const isActiveGame =
+    game.gameType === "CASTING" ||
+    game.gameType === "FASTING" ||
+    game.gameType === "FASTING_BOT" ||
+    game.gameType === "CASTING_BOT";
+  if (meUserId && isActiveGame) {
     await prisma.gamePlayer.updateMany({
       where: { gameId, userId: meUserId, status: "ACTIVE" },
       data: { lastActiveAt: new Date() },
@@ -67,7 +72,10 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     game.state === "ENROLLING"
       ? {
           current: activeCount,
-          needed: Math.max(0, (game.gameType === "CASTING" ? 20 : 15) - activeCount),
+          needed: Math.max(
+            0,
+            (game.gameType === "CASTING" || game.gameType === "CASTING_BOT" ? 20 : 15) - activeCount
+          ),
         }
       : null;
 
@@ -125,7 +133,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   let castingNominees: string[] = [];
   let castingMyVoted = false;
 
-  if (game.gameType === "CASTING" && game.state === "ROUND_VOTE") {
+  if ((game.gameType === "CASTING" || game.gameType === "CASTING_BOT") && game.state === "ROUND_VOTE") {
     const day = await prisma.castingDayResult.findUnique({
       where: { gameId_dayNumber: { gameId, dayNumber: game.roundNumber } },
       select: { nomineeUserIds: true },
@@ -149,7 +157,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   let myNomLocked: boolean | null = null;
   let voteInfo: null | { myVoteTargetUserId: string | null } = null;
 
-  if (game.gameType === "FASTING" && game.state !== "ENROLLING") {
+  if ((game.gameType === "FASTING" || game.gameType === "FASTING_BOT") && game.state !== "ENROLLING") {
     const rr = await prisma.roundResult.findUnique({
       where: { gameId_roundNumber: { gameId, roundNumber: game.roundNumber } },
       select: { nomineeAUserId: true, nomineeBUserId: true },
@@ -207,7 +215,9 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     players: playersRaw.map((p) => {
       const u = p.user;
 
-      const isCastingNominee = game.gameType === "CASTING" && castingNominees.includes(p.userId);
+      const isCastingNominee =
+        (game.gameType === "CASTING" || game.gameType === "CASTING_BOT") &&
+        castingNominees.includes(p.userId);
       const isFastingNominee = !!(nomineeA && nomineeB && (p.userId === nomineeA || p.userId === nomineeB));
 
       return {

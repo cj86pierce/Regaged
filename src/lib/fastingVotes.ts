@@ -3,6 +3,7 @@ import { getSystemUserId } from "@/lib/systemUser";
 import { assignFastingPov } from "@/lib/fastingPov";
 
 const NOM_PHASE_MS = 3 * 60 * 1000;
+const BOT_ROUND_MS = 60 * 1000;
 
 export async function resolveFastingEviction(gameId: string) {
   const lockRows = await prisma.$queryRaw<{ locked: boolean }[]>`
@@ -15,7 +16,7 @@ export async function resolveFastingEviction(gameId: string) {
       where: { id: gameId },
       select: { id: true, gameType: true, state: true, roundNumber: true },
     });
-    if (!game || game.gameType !== "FASTING" || game.state !== "ROUND_VOTE") return { ok: true, skipped: true as const };
+    if (!game || (game.gameType !== "FASTING" && game.gameType !== "FASTING_BOT") || game.state !== "ROUND_VOTE") return { ok: true, skipped: true as const };
 
     const rr = await prisma.roundResult.findUnique({
       where: { gameId_roundNumber: { gameId, roundNumber: game.roundNumber } },
@@ -87,12 +88,13 @@ export async function resolveFastingEviction(gameId: string) {
     });
 
     if (result.remainingActive <= 3) {
-      await finishFastingGame(gameId);
+      await finishFastingGame(gameId, game.gameType);
       return { ok: true, finished: true as const };
     }
 
     const nextRound = game.roundNumber + 1;
     const now2 = new Date();
+    const nomMs = game.gameType === "FASTING_BOT" ? BOT_ROUND_MS : NOM_PHASE_MS;
 
     await prisma.game.update({
       where: { id: gameId },
@@ -101,7 +103,7 @@ export async function resolveFastingEviction(gameId: string) {
         roundNumber: nextRound,
         povUserId: null,
         roundStartedAt: now2,
-        stateEndsAt: new Date(now2.getTime() + NOM_PHASE_MS),
+        stateEndsAt: new Date(now2.getTime() + nomMs),
       },
     });
 
@@ -115,7 +117,7 @@ export async function resolveFastingEviction(gameId: string) {
   }
 }
 
-async function finishFastingGame(gameId: string) {
+async function finishFastingGame(gameId: string, gameType?: string) {
   const now = new Date();
   const systemUserId = await getSystemUserId();
 
@@ -162,18 +164,22 @@ async function finishFastingGame(gameId: string) {
     });
   });
 
-  const payout = [
-    { idx: 0, karma: 12, t: 12 },
-    { idx: 1, karma: 5, t: 10 },
-    { idx: 2, karma: 3, t: 6 },
-  ];
+  // Block payouts for bot games
+  const isBotGame = gameType === "FASTING_BOT";
+  if (!isBotGame) {
+    const payout = [
+      { idx: 0, karma: 12, t: 12 },
+      { idx: 1, karma: 5, t: 10 },
+      { idx: 2, karma: 3, t: 6 },
+    ];
 
-  for (const p of payout) {
-    const u = winners[p.idx];
-    if (!u) continue;
-    await prisma.user.update({
-      where: { id: u.userId },
-      data: { karma: { increment: p.karma }, tMoney: { increment: p.t } },
-    });
+    for (const p of payout) {
+      const u = winners[p.idx];
+      if (!u) continue;
+      await prisma.user.update({
+        where: { id: u.userId },
+        data: { karma: { increment: p.karma }, tMoney: { increment: p.t } },
+      });
+    }
   }
 }
