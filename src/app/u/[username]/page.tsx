@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { getCurrentUserIdFromHeaders } from "@/lib/getCurrentUserId";
 import { prisma } from "@/lib/prisma";
+import { touchUser } from "@/lib/touchUser";
 import ProfileTabs, { ProfileTabsData, ProfileGameBubble } from "@/components/ProfileTabs";
 import Link from "next/link";
 import type { AvatarConfig } from "@/components/Avatar";
@@ -60,6 +61,11 @@ export default async function PublicProfilePage({
     );
   }
 
+  const currentUserId = await getCurrentUserIdFromHeaders();
+  if (currentUserId === user.id) {
+    await touchUser(currentUserId);
+  }
+
   const purchased = await prisma.userColor.findMany({
     where: { userId: user.id },
     include: { color: true },
@@ -111,7 +117,6 @@ export default async function PublicProfilePage({
     select: { id: true, title: true },
   });
 
-  const currentUserId = await getCurrentUserIdFromHeaders();
   const friendRows = await prisma.friendship.findMany({
     where: { userId: user.id },
     orderBy: { position: "asc" },

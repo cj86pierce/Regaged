@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { getCurrentUserIdFromHeaders } from "@/lib/getCurrentUserId";
 import { prisma } from "@/lib/prisma";
+import { touchUser } from "@/lib/touchUser";
 import ProfileTabs, { ProfileTabsData, ProfileGameBubble } from "@/components/ProfileTabs";
 import Link from "next/link";
 import type { AvatarConfig } from "@/components/Avatar";
@@ -27,6 +28,8 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
       </main>
     );
   }
+
+  await touchUser(userId);
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
