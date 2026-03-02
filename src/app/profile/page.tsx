@@ -150,11 +150,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
     username: f.friend.username,
     isMutual: mutualSet.has(f.friend.id),
     avatar: {
-      bodyStyle: oneOf(f.friend.bodyStyle, ["body_m", "body_f", "body_m2", "body_f2"], "body_m") as
-        | "body_m"
-        | "body_f"
-        | "body_m2"
-        | "body_f2",
+      bodyStyle: oneOf(f.friend.bodyStyle, ["body_m", "body_f"], "body_m") as "body_m" | "body_f",
       hairStyle: oneOf(f.friend.hairStyle, ["hair_m_01","hair_m_02","hair_m_03","hair_f_01","hair_f_02","hair_f_03"], "hair_m_01"),
       eyesStyle: oneOf(f.friend.eyesStyle, ["eyes_01","eyes_02","eyes_03","eyes_04","eyes_05","eyes_06"], "eyes_01"),
       mouthStyle: oneOf(f.friend.mouthStyle, ["mouth_01","mouth_02","mouth_03","mouth_04","mouth_05","mouth_06"], "mouth_01"),
@@ -170,11 +166,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
   }));
 
   const avatar: AvatarConfig = {
-    bodyStyle: oneOf(user.bodyStyle, ["body_m", "body_f", "body_m2", "body_f2"], "body_m") as
-      | "body_m"
-      | "body_f"
-      | "body_m2"
-      | "body_f2",
+    bodyStyle: oneOf(user.bodyStyle, ["body_m", "body_f"], "body_m") as "body_m" | "body_f",
     hairStyle: oneOf(user.hairStyle, ["hair_m_01","hair_m_02","hair_m_03","hair_f_01","hair_f_02","hair_f_03"], "hair_m_01"),
     eyesStyle: oneOf(user.eyesStyle, ["eyes_01","eyes_02","eyes_03","eyes_04","eyes_05","eyes_06"], "eyes_01"),
     mouthStyle: oneOf(user.mouthStyle, ["mouth_01","mouth_02","mouth_03","mouth_04","mouth_05","mouth_06"], "mouth_01"),

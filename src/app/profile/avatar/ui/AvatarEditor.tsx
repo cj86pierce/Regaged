@@ -163,7 +163,7 @@ export default function AvatarEditor({ initial }: { initial: AvatarEditorInitial
     <main style={{ padding: 12 }}>
       <h1 style={{ marginTop: 0 }}>Customize Avatar</h1>
 
-          <div style={{ display: "grid", gridTemplateColumns: "360px 1fr", gap: 14 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "360px 1fr", gap: 14 }}>
         <div style={{ border: "1px solid rgba(0,0,0,0.10)", borderRadius: 14, padding: 12, background: "#fff" }}>
           <div style={{ fontWeight: 900, marginBottom: 10 }}>Preview</div>
           <Avatar config={cfg} width={240} />
@@ -192,7 +192,7 @@ export default function AvatarEditor({ initial }: { initial: AvatarEditorInitial
             <StylePicker
               label="Body"
               value={cfg.bodyStyle}
-              options={["body_m", "body_f", "body_m2", "body_f2"]}
+              options={["body_m", "body_f"]}
               onChange={(v) => setCfg({ ...cfg, bodyStyle: v as any })}
             />
             <SkinPicker value={cfg.bodyColor} onChange={(v) => setCfg({ ...cfg, bodyColor: v })} />

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 export type AvatarConfig = {
-  bodyStyle: "body_m" | "body_f" | "body_m2" | "body_f2";
+  bodyStyle: "body_m" | "body_f";
   shirtStyle: string;
   eyesStyle: string;
   mouthStyle: string;
