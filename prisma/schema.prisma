@@ -97,6 +97,7 @@ model User {
 
   karma      Int      @default(0)
   tMoney     Int      @default(0)
+  pMoney     Int      @default(0)
   lastSeenAt DateTime @default(now())
 
   // ✅ Email verification (beta)
@@ -137,7 +138,71 @@ model User {
   pmSent     GamePmMessage[] @relation("PmSender")
   pmReceived GamePmMessage[] @relation("PmRecipient")
 
+  blogPosts      BlogPost[]
+  postVotes      PostVote[]
+  blogComments   BlogComment[]
+  commentVotes   CommentVote[]
+
   @@index([usernameLower])
+}
+
+model BlogPost {
+  id        String   @id @default(cuid())
+  authorId  String
+  title     String
+  content   String
+  createdAt DateTime @default(now())
+
+  author   User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  votes    PostVote[]
+  comments BlogComment[]
+
+  @@index([authorId])
+  @@index([createdAt])
+}
+
+model PostVote {
+  id        String       @id @default(cuid())
+  postId    String
+  userId    String
+  type      ReactionType
+  points    Int
+  createdAt DateTime     @default(now())
+
+  post   BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([postId])
+}
+
+model BlogComment {
+  id        String   @id @default(cuid())
+  postId    String
+  authorId  String
+  content   String
+  createdAt DateTime @default(now())
+
+  post   BlogPost      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  votes  CommentVote[]
+
+  @@index([postId])
+}
+
+model CommentVote {
+  id        String       @id @default(cuid())
+  commentId String
+  userId    String
+  type      ReactionType
+  points    Int
+  createdAt DateTime     @default(now())
+
+  comment BlogComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@index([commentId])
 }
 
 model ColorLevel {

@@ -10,7 +10,7 @@ export default async function HomePage() {
   const me = userId
     ? await prisma.user.findUnique({
         where: { id: userId },
-        select: { username: true, karma: true, tMoney: true },
+        select: { username: true, karma: true, tMoney: true, pMoney: true },
       })
     : null;
 
@@ -126,6 +126,9 @@ export default async function HomePage() {
                   </div>
                   <div>
                     Karma: <b>{me.karma}</b> · R$: <b>{me.tMoney}</b>
+                  <div>
+                    P$: <b>{me.pMoney}</b> <span style={{ fontSize: 10, opacity: 0.7 }}>(Premium)</span>
+                  </div>
                   </div>
                   <div style={{ marginTop: 8, display: "flex", gap: 10, flexWrap: "wrap" }}>
                     <Link href="/profile" style={{ fontWeight: 900, fontSize: 12, color: "#0b5ed7" }}>

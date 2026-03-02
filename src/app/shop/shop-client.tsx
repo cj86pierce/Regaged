@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-type Me = { username: string; karma: number; tMoney: number };
+type Me = { username: string; karma: number; tMoney: number; pMoney: number };
 
 type ColorLevel = {
   id: number;
@@ -111,6 +111,7 @@ export default function ShopClient({
           </div>
           <div style={{ padding: "6px 10px", borderRadius: 10, border: "1px solid rgba(0,0,0,0.10)" }}>
             Money: <b>{me.tMoney}</b> R$
+            <div style={{ fontSize: 11, opacity: 0.85 }}>P$: <b>{me.pMoney}</b></div>
           </div>
         </div>
       </div>

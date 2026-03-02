@@ -26,6 +26,7 @@ export default async function PublicProfilePage({
       usernameLower: true,
       karma: true,
       tMoney: true,
+      pMoney: true,
       bio: true,
       createdAt: true,
       lastSeenAt: true,
@@ -103,6 +104,12 @@ export default async function PublicProfilePage({
   const start = (page - 1) * pageSize;
   const recentGames = all.slice(start, start + pageSize);
 
+  const blogPosts = await prisma.blogPost.findMany({
+    where: { authorId: user.id },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, title: true },
+  });
+
   const avatar: AvatarConfig = {
     bodyStyle: oneOf(user.bodyStyle, ["body_m", "body_f"], "body_m") as "body_m" | "body_f",
     hairStyle: oneOf(user.hairStyle, ["hair_m_01","hair_m_02","hair_m_03","hair_f_01","hair_f_02","hair_f_03"], "hair_m_01"),
@@ -124,6 +131,7 @@ export default async function PublicProfilePage({
     joinedAt: user.createdAt.toISOString(),
     karma: user.karma,
     tMoney: user.tMoney,
+    pMoney: user.pMoney,
     bio: user.bio ?? "",
     colorName: highestColor?.name ?? "White",
     colorAnimated: highestColor?.isAnimated ?? false,
@@ -139,6 +147,7 @@ export default async function PublicProfilePage({
     recentGames,
     recentGamesPage: page,
     recentGamesTotalPages: totalPages,
+    blogPosts,
   };
 
   return <ProfileTabs data={data} />;

@@ -20,7 +20,7 @@ export default async function ShopPage() {
 
   const me = await prisma.user.findUnique({
     where: { id: userId },
-    select: { username: true, karma: true, tMoney: true },
+    select: { username: true, karma: true, tMoney: true, pMoney: true },
   });
   if (!me) {
     return (
@@ -47,6 +47,7 @@ export default async function ShopPage() {
         username: me.username,
         karma: me.karma,
         tMoney: me.tMoney,
+        pMoney: me.pMoney,
       }}
       levels={levels}
       ownedColorIds={owned.map((x) => x.colorId)}

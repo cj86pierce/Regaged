@@ -20,6 +20,7 @@ export type ProfileTabsData = {
   joinedAt: string;
   karma: number;
   tMoney: number;
+  pMoney: number;
   colorName: string;
   colorAnimated: boolean;
   lastSeenAt: string;
@@ -38,6 +39,8 @@ export type ProfileTabsData = {
   recentGames: ProfileGameBubble[];
   recentGamesPage: number;
   recentGamesTotalPages: number;
+
+  blogPosts: { id: string; title: string }[];
 };
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
@@ -226,7 +229,12 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
               </div>
 
               <StatLine label="Karma:" value={data.karma} />
-              {data.isOwnProfile && <StatLine label="Money:" value={data.tMoney} suffixText="R$" />}
+              {data.isOwnProfile && (
+                <>
+                  <StatLine label="Money:" value={data.tMoney} suffixText="R$" />
+                  <StatLine label="P$:" value={data.pMoney} suffixText="(Premium)" />
+                </>
+              )}
               <StatLine label="Played:" value={data.stats.gamesPlayed} suffixText="times" />
 
               <div style={{ marginTop: 8, fontSize: 14, color: "#666" }}>
@@ -310,6 +318,30 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
               </div>
             </Card>
           </div>
+
+          {/* Blogs written */}
+          {data.blogPosts.length > 0 && (
+            <div style={{ marginTop: 14 }}>
+              <Card title="Blogs">
+                <div style={{ display: "grid", gap: 6 }}>
+                  {data.blogPosts.map((b) => (
+                    <Link
+                      key={b.id}
+                      href={`/blogs/${b.id}`}
+                      style={{
+                        fontSize: 14,
+                        fontWeight: 700,
+                        color: "#0b5ed7",
+                        textDecoration: "none",
+                      }}
+                    >
+                      {b.title}
+                    </Link>
+                  ))}
+                </div>
+              </Card>
+            </div>
+          )}
         </Card>
 
         {/* RIGHT */}
