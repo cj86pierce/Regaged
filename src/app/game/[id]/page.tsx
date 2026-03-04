@@ -325,10 +325,6 @@ export default function GamePage({ params }: { params: { id: string } }) {
                   if (!res.ok) setError(json?.error ?? "Nudge failed");
                   else if (json.skipped) setError(`Nudge skipped: ${json.reason ?? "lock"}`);
                   else if (json.nudge?.reason && json.nudge.reason !== "not_due") setError(`Nudge: ${json.nudge.reason}`);
-                  else if (json.day1Result && !["advanced", "day2+", "finalized"].includes(json.day1Result))
-                    setError(`Nudge: ${json.day1Result} (state=${json.state ?? "?"}, round=${json.round ?? "?"})`);
-                  else setError(`Server: day1Result=${json.day1Result ?? (json.nudge?.advanced ? "advanced" : "—")} loops=${json.nudge?.loops ?? "—"} (refresh if day unchanged)`);
-                  await new Promise((r) => setTimeout(r, 400));
                   await load({ bust: true });
                 } catch (e) {
                   setError("Nudge request failed");

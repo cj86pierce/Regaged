@@ -3,8 +3,8 @@ import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 import { getCurrentUserId } from "@/lib/getCurrentUserId";
 import { prisma } from "@/lib/prisma";
-import { catchUpCastingGame } from "@/lib/castingCatchUp";
-import { catchUpCastingBotGame } from "@/lib/castingBotEngine";
+import { advanceCastingIfDue } from "@/lib/castingAdvance";
+import { advanceCastingBotIfDue } from "@/lib/castingBotAdvance";
 import { advanceFastingIfDue } from "@/lib/fastingAdvance";
 import { advanceFastingBotIfDue } from "@/lib/fastingBotAdvance";
 
@@ -36,9 +36,9 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   try {
     let result: unknown;
     if (game.gameType === "CASTING") {
-      result = await catchUpCastingGame(gameId, { forceDue: force });
+      result = await advanceCastingIfDue(gameId, { forceDue: force });
     } else if (game.gameType === "CASTING_BOT") {
-      result = await catchUpCastingBotGame(gameId, { forceDue: force });
+      result = await advanceCastingBotIfDue(gameId, { forceDue: force });
     } else if (game.gameType === "FASTING") {
       result = await advanceFastingIfDue(gameId);
     } else if (game.gameType === "FASTING_BOT") {
@@ -46,18 +46,13 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     } else {
       return NextResponse.json({ ok: true, skipped: "no nudge for this game type" });
     }
-    const nudge = result as { ok?: boolean; skipped?: boolean; lastResult?: string; reason?: string; state?: string; round?: number; advanced?: boolean; loops?: number };
-    if (game.gameType === "CASTING" || game.gameType === "CASTING_BOT") {
-      console.log("[nudge]", { gameId: gameId.slice(0, 8), gameType: game.gameType, force, nudge });
-    }
+    const nudge = result as { ok?: boolean; skipped?: boolean; reason?: string; advanced?: string; fixed?: string };
     return NextResponse.json({
       ok: true,
       gameType: game.gameType,
       nudge: result,
-      day1Result: nudge?.lastResult,
+      advanced: !!nudge?.advanced || !!nudge?.fixed,
       skipped: nudge?.skipped ? nudge.reason ?? "lock" : undefined,
-      state: nudge?.state,
-      round: nudge?.round,
     });
   } catch (e) {
     console.error("Nudge failed", { gameId, err: String(e) });

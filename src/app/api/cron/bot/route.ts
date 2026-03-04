@@ -5,7 +5,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { advanceFastingBotIfDue } from "@/lib/fastingBotAdvance";
-import { catchUpCastingBotGame } from "@/lib/castingBotEngine";
+import { advanceCastingBotIfDue } from "@/lib/castingBotAdvance";
 
 function requireCronAuth(req: Request) {
   const secret = process.env.CRON_SECRET;
@@ -53,21 +53,25 @@ async function runBotTick() {
       }
     }
 
-    // CASTING_BOT: catch up games that are due
-    const castingBotActive = await prisma.game.findMany({
+    // CASTING_BOT: Fasting-style day rolling
+    const castingBotDue = await prisma.game.findMany({
       where: {
         gameType: "CASTING_BOT",
         state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] },
+        OR: [
+          { stateEndsAt: { not: null, lte: now } },
+          { stateEndsAt: null },
+        ],
       },
       select: { id: true },
       take: 50,
     });
 
     let castingAdvanced = 0;
-    for (const g of castingBotActive) {
+    for (const g of castingBotDue) {
       try {
-        const r = await catchUpCastingBotGame(g.id);
-        if (!(r as any)?.skipped) castingAdvanced++;
+        const r = await advanceCastingBotIfDue(g.id);
+        if ((r as any)?.advanced || (r as any)?.fixed) castingAdvanced++;
       } catch (e) {
         console.error("CASTING_BOT advance failed", { gameId: g.id, err: String(e) });
       }
@@ -75,7 +79,7 @@ async function runBotTick() {
 
     return {
       fasting: { due: fastingBotDue.length, advanced: fastingAdvanced },
-      casting: { active: castingBotActive.length, advanced: castingAdvanced },
+      casting: { due: castingBotDue.length, advanced: castingAdvanced },
     };
   } finally {
     await prisma.$queryRaw`SELECT pg_advisory_unlock(hashtext('cron_bot'))`;

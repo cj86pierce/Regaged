@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { maybeSpawnCastingsDrops } from "@/lib/castingsDrops";
 import { applyCastingHealthDecay } from "@/lib/castingHealth";
-import { catchUpCastingGame } from "@/lib/castingCatchUp";
+import { advanceCastingIfDue } from "@/lib/castingAdvance";
 
 function requireCronAuth(req: Request) {
   const secret = process.env.CRON_SECRET;
@@ -21,6 +21,7 @@ function requireCronAuth(req: Request) {
 }
 
 async function runCastingTick() {
+  const now = new Date();
   const lockRows = await prisma.$queryRaw<{ locked: boolean }[]>`
     SELECT pg_try_advisory_lock(hashtext('cron_casting')) as locked
   `;
@@ -28,14 +29,23 @@ async function runCastingTick() {
 
   try {
     const games = await prisma.game.findMany({
-      where: { gameType: "CASTING", state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] } },
+      where: {
+        gameType: "CASTING",
+        state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] },
+        OR: [
+          { stateEndsAt: { not: null, lte: now } },
+          { stateEndsAt: null },
+        ],
+      },
       select: { id: true },
       take: 50,
     });
 
+    let advanced = 0;
     for (const g of games) {
       try {
-        await catchUpCastingGame(g.id);
+        const r = await advanceCastingIfDue(g.id);
+        if ((r as any)?.advanced || (r as any)?.fixed) advanced++;
       } catch (e) {
         console.error("CASTING catchUp failed", { gameId: g.id, err: String(e) });
       }
@@ -55,7 +65,7 @@ async function runCastingTick() {
       console.error("CASTING decay failed", { err: String(e) });
     }
 
-    return { active: games.length };
+    return { due: games.length, advanced };
   } finally {
     await prisma.$queryRaw`SELECT pg_advisory_unlock(hashtext('cron_casting'))`;
   }
