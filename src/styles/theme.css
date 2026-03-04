@@ -295,3 +295,21 @@
 .game-page-content .theme-chat-wrap {
   color: var(--text-game);
 }
+
+/* Chat & PM: white text on dark message bubbles */
+.game-page-content .theme-chat-msg,
+.game-page-content .theme-chat-msg-sys {
+  color: #fff;
+}
+[data-theme="light"] .game-page-content .theme-chat-msg {
+  background: #1a1a2e;
+}
+[data-theme="light"] .game-page-content .theme-chat-msg-sys {
+  background: #2a2a3e;
+}
+[data-theme="light"] .game-page-content .game-chat-sys-row {
+  background: #1a1a2e;
+}
+[data-theme="light"] .game-page-content .game-pm-msg {
+  background: #1a1a2e !important;
+}

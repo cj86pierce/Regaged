@@ -222,7 +222,7 @@ export default function CastingChatPanel(props: {
               </div>
 
               <div style={{ marginTop: 6, display: "flex", gap: 10, alignItems: "flex-start" }}>
-                <div style={{ flex: 1, whiteSpace: "pre-wrap", fontSize: 13, color: "var(--text-game)" }}>{m.body}</div>
+                <div style={{ flex: 1, whiteSpace: "pre-wrap", fontSize: 13, color: "#fff" }}>{m.body}</div>
 
                 {/* reactions on the right, horizontal ✅ ❌ */}
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>

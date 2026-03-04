@@ -168,6 +168,7 @@ export default function ChatPanel(props: {
             return (
               <div
                 key={m.id}
+                className="theme-chat-msg-sys"
                 style={{
                   padding: 8,
                   marginBottom: 6,
@@ -185,6 +186,7 @@ export default function ChatPanel(props: {
                   {sysParsed.rows.map((r, idx) => (
                     <div
                       key={idx}
+                      className="game-chat-sys-row"
                       style={{
                         display: "grid",
                         gridTemplateColumns: "1fr 62px 52px",
@@ -192,7 +194,6 @@ export default function ChatPanel(props: {
                         gap: 8,
                         padding: "4px 6px",
                         borderRadius: 8,
-                        background: "var(--bg-msg)",
                       }}
                     >
                       <div className="theme-username" style={{ fontSize: 12 }}>
@@ -242,6 +243,7 @@ export default function ChatPanel(props: {
           return (
             <div
               key={m.id}
+              className={sys ? "theme-chat-msg-sys" : "theme-chat-msg"}
               style={{
                 display: "grid",
                 gridTemplateColumns: "170px 1fr 90px",
@@ -265,7 +267,7 @@ export default function ChatPanel(props: {
                 <div style={{ opacity: 0.6 }}>{new Date(m.createdAt).toLocaleString()}</div>
               </div>
 
-              <div style={{ fontSize: 14, color: sys ? "var(--text-muted)" : "var(--text-game)" }}>
+              <div style={{ fontSize: 14, color: "#fff" }}>
                 {m.body.replace(/^\[SYSTEM\]\s*/i, "")}
               </div>
 
