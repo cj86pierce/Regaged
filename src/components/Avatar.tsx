@@ -18,6 +18,9 @@ export type AvatarConfig = {
   accessoryColor: string;
 };
 
+/** Design type slot overrides: URL for custom design image to replace that layer. */
+export type SlotDesignType = "BODY" | "HAIR" | "EYES" | "MOUTH" | "SHIRT" | "ACCESSORY";
+
 const DEFAULTS = {
   bodyColor: "#F1C27D",
   hairColor: "#2B1B0E",
@@ -157,10 +160,13 @@ export default function Avatar({
   config,
   width = 200,
   grayscale = false,
+  slotDesigns,
 }: {
   config: AvatarConfig;
   width?: number;
   grayscale?: boolean;
+  /** Custom design image URLs per slot; when set, replaces the default layer for that slot. */
+  slotDesigns?: Partial<Record<SlotDesignType, string>>;
 }) {
   const w = width;
   const h = Math.round(width * (230 / 200));
@@ -207,6 +213,14 @@ export default function Avatar({
     pointerEvents: "none",
   };
 
+  const bodyImg = slotDesigns?.BODY ?? (bodyTinted ?? bodySrc);
+  const shirtImg = slotDesigns?.SHIRT ?? (shirtTinted ?? shirtBaseSrc);
+  const mouthImg = slotDesigns?.MOUTH ?? (mouthTinted ?? mouthSrc);
+  const eyesWhite = slotDesigns?.EYES ? null : eyesWhiteSrc;
+  const eyesIrisImg = slotDesigns?.EYES ?? (eyesIrisTinted ?? eyesIrisSrc);
+  const hairImg = slotDesigns?.HAIR ?? (hairTinted ?? hairSrc);
+  const accessoryImg = slotDesigns?.ACCESSORY ?? (accessorySrc ? (accessoryTinted ?? accessorySrc) : null);
+
   return (
     <div
       style={{
@@ -220,17 +234,17 @@ export default function Avatar({
         filter: grayscale ? "grayscale(1)" : "none",
       }}
     >
-      <img src={bodyTinted ?? bodySrc} alt="" style={{ ...layer, zIndex: 1 }} />
-      <img src={shirtTinted ?? shirtBaseSrc} alt="" style={{ ...layer, zIndex: 2 }} />
-      {hasHighlight && <img src={shirtHighlightSrc} alt="" style={{ ...layer, zIndex: 3 }} />}
+      <img src={bodyImg} alt="" style={{ ...layer, zIndex: 1 }} />
+      <img src={shirtImg} alt="" style={{ ...layer, zIndex: 2 }} />
+      {hasHighlight && !slotDesigns?.SHIRT && <img src={shirtHighlightSrc} alt="" style={{ ...layer, zIndex: 3 }} />}
 
-      <img src={mouthTinted ?? mouthSrc} alt="" style={{ ...layer, zIndex: 4 }} />
+      <img src={mouthImg} alt="" style={{ ...layer, zIndex: 4 }} />
 
-      <img src={eyesWhiteSrc} alt="" style={{ ...layer, zIndex: 5 }} />
-      <img src={eyesIrisTinted ?? eyesIrisSrc} alt="" style={{ ...layer, zIndex: 6 }} />
+      {eyesWhite && <img src={eyesWhiteSrc} alt="" style={{ ...layer, zIndex: 5 }} />}
+      <img src={eyesIrisImg} alt="" style={{ ...layer, zIndex: 6 }} />
 
-      <img src={hairTinted ?? hairSrc} alt="" style={{ ...layer, zIndex: 7 }} />
-      {accessorySrc && <img src={accessoryTinted ?? accessorySrc} alt="" style={{ ...layer, zIndex: 8 }} />}
+      <img src={hairImg} alt="" style={{ ...layer, zIndex: 7 }} />
+      {accessoryImg && <img src={accessoryImg} alt="" style={{ ...layer, zIndex: 8 }} />}
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import Avatar, { type AvatarConfig } from "@/components/Avatar";
+import Avatar, { type AvatarConfig, type SlotDesignType } from "@/components/Avatar";
 
 type Comment = {
   id: string;
@@ -64,6 +64,7 @@ export default function DesignDetailClient({ initialDesign }: { initialDesign: D
   const [previewAvatar, setPreviewAvatar] = useState<AvatarConfig | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const [previewDesignOn, setPreviewDesignOn] = useState(true);
 
   useEffect(() => {
     const t = setInterval(() => {
@@ -315,21 +316,32 @@ export default function DesignDetailClient({ initialDesign }: { initialDesign: D
             {!previewLoading && !previewError && previewAvatar && (
               <div style={{ display: "grid", placeItems: "center", gap: 12 }}>
                 <div style={{ position: "relative", width: 200, height: 230 }}>
-                  <div style={{ position: "absolute", inset: 0 }}>
-                    <Avatar config={previewAvatar} width={200} />
-                  </div>
-                  <img
-                    src={`/api/designs/${design.id}/image`}
-                    alt=""
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "contain",
-                      pointerEvents: "none",
-                    }}
+                  <Avatar
+                    config={previewAvatar}
+                    width={200}
+                    slotDesigns={
+                      previewDesignOn && design.designType
+                        ? { [design.designType as SlotDesignType]: `/api/designs/${design.id}/image` }
+                        : undefined
+                    }
                   />
+                </div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewDesignOn((on) => !on)}
+                    style={{
+                      padding: "8px 14px",
+                      borderRadius: 8,
+                      border: "1px solid rgba(0,0,0,0.2)",
+                      background: previewDesignOn ? "#e8f0fe" : "#f5f5f5",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      fontSize: 14,
+                    }}
+                  >
+                    {previewDesignOn ? "Hide design" : "Show design"}
+                  </button>
                 </div>
                 <div style={{ fontSize: 13, color: "#666", textAlign: "center" }}>
                   This is how the design would look on your avatar. Win it in the Auction House to use it.
