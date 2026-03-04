@@ -49,13 +49,13 @@ async function pickNominees(gameId: string, count: number): Promise<string[]> {
 }
 
 /** Wiki Day 1: No nominees. Expel 1 by algorithm (worst keys, checks, health). */
-export async function resolveDay1(gameId: string) {
+export async function resolveDay1(gameId: string): Promise<"advanced" | "wrong_state" | "no_players" | "finalized"> {
   const game = await prisma.game.findUnique({
     where: { id: gameId },
     select: { gameType: true, state: true, roundNumber: true },
   });
-  if (!game || (game.gameType !== "CASTING" && game.gameType !== "CASTING_BOT")) return;
-  if (game.state !== "ROUND_VOTE" || (game.roundNumber ?? 1) !== 1) return;
+  if (!game || (game.gameType !== "CASTING" && game.gameType !== "CASTING_BOT")) return "wrong_state";
+  if (game.state !== "ROUND_VOTE" || (game.roundNumber ?? 1) !== 1) return "wrong_state";
 
   const now = new Date();
   const rows = await prisma.gamePlayer.findMany({
@@ -76,7 +76,7 @@ export async function resolveDay1(gameId: string) {
     });
 
   const evicted = ranked[0]?.userId;
-  if (!evicted) return;
+  if (!evicted) return "no_players";
 
   const activeCount = await prisma.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
   const place = activeCount;
@@ -100,7 +100,7 @@ export async function resolveDay1(gameId: string) {
   const activeAfter = await prisma.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
   if (activeAfter <= 4) {
     await finalizeCastingGame(gameId);
-    return;
+    return "finalized";
   }
 
   const dayMs = await getDayMsForGame(gameId);
@@ -113,6 +113,7 @@ export async function resolveDay1(gameId: string) {
     },
   });
   await ensureCastingVotingStarted(gameId, 2);
+  return "advanced";
 }
 
 /**

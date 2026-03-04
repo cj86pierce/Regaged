@@ -12,6 +12,9 @@ export async function catchUpCastingGame(gameId: string, options?: { forceDue?: 
 
   const run = async () => {
     let loops = 0;
+    let lastResult: string | undefined;
+    let lastState: string | undefined;
+    let lastRound: number | undefined;
 
     while (loops < 5) {
       loops++;
@@ -45,10 +48,13 @@ export async function catchUpCastingGame(gameId: string, options?: { forceDue?: 
 
       if (g.state === "ROUND_VOTE") {
         const day = g.roundNumber ?? 1;
+        lastState = g.state;
+        lastRound = day;
         if (day === 1) {
-          await resolveDay1(gameId);
+          lastResult = await resolveDay1(gameId);
         } else {
           await resolveCastingVoteDue(gameId, day, { forceDue });
+          lastResult = "day2+";
         }
         continue;
       }
@@ -60,14 +66,14 @@ export async function catchUpCastingGame(gameId: string, options?: { forceDue?: 
       break;
     }
 
-    return { ok: true, loops };
+    return { ok: true, loops, lastResult, state: lastState, round: lastRound };
   };
 
   if (!forceDue) {
     const lockRows = await prisma.$queryRaw<{ locked: boolean }[]>`
       SELECT pg_try_advisory_lock(hashtext(${gameId})) as locked
     `;
-    if (!lockRows?.[0]?.locked) return { skipped: true as const };
+    if (!lockRows?.[0]?.locked) return { skipped: true as const, reason: "lock" };
     try {
       return await run();
     } finally {

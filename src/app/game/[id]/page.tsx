@@ -317,9 +317,18 @@ export default function GamePage({ params }: { params: { id: string } }) {
               disabled={nudging}
               onClick={async () => {
                 setNudging(true);
+                setError(null);
                 try {
-                  await fetch(`/api/game/${gameId}/nudge?force=1`, { credentials: "include" });
+                  const res = await fetch(`/api/game/${gameId}/nudge?force=1`, { credentials: "include" });
+                  const json = await res.json().catch(() => ({}));
                   await load();
+                  if (!res.ok) setError(json?.error ?? "Nudge failed");
+                  else if (json.skipped) setError(`Nudge skipped: ${json.reason ?? "lock"}`);
+                  else if (json.nudge?.reason && json.nudge.reason !== "not_due") setError(`Nudge: ${json.nudge.reason}`);
+                  else if (json.day1Result && !["advanced", "day2+", "finalized"].includes(json.day1Result))
+                    setError(`Nudge: ${json.day1Result} (state=${json.state ?? "?"}, round=${json.round ?? "?"})`);
+                } catch (e) {
+                  setError("Nudge request failed");
                 } finally {
                   setNudging(false);
                 }

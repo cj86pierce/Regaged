@@ -44,7 +44,15 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     } else {
       return NextResponse.json({ ok: true, skipped: "no nudge for this game type" });
     }
-    return NextResponse.json({ ok: true, nudge: result });
+    const nudge = result as { ok?: boolean; skipped?: boolean; lastResult?: string; reason?: string; state?: string; round?: number };
+    return NextResponse.json({
+      ok: true,
+      nudge: result,
+      day1Result: nudge?.lastResult,
+      skipped: nudge?.skipped ? nudge.reason ?? "lock" : undefined,
+      state: nudge?.state,
+      round: nudge?.round,
+    });
   } catch (e) {
     console.error("Nudge failed", { gameId, err: String(e) });
     return NextResponse.json({ error: "Nudge failed" }, { status: 500 });
