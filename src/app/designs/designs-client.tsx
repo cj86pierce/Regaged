@@ -105,29 +105,11 @@ export default function DesignsClient({ userId }: { userId: string | null }) {
       {userId && (
         <div style={{ marginBottom: 14 }}>
           {!showForm ? (
-            <button
-              onClick={() => setShowForm(true)}
-              style={{
-                padding: "10px 14px",
-                borderRadius: 10,
-                border: "1px solid rgba(0,0,0,0.12)",
-                background: "linear-gradient(#ffd85a, #ffb703)",
-                color: "#3a2b00",
-                fontWeight: 1000,
-                cursor: "pointer",
-              }}
-            >
+            <button onClick={() => setShowForm(true)} className="theme-btn-primary" style={{ cursor: "pointer" }}>
               Submit a design
             </button>
           ) : (
-            <div
-              style={{
-                border: "1px solid rgba(0,0,0,0.12)",
-                borderRadius: 12,
-                padding: 14,
-                background: "#fff",
-              }}
-            >
+            <div className="theme-sidebar-panel" style={{ padding: 14, borderRadius: 12 }}>
               <div style={{ fontWeight: 1000, marginBottom: 8 }}>Submit a design</div>
               <form onSubmit={handleUpload} style={{ display: "grid", gap: 8 }}>
                 <input
@@ -135,14 +117,8 @@ export default function DesignsClient({ userId }: { userId: string | null }) {
                   onChange={(e) => setUploadTitle(e.target.value)}
                   placeholder="Title"
                   maxLength={200}
-                  style={{
-                    width: "100%",
-                    padding: "10px 12px",
-                    borderRadius: 8,
-                    border: "1px solid rgba(0,0,0,0.15)",
-                    fontSize: 16,
-                    fontWeight: 800,
-                  }}
+                className="theme-chat-input"
+                style={{ width: "100%", padding: "10px 12px", borderRadius: 8, fontSize: 16, fontWeight: 800 }}
                 />
                 <textarea
                   value={uploadDescription}
@@ -150,15 +126,8 @@ export default function DesignsClient({ userId }: { userId: string | null }) {
                   placeholder="Description"
                   rows={3}
                   maxLength={2000}
-                  style={{
-                    width: "100%",
-                    padding: "10px 12px",
-                    borderRadius: 8,
-                    border: "1px solid rgba(0,0,0,0.15)",
-                    fontSize: 14,
-                    resize: "vertical",
-                    fontFamily: "inherit",
-                  }}
+                className="theme-chat-input"
+                style={{ width: "100%", padding: "10px 12px", borderRadius: 8, fontSize: 14, resize: "vertical", fontFamily: "inherit" }}
                 />
                 <div>
                   <label style={{ display: "block", fontSize: 13, fontWeight: 800, marginBottom: 4 }}>Design type</label>
@@ -166,14 +135,8 @@ export default function DesignsClient({ userId }: { userId: string | null }) {
                     value={uploadDesignType}
                     onChange={(e) => setUploadDesignType(e.target.value)}
                     required
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      borderRadius: 8,
-                      border: "1px solid rgba(0,0,0,0.15)",
-                      fontSize: 14,
-                      fontWeight: 700,
-                    }}
+                    className="theme-chat-input"
+                    style={{ width: "100%", padding: "10px 12px", borderRadius: 8, fontSize: 14, fontWeight: 700 }}
                   >
                     {DESIGN_TYPES.map((t) => (
                       <option key={t.value} value={t.value}>
@@ -198,8 +161,8 @@ export default function DesignsClient({ userId }: { userId: string | null }) {
                       padding: "10px 14px",
                       borderRadius: 8,
                       border: "none",
-                      background: uploading ? "#ccc" : "#111",
-                      color: "#fff",
+                      background: uploading ? "var(--bg-btn-disabled)" : "var(--bg-btn-send)",
+                      color: uploading ? "var(--text-muted)" : "var(--text-btn-send)",
                       fontWeight: 1000,
                       cursor: uploading ? "not-allowed" : "pointer",
                     }}
@@ -219,15 +182,16 @@ export default function DesignsClient({ userId }: { userId: string | null }) {
                     style={{
                       padding: "10px 14px",
                       borderRadius: 8,
-                      border: "1px solid rgba(0,0,0,0.15)",
-                      background: "#fff",
+                      border: "1px solid var(--border)",
+                      background: "var(--bg-card)",
+                      color: "var(--text-primary)",
                       fontWeight: 800,
                       cursor: "pointer",
                     }}
                   >
                     Cancel
                   </button>
-                  {error && <span style={{ fontSize: 13, color: "#c00" }}>{error}</span>}
+                  {error && <span style={{ fontSize: 13, color: "var(--text-error)" }}>{error}</span>}
                 </div>
               </form>
             </div>
@@ -251,15 +215,7 @@ export default function DesignsClient({ userId }: { userId: string | null }) {
           )}
           <div style={{ fontWeight: 1000, fontSize: 16, marginBottom: 10 }}>Recent</div>
           {recent.length === 0 ? (
-            <div
-              style={{
-                padding: 40,
-                textAlign: "center",
-                border: "1px dashed rgba(0,0,0,0.2)",
-                borderRadius: 12,
-                background: "#f9fafb",
-              }}
-            >
+            <div className="theme-sidebar-panel" style={{ padding: 40, textAlign: "center", borderRadius: 12, borderStyle: "dashed" }}>
               No designs yet. {userId ? "Submit one!" : "Log in to submit a design."}
             </div>
           ) : (
@@ -301,19 +257,7 @@ function DesignCard({
   }
 
   return (
-    <Link
-      href={`/designs/${design.id}`}
-      style={{
-        display: "block",
-        textDecoration: "none",
-        color: "inherit",
-        border: "1px solid rgba(0,0,0,0.08)",
-        borderRadius: 12,
-        padding: 14,
-        background: "#fff",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-      }}
-    >
+    <Link href={`/designs/${design.id}`} className="theme-card" style={{ display: "block", textDecoration: "none", color: "inherit", padding: 14 }}>
       <div className="mobileStack" style={{ display: "flex", gap: 14 }}>
         <div
           className="designCardThumb"
@@ -323,8 +267,8 @@ function DesignCard({
             height: Math.round((120 * 230) / 200),
             borderRadius: 8,
             overflow: "hidden",
-            border: "1px solid rgba(0,0,0,0.08)",
-            background: "#eee",
+            border: "1px solid var(--border)",
+            background: "var(--bg-input)",
             flexShrink: 0,
           }}
         >
@@ -338,27 +282,18 @@ function DesignCard({
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
             <span style={{ fontWeight: 1000, fontSize: 18 }}>{design.title}</span>
             {design.designType && (
-              <span
-                style={{
-                  fontSize: 11,
-                  fontWeight: 800,
-                  padding: "2px 6px",
-                  borderRadius: 6,
-                  background: "#eaf2ff",
-                  color: "#0b2b66",
-                }}
-              >
+              <span className="theme-btn-secondary" style={{ fontSize: 11, padding: "2px 6px", borderRadius: 6 }}>
                 {DESIGN_TYPES.find((t) => t.value === design.designType)?.label ?? design.designType}
               </span>
             )}
           </div>
-          <div style={{ fontSize: 13, color: "#666", marginBottom: 6 }}>
+          <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 6 }}>
             by {design.authorUsername} · {new Date(design.createdAt).toLocaleDateString()}
           </div>
           <div
             style={{
-              fontSize: 14,
-              color: "#444",
+            fontSize: 14,
+            color: "var(--text-secondary)",
               lineHeight: 1.4,
               marginBottom: 8,
               overflow: "hidden",
@@ -370,9 +305,9 @@ function DesignCard({
           >
             {design.description}
           </div>
-          <div style={{ display: "flex", gap: 14, fontSize: 12, color: "#666", flexWrap: "wrap", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 14, fontSize: 12, color: "var(--text-muted)", flexWrap: "wrap", alignItems: "center" }}>
             {ended ? (
-              <span style={{ color: "#888" }}>✅ {design.plus} ❌ {design.minus} · Score {design.score}</span>
+              <span style={{ color: "var(--text-muted)" }}>✅ {design.plus} ❌ {design.minus} · Score {design.score}</span>
             ) : (
               <>
                 <button
@@ -384,8 +319,8 @@ function DesignCard({
                   style={{
                     padding: "4px 8px",
                     borderRadius: 6,
-                    border: design.myVote === "PLUS" ? "2px solid #2e7d32" : "1px solid rgba(0,0,0,0.12)",
-                    background: design.myVote === "PLUS" ? "#e8f5e9" : "#fff",
+                    border: design.myVote === "PLUS" ? `2px solid var(--vote-plus-border)` : "1px solid var(--border)",
+                    background: design.myVote === "PLUS" ? "var(--vote-plus-bg)" : "var(--bg-card)",
                     fontWeight: 800,
                     fontSize: 12,
                     cursor: voting ? "not-allowed" : "pointer",
@@ -402,8 +337,8 @@ function DesignCard({
                   style={{
                     padding: "4px 8px",
                     borderRadius: 6,
-                    border: design.myVote === "MINUS" ? "2px solid #c62828" : "1px solid rgba(0,0,0,0.12)",
-                    background: design.myVote === "MINUS" ? "#ffebee" : "#fff",
+                    border: design.myVote === "MINUS" ? `2px solid var(--vote-minus-border)` : "1px solid var(--border)",
+                    background: design.myVote === "MINUS" ? "var(--vote-minus-bg)" : "var(--bg-card)",
                     fontWeight: 800,
                     fontSize: 12,
                     cursor: voting ? "not-allowed" : "pointer",
@@ -414,7 +349,7 @@ function DesignCard({
                 <span style={{ fontWeight: 800 }}>Score {design.score}</span>
               </>
             )}
-            <span style={ended ? { color: "#888" } : undefined}>{timeLabel}</span>
+            <span style={ended ? { color: "var(--text-muted)" } : undefined}>{timeLabel}</span>
             <span>{design.commentCount} comments</span>
           </div>
         </div>

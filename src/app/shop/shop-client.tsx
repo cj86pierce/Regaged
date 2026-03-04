@@ -53,11 +53,10 @@ function TabButton({ active, children, onClick }: { active: boolean; children: R
   return (
     <button
       onClick={onClick}
+      className={active ? "theme-tab-btn-active" : "theme-tab-btn"}
       style={{
         padding: "10px 12px",
         borderRadius: 10,
-        border: "1px solid rgba(0,0,0,0.12)",
-        background: active ? "#fff" : "#f3f6f9",
         fontWeight: 1000,
         cursor: "pointer",
       }}
@@ -167,11 +166,10 @@ export default function ShopClient({
       <h1 style={{ marginTop: 0 }}>Shop</h1>
 
       <div
+        className="theme-sidebar-panel"
         style={{
-          border: "1px solid rgba(0,0,0,0.12)",
           borderRadius: 12,
           padding: 12,
-          background: "#fff",
           marginBottom: 12,
           display: "flex",
           justifyContent: "space-between",
@@ -231,7 +229,7 @@ export default function ShopClient({
                     border: "1px solid rgba(0,0,0,0.12)",
                     borderRadius: 12,
                     padding: 12,
-                    background: "#fff",
+                    background: "var(--bg-card)",
                     display: "grid",
                     gridTemplateColumns: "1fr 160px",
                     gap: 12,
@@ -281,7 +279,7 @@ export default function ShopClient({
                       padding: "10px 12px",
                       borderRadius: 10,
                       border: "1px solid rgba(0,0,0,0.15)",
-                      background: canBuy ? "linear-gradient(#ffd85a,#ffb703)" : "#f3f6f9",
+                      background: canBuy ? "var(--btn-primary-bg)" : "var(--bg-btn-disabled)",
                       fontWeight: 1000,
                       cursor: canBuy ? "pointer" : "not-allowed",
                     }}
@@ -295,21 +293,14 @@ export default function ShopClient({
       )}
 
       {tab === "items" && (
-        <div style={{ padding: 12, borderRadius: 12, border: "1px solid rgba(0,0,0,0.12)", background: "#fff" }}>
+        <div className="theme-sidebar-panel" style={{ padding: 12, borderRadius: 12 }}>
           <div style={{ fontWeight: 1000 }}>More shop items soon.</div>
           <div style={{ marginTop: 6, fontSize: 12, opacity: 0.8 }}>Next: avatar items, buttons, cosmetic frames, and more.</div>
         </div>
       )}
 
       {tab === "auctions" && (
-        <div
-          style={{
-            padding: 12,
-            borderRadius: 12,
-            border: "1px solid rgba(0,0,0,0.12)",
-            background: "#fff",
-          }}
-        >
+        <div className="theme-sidebar-panel" style={{ padding: 12, borderRadius: 12 }}>
           <div style={{ fontWeight: 1000, marginBottom: 8 }}>Active auctions</div>
           {auctionsLoading && <div style={{ fontSize: 12 }}>Loading auctions…</div>}
           {auctionsError && (
@@ -331,8 +322,8 @@ export default function ShopClient({
                   gap: 10,
                   padding: 8,
                   borderRadius: 10,
-                  border: "1px solid rgba(0,0,0,0.08)",
-                  background: "#fdfdfd",
+                  border: "1px solid var(--border)",
+                  background: "var(--bg-card)",
                 }}
               >
                 <div
@@ -342,8 +333,8 @@ export default function ShopClient({
                     height: Math.round((120 * 230) / 200),
                     borderRadius: 8,
                     overflow: "hidden",
-                    border: "1px solid rgba(0,0,0,0.08)",
-                    background: "#eee",
+                    border: "1px solid var(--border)",
+                    background: "var(--bg-input)",
                   }}
                 >
                   <img

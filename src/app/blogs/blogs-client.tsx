@@ -68,43 +68,18 @@ export default function BlogsClient({ userId }: { userId: string | null }) {
       {userId && (
         <div style={{ marginBottom: 14 }}>
           {!showForm ? (
-            <button
-              onClick={() => setShowForm(true)}
-              style={{
-                padding: "10px 14px",
-                borderRadius: 10,
-                border: "1px solid rgba(0,0,0,0.12)",
-                background: "linear-gradient(#ffd85a, #ffb703)",
-                color: "#3a2b00",
-                fontWeight: 1000,
-                cursor: "pointer",
-              }}
-            >
+            <button onClick={() => setShowForm(true)} className="theme-btn-primary" style={{ cursor: "pointer" }}>
               Write a post
             </button>
           ) : (
-            <div
-              style={{
-                border: "1px solid rgba(0,0,0,0.12)",
-                borderRadius: 12,
-                padding: 14,
-                background: "#fff",
-              }}
-            >
+            <div className="theme-sidebar-panel" style={{ padding: 14, borderRadius: 12 }}>
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Title"
                 maxLength={200}
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  borderRadius: 8,
-                  border: "1px solid rgba(0,0,0,0.15)",
-                  marginBottom: 8,
-                  fontSize: 16,
-                  fontWeight: 800,
-                }}
+                className="theme-chat-input"
+                style={{ width: "100%", padding: "10px 12px", borderRadius: 8, marginBottom: 8, fontSize: 16, fontWeight: 800 }}
               />
               <textarea
                 value={content}
@@ -112,16 +87,8 @@ export default function BlogsClient({ userId }: { userId: string | null }) {
                 placeholder="Content (optional)"
                 rows={4}
                 maxLength={10000}
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  borderRadius: 8,
-                  border: "1px solid rgba(0,0,0,0.15)",
-                  marginBottom: 10,
-                  fontSize: 14,
-                  resize: "vertical",
-                  fontFamily: "inherit",
-                }}
+                className="theme-chat-input"
+                style={{ width: "100%", padding: "10px 12px", borderRadius: 8, marginBottom: 10, fontSize: 14, resize: "vertical", fontFamily: "inherit" }}
               />
               <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                 <button
@@ -131,8 +98,8 @@ export default function BlogsClient({ userId }: { userId: string | null }) {
                     padding: "10px 14px",
                     borderRadius: 8,
                     border: "none",
-                    background: submitting ? "#ccc" : "#111",
-                    color: "#fff",
+                    background: submitting ? "var(--bg-btn-disabled)" : "var(--bg-btn-send)",
+                    color: submitting ? "var(--text-muted)" : "var(--text-btn-send)",
                     fontWeight: 1000,
                     cursor: submitting ? "not-allowed" : "pointer",
                   }}
@@ -149,15 +116,16 @@ export default function BlogsClient({ userId }: { userId: string | null }) {
                   style={{
                     padding: "10px 14px",
                     borderRadius: 8,
-                    border: "1px solid rgba(0,0,0,0.15)",
-                    background: "#fff",
+                    border: "1px solid var(--border)",
+                    background: "var(--bg-card)",
+                    color: "var(--text-primary)",
                     fontWeight: 800,
                     cursor: "pointer",
                   }}
                 >
                   Cancel
                 </button>
-                {error && <span style={{ fontSize: 13, color: "#c00" }}>{error}</span>}
+                {error && <span style={{ fontSize: 13, color: "var(--text-error)" }}>{error}</span>}
               </div>
             </div>
           )}
@@ -167,46 +135,16 @@ export default function BlogsClient({ userId }: { userId: string | null }) {
       {loading ? (
         <div style={{ padding: 20, textAlign: "center", opacity: 0.7 }}>Loading...</div>
       ) : posts.length === 0 ? (
-        <div
-          style={{
-            padding: 40,
-            textAlign: "center",
-            border: "1px dashed rgba(0,0,0,0.2)",
-            borderRadius: 12,
-            background: "#f9fafb",
-          }}
-        >
+        <div className="theme-sidebar-panel" style={{ padding: 40, textAlign: "center", borderRadius: 12, borderStyle: "dashed" }}>
           No posts yet. {userId ? "Be the first to write one!" : "Log in to write a post."}
         </div>
       ) : (
         <div style={{ display: "grid", gap: 12 }}>
           {posts.map((p) => (
-            <Link
-              key={p.id}
-              href={`/blogs/${p.id}`}
-              style={{
-                display: "block",
-                textDecoration: "none",
-                color: "inherit",
-                border: "1px solid rgba(0,0,0,0.08)",
-                borderRadius: 12,
-                padding: 14,
-                background: "#fff",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-              }}
-            >
+            <Link key={p.id} href={`/blogs/${p.id}`} className="theme-card" style={{ display: "block", textDecoration: "none", color: "inherit", padding: 14 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                 {p.placement !== null && (
-                  <span
-                    style={{
-                      padding: "2px 8px",
-                      borderRadius: 6,
-                      background: "linear-gradient(#ffd85a, #ffb703)",
-                      color: "#3a2b00",
-                      fontWeight: 1000,
-                      fontSize: 12,
-                    }}
-                  >
+                  <span className="theme-btn-primary" style={{ padding: "2px 8px", borderRadius: 6, fontSize: 12 }}>
                     #{p.placement}
                   </span>
                 )}
@@ -216,7 +154,7 @@ export default function BlogsClient({ userId }: { userId: string | null }) {
                 <div
                   style={{
                     fontSize: 14,
-                    color: "#444",
+                    color: "var(--text-secondary)",
                     lineHeight: 1.4,
                     marginBottom: 8,
                     overflow: "hidden",
@@ -229,7 +167,7 @@ export default function BlogsClient({ userId }: { userId: string | null }) {
                   {p.content}
                 </div>
               )}
-              <div style={{ display: "flex", gap: 14, fontSize: 12, color: "#666" }}>
+              <div style={{ display: "flex", gap: 14, fontSize: 12, color: "var(--text-muted)" }}>
                 <span>by {p.author.username}</span>
                 <span>✅ {p.plus} ❌ {p.minus} · Score {p.score}</span>
                 <span>{p.commentCount} comments</span>
@@ -248,8 +186,9 @@ export default function BlogsClient({ userId }: { userId: string | null }) {
             style={{
               padding: "8px 12px",
               borderRadius: 8,
-              border: "1px solid rgba(0,0,0,0.15)",
-              background: page <= 1 ? "#f3f6f9" : "#fff",
+              border: "1px solid var(--border)",
+              background: page <= 1 ? "var(--bg-btn-disabled)" : "var(--bg-card)",
+              color: "var(--text-primary)",
               cursor: page <= 1 ? "not-allowed" : "pointer",
               fontWeight: 800,
             }}
@@ -265,8 +204,9 @@ export default function BlogsClient({ userId }: { userId: string | null }) {
             style={{
               padding: "8px 12px",
               borderRadius: 8,
-              border: "1px solid rgba(0,0,0,0.15)",
-              background: page >= totalPages ? "#f3f6f9" : "#fff",
+              border: "1px solid var(--border)",
+              background: page >= totalPages ? "var(--bg-btn-disabled)" : "var(--bg-card)",
+              color: "var(--text-primary)",
               cursor: page >= totalPages ? "not-allowed" : "pointer",
               fontWeight: 800,
             }}

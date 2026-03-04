@@ -28,6 +28,11 @@
   --border-input: rgba(0, 0, 0, 0.12);
   --link-color: #0b5ed7;
   --bg-pm-mine: #eaf2ff;
+  --text-error: #c00;
+  --vote-plus-bg: #e8f5e9;
+  --vote-plus-border: #2e7d32;
+  --vote-minus-bg: #ffebee;
+  --vote-minus-border: #c62828;
 }
 
 /* Dark: dark red & black */
@@ -59,6 +64,11 @@
   --border-input: rgba(139, 26, 26, 0.4);
   --link-color: #e05050;
   --bg-pm-mine: #2a1515;
+  --text-error: #f08080;
+  --vote-plus-bg: #1a2a1a;
+  --vote-plus-border: #3d8b3d;
+  --vote-minus-bg: #2a1a1a;
+  --vote-minus-border: #b03030;
 }
 
 .theme-body {
@@ -239,8 +249,24 @@
 .theme-chat-msg { background: var(--bg-msg); border: 1px solid var(--border); border-radius: 12px; padding: 10px; }
 .theme-chat-msg-sys { background: var(--bg-msg-system); border: 1px solid var(--border); border-radius: 12px; padding: 10px; }
 .theme-chat-input { background: var(--bg-input); border: 1px solid var(--border-input); color: var(--text-primary); }
-.theme-tab-btn { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-primary); }
-.theme-tab-btn-active { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-primary); font-weight: 800; }
+.theme-tab-btn {
+  background: var(--bg-btn-disabled);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-weight: 1000;
+  cursor: pointer;
+}
+.theme-tab-btn-active {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
 .theme-sidebar-panel { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-primary); }
 .theme-pager-btn { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-primary); }
 

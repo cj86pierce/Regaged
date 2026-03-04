@@ -96,20 +96,11 @@ export default function BlogPostClient({ initialPost }: { initialPost: Post }) {
 
   return (
     <div>
-      <div
-        style={{
-          border: "1px solid rgba(0,0,0,0.08)",
-          borderRadius: 12,
-          padding: 18,
-          background: "#fff",
-          boxShadow: "0 2px 12px rgba(0,0,0,0.04)",
-          marginBottom: 14,
-        }}
-      >
+      <div className="theme-card" style={{ padding: 18, marginBottom: 14 }}>
         <h1 style={{ margin: "0 0 8px 0", fontSize: 24, fontWeight: 1000 }}>{post.title}</h1>
-        <div style={{ fontSize: 13, color: "#666", marginBottom: 12 }}>
+        <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 12 }}>
           by{" "}
-          <Link href={`/u/${post.author.username.toLowerCase()}`} style={{ fontWeight: 800, color: "#0b5ed7" }}>
+          <Link href={`/u/${post.author.username.toLowerCase()}`} style={{ fontWeight: 800, color: "var(--link-color)" }}>
             {post.author.username}
           </Link>
           {" · "}
@@ -124,8 +115,8 @@ export default function BlogPostClient({ initialPost }: { initialPost: Post }) {
                 style={{
                   padding: "6px 12px",
                   borderRadius: 8,
-                  border: post.myVote === "PLUS" ? "2px solid #2e7d32" : "1px solid rgba(0,0,0,0.15)",
-                  background: post.myVote === "PLUS" ? "#e8f5e9" : "#fff",
+                  border: post.myVote === "PLUS" ? "2px solid var(--vote-plus-border)" : "1px solid var(--border)",
+                  background: post.myVote === "PLUS" ? "var(--vote-plus-bg)" : "var(--bg-card)",
                   fontWeight: 1000,
                   cursor: "pointer",
                 }}
@@ -137,8 +128,8 @@ export default function BlogPostClient({ initialPost }: { initialPost: Post }) {
                 style={{
                   padding: "6px 12px",
                   borderRadius: 8,
-                  border: post.myVote === "MINUS" ? "2px solid #c62828" : "1px solid rgba(0,0,0,0.15)",
-                  background: post.myVote === "MINUS" ? "#ffebee" : "#fff",
+                  border: post.myVote === "MINUS" ? "2px solid var(--vote-minus-border)" : "1px solid var(--border)",
+                  background: post.myVote === "MINUS" ? "var(--vote-minus-bg)" : "var(--bg-card)",
                   fontWeight: 1000,
                   cursor: "pointer",
                 }}
@@ -147,7 +138,7 @@ export default function BlogPostClient({ initialPost }: { initialPost: Post }) {
               </button>
             </>
           ) : (
-            <div style={{ fontSize: 13, color: "#888" }}>
+            <div style={{ fontSize: 13, color: "var(--text-muted)" }}>
               Voting closed (post older than 3 days) · ✅ {post.plus} ❌ {post.minus}
             </div>
           )}
@@ -168,16 +159,8 @@ export default function BlogPostClient({ initialPost }: { initialPost: Post }) {
           placeholder="Add a comment..."
           rows={3}
           maxLength={2000}
-          style={{
-            width: "100%",
-            padding: "10px 12px",
-            borderRadius: 8,
-            border: "1px solid rgba(0,0,0,0.15)",
-            marginBottom: 8,
-            fontSize: 14,
-            resize: "vertical",
-            fontFamily: "inherit",
-          }}
+          className="theme-chat-input"
+          style={{ width: "100%", padding: "10px 12px", borderRadius: 8, marginBottom: 8, fontSize: 14, resize: "vertical", fontFamily: "inherit" }}
         />
         <button
           onClick={addComment}
@@ -186,37 +169,29 @@ export default function BlogPostClient({ initialPost }: { initialPost: Post }) {
             padding: "10px 14px",
             borderRadius: 8,
             border: "none",
-            background: submitting ? "#ccc" : "#111",
-            color: "#fff",
+            background: submitting ? "var(--bg-btn-disabled)" : "var(--bg-btn-send)",
+            color: submitting ? "var(--text-muted)" : "var(--text-btn-send)",
             fontWeight: 1000,
             cursor: submitting ? "not-allowed" : "pointer",
           }}
         >
           {submitting ? "Posting..." : "Comment"}
         </button>
-        {error && <span style={{ marginLeft: 10, fontSize: 13, color: "#c00" }}>{error}</span>}
+        {error && <span style={{ marginLeft: 10, fontSize: 13, color: "var(--text-error)" }}>{error}</span>}
       </div>
 
       <div style={{ display: "grid", gap: 10 }}>
         {post.comments.map((c) => (
-          <div
-            key={c.id}
-            style={{
-              border: "1px solid rgba(0,0,0,0.08)",
-              borderRadius: 10,
-              padding: 12,
-              background: "#f9fafb",
-            }}
-          >
+          <div key={c.id} className="theme-chat-msg" style={{ borderRadius: 10, padding: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
               <div>
                 <Link
                   href={`/u/${c.author.username.toLowerCase()}`}
-                  style={{ fontWeight: 800, fontSize: 13, color: "#0b5ed7" }}
+                  style={{ fontWeight: 800, fontSize: 13, color: "var(--link-color)" }}
                 >
                   {c.author.username}
                 </Link>
-                <span style={{ fontSize: 12, color: "#666", marginLeft: 8 }}>
+                <span style={{ fontSize: 12, color: "var(--text-muted)", marginLeft: 8 }}>
                   {new Date(c.createdAt).toLocaleString()}
                 </span>
               </div>
@@ -228,8 +203,8 @@ export default function BlogPostClient({ initialPost }: { initialPost: Post }) {
                   style={{
                     padding: "4px 8px",
                     borderRadius: 6,
-                    border: c.myVote === "PLUS" ? "2px solid #2e7d32" : "1px solid rgba(0,0,0,0.12)",
-                    background: c.myVote === "PLUS" ? "#e8f5e9" : "#fff",
+                    border: c.myVote === "PLUS" ? "2px solid var(--vote-plus-border)" : "1px solid var(--border)",
+                    background: c.myVote === "PLUS" ? "var(--vote-plus-bg)" : "var(--bg-card)",
                     fontWeight: 800,
                     fontSize: 12,
                     cursor: "pointer",
@@ -242,8 +217,8 @@ export default function BlogPostClient({ initialPost }: { initialPost: Post }) {
                   style={{
                     padding: "4px 8px",
                     borderRadius: 6,
-                    border: c.myVote === "MINUS" ? "2px solid #c62828" : "1px solid rgba(0,0,0,0.12)",
-                    background: c.myVote === "MINUS" ? "#ffebee" : "#fff",
+                    border: c.myVote === "MINUS" ? "2px solid var(--vote-minus-border)" : "1px solid var(--border)",
+                    background: c.myVote === "MINUS" ? "var(--vote-minus-bg)" : "var(--bg-card)",
                     fontWeight: 800,
                     fontSize: 12,
                     cursor: "pointer",
@@ -254,7 +229,7 @@ export default function BlogPostClient({ initialPost }: { initialPost: Post }) {
                 <span style={{ fontSize: 12, fontWeight: 800 }}>{c.score}</span>
                 </>
                 ) : (
-                  <span style={{ fontSize: 12, color: "#888" }}>✅ {c.plus} ❌ {c.minus} · {c.score}</span>
+                  <span style={{ fontSize: 12, color: "var(--text-muted)" }}>✅ {c.plus} ❌ {c.minus} · {c.score}</span>
                 )}
               </div>
             </div>

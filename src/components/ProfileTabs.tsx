@@ -145,7 +145,7 @@ function ReorderFriendsButton({
           padding: "4px 8px",
           borderRadius: 6,
           border: "1px solid rgba(0,0,0,0.12)",
-          background: "#f3f6f9",
+                        background: "var(--bg-btn-disabled)",
           fontSize: 11,
           fontWeight: 700,
           cursor: "pointer",
@@ -276,18 +276,8 @@ function RemoveFriendButton({ friendId, onRemoved }: { friendId: string; onRemov
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div
-      style={{
-        border: "1px solid rgba(0,0,0,0.08)",
-        borderRadius: 14,
-        background: "#fff",
-        boxShadow: "0 8px 24px rgba(0,0,0,0.06)",
-        overflow: "hidden",
-      }}
-    >
-      <div style={{ padding: "12px 14px", borderBottom: "1px solid rgba(0,0,0,0.06)", fontWeight: 1000 }}>
-        {title}
-      </div>
+    <div className="theme-card" style={{ borderRadius: 14, boxShadow: "var(--shadow-card)", overflow: "hidden" }}>
+      <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--border)", fontWeight: 1000 }}>{title}</div>
       <div style={{ padding: 14 }}>{children}</div>
     </div>
   );
@@ -352,7 +342,7 @@ function Bubble({ g }: { g: ProfileGameBubble }) {
             height: 72,
             borderRadius: 999,
             border: "2px solid rgba(0,0,0,0.25)",
-            background: isActiveGame ? "linear-gradient(#eaf2ff, #d6e6ff)" : "linear-gradient(#f3f6f9, #fff)",
+            background: isActiveGame ? "var(--accent-bg)" : "var(--bg-card)",
             margin: "0 auto",
             display: "grid",
             placeItems: "center",
@@ -372,8 +362,8 @@ function Bubble({ g }: { g: ProfileGameBubble }) {
               fontSize: 11,
               fontWeight: 1000,
               border: "1px solid rgba(0,0,0,0.20)",
-              background: isActiveGame ? "#111" : "#fff",
-              color: isActiveGame ? "#fff" : "#111",
+              background: isActiveGame ? "var(--bg-btn-send)" : "var(--bg-card)",
+              color: isActiveGame ? "var(--text-btn-send)" : "var(--text-primary)",
               minWidth: 56,
               textAlign: "center",
             }}
@@ -444,7 +434,7 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
                     top: 40,
                     height: 10,
                     borderRadius: 999,
-                    background: "#f3f6f9",
+                        background: "var(--bg-btn-disabled)",
                     border: "1px solid rgba(0,0,0,0.08)",
                     zIndex: -1,
                   }}
@@ -478,7 +468,7 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
           </div>
 
           {/* Bio */}
-          <div style={{ marginTop: 14, border: "1px solid rgba(0,0,0,0.18)", borderRadius: 10, background: "#fff9b8", padding: 12, minHeight: 120 }}>
+          <div className="theme-chat-msg-sys" style={{ marginTop: 14, border: "1px solid var(--border)", borderRadius: 10, padding: 12, minHeight: 120 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
               <div style={{ fontWeight: 1000 }}>Bio</div>
               {data.isOwnProfile && (
@@ -488,7 +478,8 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
                     setBioMsg(null);
                     setEditingBio((v) => !v);
                   }}
-                  style={{ padding: "6px 10px", borderRadius: 10, border: "1px solid rgba(0,0,0,0.20)", background: "#fff", fontWeight: 1000, cursor: "pointer" }}
+                  className="theme-pager-btn"
+                  style={{ padding: "6px 10px", borderRadius: 10, fontWeight: 1000, cursor: "pointer" }}
                 >
                   {editingBio ? "Cancel" : "Edit"}
                 </button>
@@ -512,8 +503,8 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
                       padding: "10px 12px",
                       borderRadius: 10,
                       border: "1px solid rgba(0,0,0,0.18)",
-                      background: bioSaving ? "#f3f6f9" : "#111",
-                      color: bioSaving ? "#111" : "#fff",
+                      background: bioSaving ? "var(--bg-btn-disabled)" : "var(--bg-btn-send)",
+                      color: bioSaving ? "var(--text-primary)" : "var(--text-btn-send)",
                       fontWeight: 1000,
                       cursor: bioSaving ? "not-allowed" : "pointer",
                     }}
@@ -548,9 +539,9 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
                         padding: "6px 10px",
                         borderRadius: 8,
                         border: "1px solid rgba(0,0,0,0.12)",
-                        background: "#fff",
+                        background: "var(--bg-card)",
                         textDecoration: "none",
-                        color: "#111",
+                        color: "var(--text-primary)",
                         fontWeight: 800,
                         fontSize: 12,
                       }}
@@ -558,7 +549,7 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
                       ← Prev
                     </Link>
                   ) : (
-                    <span style={{ padding: "6px 10px", borderRadius: 8, background: "#f3f6f9", color: "#888", fontSize: 12 }}>← Prev</span>
+                    <span className="theme-text-muted" style={{ padding: "6px 10px", borderRadius: 8, background: "var(--bg-btn-disabled)", fontSize: 12 }}>← Prev</span>
                   )}
                   <span style={{ fontSize: 13 }}>
                     Page {data.recentGamesPage} of {data.recentGamesTotalPages}
@@ -570,9 +561,9 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
                         padding: "6px 10px",
                         borderRadius: 8,
                         border: "1px solid rgba(0,0,0,0.12)",
-                        background: "#fff",
+                        background: "var(--bg-card)",
                         textDecoration: "none",
-                        color: "#111",
+                        color: "var(--text-primary)",
                         fontWeight: 800,
                         fontSize: 12,
                       }}
@@ -580,7 +571,7 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
                       Next →
                     </Link>
                   ) : (
-                    <span style={{ padding: "6px 10px", borderRadius: 8, background: "#f3f6f9", color: "#888", fontSize: 12 }}>Next →</span>
+                    <span className="theme-text-muted" style={{ padding: "6px 10px", borderRadius: 8, background: "var(--bg-btn-disabled)", fontSize: 12 }}>Next →</span>
                   )}
                 </div>
               )}
@@ -616,59 +607,19 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
         <div className="profileSidebar" style={{ display: "grid", gap: 14 }}>
           <Card title="Participate!">
             <div style={{ display: "grid", gap: 10 }}>
-              <Link
-                href="/enroll"
-                style={{
-                  display: "block",
-                  textAlign: "center",
-                  textDecoration: "none",
-                  fontWeight: 1000,
-                  padding: "10px 12px",
-                  borderRadius: 10,
-                  background: "linear-gradient(#ffd85a, #ffb703)",
-                  color: "#3a2b00",
-                  border: "1px solid rgba(0,0,0,0.12)",
-                  boxShadow: "0 8px 18px rgba(255, 183, 3, 0.25)",
-                }}
-              >
+              <Link href="/enroll" className="theme-btn-primary" style={{ display: "block", textAlign: "center" }}>
                 Enroll now ▶
               </Link>
 
               {data.isOwnProfile && (
-  <Link
-    href="/profile/edit"
-    style={{
-      display: "block",
-      textAlign: "center",
-      textDecoration: "none",
-      fontWeight: 1000,
-      padding: "10px 12px",
-      borderRadius: 10,
-      background: "linear-gradient(#fff9b8, #ffe28a)",
-      color: "#3a2b00",
-      border: "1px solid rgba(0,0,0,0.12)",
-    }}
-  >
+  <Link href="/profile/edit" className="theme-btn-secondary" style={{ display: "block", textAlign: "center" }}>
     Edit Profile
   </Link>
 )}
 
 
               {data.isOwnProfile && (
-                <Link
-                  href="/profile/avatar"
-                  style={{
-                    display: "block",
-                    textAlign: "center",
-                    textDecoration: "none",
-                    fontWeight: 1000,
-                    padding: "10px 12px",
-                    borderRadius: 10,
-                    background: "linear-gradient(#eaf2ff, #d6e6ff)",
-                    color: "#0b2b66",
-                    border: "1px solid rgba(0,0,0,0.12)",
-                  }}
-                >
+                <Link href="/profile/avatar" className="theme-btn-secondary" style={{ display: "block", textAlign: "center" }}>
                   Customize Avatar
                 </Link>
               )}

@@ -27,11 +27,11 @@ export default async function GamesPage() {
             className="gamesListItem"
             style={{
               textDecoration: "none",
-              color: "#111",
+              color: "var(--text-primary)",
               border: "1px solid rgba(0,0,0,0.12)",
               borderRadius: 12,
               padding: 12,
-              background: "#fff",
+              background: "var(--bg-card)",
               display: "grid",
               gridTemplateColumns: "1fr auto",
               gap: 10,
@@ -47,7 +47,7 @@ export default async function GamesPage() {
         ))}
 
         {!games.length && (
-          <div style={{ padding: 12, borderRadius: 12, border: "1px solid rgba(0,0,0,0.12)", background: "#fff" }}>
+          <div className="theme-sidebar-panel" style={{ padding: 12, borderRadius: 12 }}>
             No active games right now.
           </div>
         )}

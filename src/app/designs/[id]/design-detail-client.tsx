@@ -156,16 +156,7 @@ export default function DesignDetailClient({ initialDesign }: { initialDesign: D
 
   return (
     <div>
-      <div
-        style={{
-          border: "1px solid rgba(0,0,0,0.08)",
-          borderRadius: 12,
-          padding: 18,
-          background: "#fff",
-          boxShadow: "0 2px 12px rgba(0,0,0,0.04)",
-          marginBottom: 14,
-        }}
-      >
+      <div className="theme-card" style={{ padding: 18, marginBottom: 14 }}>
         <div
           className="designDetailImage"
           style={{
@@ -173,8 +164,8 @@ export default function DesignDetailClient({ initialDesign }: { initialDesign: D
             height: 230,
             borderRadius: 8,
             overflow: "hidden",
-            border: "1px solid rgba(0,0,0,0.08)",
-            background: "#eee",
+            border: "1px solid var(--border)",
+            background: "var(--bg-input)",
             marginBottom: 12,
           }}
         >
@@ -186,13 +177,13 @@ export default function DesignDetailClient({ initialDesign }: { initialDesign: D
         </div>
         <h1 style={{ margin: "0 0 8px 0", fontSize: "clamp(18px, 5vw, 24px)", fontWeight: 1000 }}>{design.title}</h1>
         {design.designType && (
-          <div style={{ fontSize: 12, color: "#0b5ed7", fontWeight: 800, marginBottom: 6 }}>
+          <div style={{ fontSize: 12, color: "var(--link-color)", fontWeight: 800, marginBottom: 6 }}>
             {DESIGN_TYPE_LABELS[design.designType] ?? design.designType}
           </div>
         )}
-        <div style={{ fontSize: 13, color: "#666", marginBottom: 12 }}>
+        <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 12 }}>
           by{" "}
-          <Link href={`/u/${design.author.username.toLowerCase()}`} style={{ fontWeight: 800, color: "#0b5ed7" }}>
+          <Link href={`/u/${design.author.username.toLowerCase()}`} style={{ fontWeight: 800, color: "var(--link-color)" }}>
             {design.author.username}
           </Link>
           {" · "}
@@ -201,7 +192,7 @@ export default function DesignDetailClient({ initialDesign }: { initialDesign: D
 
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
           {ended ? (
-            <div style={{ fontSize: 13, color: "#888" }}>
+            <div style={{ fontSize: 13, color: "var(--text-muted)" }}>
               Voting closed (2-day window ended) · ✅ {design.plus} ❌ {design.minus}
             </div>
           ) : (
@@ -211,8 +202,8 @@ export default function DesignDetailClient({ initialDesign }: { initialDesign: D
                 style={{
                   padding: "6px 12px",
                   borderRadius: 8,
-                  border: design.myVote === "PLUS" ? "2px solid #2e7d32" : "1px solid rgba(0,0,0,0.15)",
-                  background: design.myVote === "PLUS" ? "#e8f5e9" : "#fff",
+                  border: design.myVote === "PLUS" ? "2px solid var(--vote-plus-border)" : "1px solid var(--border)",
+                  background: design.myVote === "PLUS" ? "var(--vote-plus-bg)" : "var(--bg-card)",
                   fontWeight: 1000,
                   cursor: "pointer",
                 }}
@@ -224,8 +215,8 @@ export default function DesignDetailClient({ initialDesign }: { initialDesign: D
                 style={{
                   padding: "6px 12px",
                   borderRadius: 8,
-                  border: design.myVote === "MINUS" ? "2px solid #c62828" : "1px solid rgba(0,0,0,0.15)",
-                  background: design.myVote === "MINUS" ? "#ffebee" : "#fff",
+                  border: design.myVote === "MINUS" ? "2px solid var(--vote-minus-border)" : "1px solid var(--border)",
+                  background: design.myVote === "MINUS" ? "var(--vote-minus-bg)" : "var(--bg-card)",
                   fontWeight: 1000,
                   cursor: "pointer",
                 }}
@@ -235,19 +226,17 @@ export default function DesignDetailClient({ initialDesign }: { initialDesign: D
             </>
           )}
           <span style={{ fontSize: 16, fontWeight: 1000 }}>Score: {design.score}</span>
-          <span style={{ fontSize: 13, color: ended ? "#888" : "#666" }}>{timeLabel}</span>
+          <span style={{ fontSize: 13, color: "var(--text-muted)" }}>{timeLabel}</span>
         </div>
 
         <div style={{ marginBottom: 14 }}>
           <button
             type="button"
             onClick={openPreview}
+            className="theme-btn-secondary"
             style={{
               padding: "10px 16px",
               borderRadius: 10,
-              border: "1px solid rgba(0,0,0,0.15)",
-              background: "linear-gradient(#eaf2ff, #d6e6ff)",
-              color: "#0b2b66",
               fontWeight: 1000,
               fontSize: 15,
               cursor: "pointer",
@@ -283,7 +272,7 @@ export default function DesignDetailClient({ initialDesign }: { initialDesign: D
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              background: "#fff",
+              background: "var(--bg-card)",
               borderRadius: 14,
               padding: 20,
               boxShadow: "0 12px 40px rgba(0,0,0,0.2)",
@@ -308,10 +297,10 @@ export default function DesignDetailClient({ initialDesign }: { initialDesign: D
               </button>
             </div>
             {previewLoading && (
-              <div style={{ padding: 40, textAlign: "center", color: "#666" }}>Loading…</div>
+              <div style={{ padding: 40, textAlign: "center", color: "var(--text-muted)" }}>Loading…</div>
             )}
             {previewError && (
-              <div style={{ padding: 20, textAlign: "center", color: "#c00" }}>{previewError}</div>
+              <div style={{ padding: 20, textAlign: "center", color: "var(--text-error)" }}>{previewError}</div>
             )}
             {!previewLoading && !previewError && previewAvatar && (
               <div style={{ display: "grid", placeItems: "center", gap: 12 }}>
@@ -334,7 +323,7 @@ export default function DesignDetailClient({ initialDesign }: { initialDesign: D
                       padding: "8px 14px",
                       borderRadius: 8,
                       border: "1px solid rgba(0,0,0,0.2)",
-                      background: previewDesignOn ? "#e8f0fe" : "#f5f5f5",
+                      background: previewDesignOn ? "var(--accent-bg)" : "var(--bg-btn-disabled)",
                       fontWeight: 700,
                       cursor: "pointer",
                       fontSize: 14,
@@ -343,7 +332,7 @@ export default function DesignDetailClient({ initialDesign }: { initialDesign: D
                     {previewDesignOn ? "Hide design" : "Show design"}
                   </button>
                 </div>
-                <div style={{ fontSize: 13, color: "#666", textAlign: "center" }}>
+                <div style={{ fontSize: 13, color: "var(--text-muted)", textAlign: "center" }}>
                   This is how the design would look on your avatar. Win it in the Auction House to use it.
                 </div>
               </div>
@@ -361,16 +350,8 @@ export default function DesignDetailClient({ initialDesign }: { initialDesign: D
           placeholder="Add a comment..."
           rows={3}
           maxLength={2000}
-          style={{
-            width: "100%",
-            padding: "10px 12px",
-            borderRadius: 8,
-            border: "1px solid rgba(0,0,0,0.15)",
-            marginBottom: 8,
-            fontSize: 14,
-            resize: "vertical",
-            fontFamily: "inherit",
-          }}
+          className="theme-chat-input"
+          style={{ width: "100%", padding: "10px 12px", borderRadius: 8, marginBottom: 8, fontSize: 14, resize: "vertical", fontFamily: "inherit" }}
         />
         <button
           onClick={addComment}
@@ -379,37 +360,29 @@ export default function DesignDetailClient({ initialDesign }: { initialDesign: D
             padding: "10px 14px",
             borderRadius: 8,
             border: "none",
-            background: submitting ? "#ccc" : "#111",
-            color: "#fff",
+            background: submitting ? "var(--bg-btn-disabled)" : "var(--bg-btn-send)",
+            color: submitting ? "var(--text-muted)" : "var(--text-btn-send)",
             fontWeight: 1000,
             cursor: submitting ? "not-allowed" : "pointer",
           }}
         >
           {submitting ? "Posting..." : "Comment"}
         </button>
-        {error && <span style={{ marginLeft: 10, fontSize: 13, color: "#c00" }}>{error}</span>}
+        {error && <span style={{ marginLeft: 10, fontSize: 13, color: "var(--text-error)" }}>{error}</span>}
       </div>
 
       <div style={{ display: "grid", gap: 10 }}>
         {design.comments.map((c) => (
-          <div
-            key={c.id}
-            style={{
-              border: "1px solid rgba(0,0,0,0.08)",
-              borderRadius: 10,
-              padding: 12,
-              background: "#f9fafb",
-            }}
-          >
+          <div key={c.id} className="theme-chat-msg" style={{ borderRadius: 10, padding: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
               <div>
                 <Link
                   href={`/u/${c.author.username.toLowerCase()}`}
-                  style={{ fontWeight: 800, fontSize: 13, color: "#0b5ed7" }}
+                  style={{ fontWeight: 800, fontSize: 13, color: "var(--link-color)" }}
                 >
                   {c.author.username}
                 </Link>
-                <span style={{ fontSize: 12, color: "#666", marginLeft: 8 }}>
+                <span style={{ fontSize: 12, color: "var(--text-muted)", marginLeft: 8 }}>
                   {new Date(c.createdAt).toLocaleString()}
                 </span>
               </div>
@@ -421,8 +394,8 @@ export default function DesignDetailClient({ initialDesign }: { initialDesign: D
                       style={{
                         padding: "4px 8px",
                         borderRadius: 6,
-                        border: c.myVote === "PLUS" ? "2px solid #2e7d32" : "1px solid rgba(0,0,0,0.12)",
-                        background: c.myVote === "PLUS" ? "#e8f5e9" : "#fff",
+                    border: c.myVote === "PLUS" ? "2px solid var(--vote-plus-border)" : "1px solid var(--border)",
+                    background: c.myVote === "PLUS" ? "var(--vote-plus-bg)" : "var(--bg-card)",
                         fontWeight: 800,
                         fontSize: 12,
                         cursor: "pointer",
@@ -435,8 +408,8 @@ export default function DesignDetailClient({ initialDesign }: { initialDesign: D
                       style={{
                         padding: "4px 8px",
                         borderRadius: 6,
-                        border: c.myVote === "MINUS" ? "2px solid #c62828" : "1px solid rgba(0,0,0,0.12)",
-                        background: c.myVote === "MINUS" ? "#ffebee" : "#fff",
+                    border: c.myVote === "MINUS" ? "2px solid var(--vote-minus-border)" : "1px solid var(--border)",
+                    background: c.myVote === "MINUS" ? "var(--vote-minus-bg)" : "var(--bg-card)",
                         fontWeight: 800,
                         fontSize: 12,
                         cursor: "pointer",
