@@ -69,7 +69,7 @@ export default function PlayerStrip(props: {
   }
 
   return (
-    <div style={{ border: "1px solid #cfd7df", borderRadius: 10, padding: "6px 8px", background: "#eef7ff", overflow: "hidden" }}>
+    <div className="theme-sidebar-panel" style={{ borderRadius: 10, padding: "6px 8px", overflow: "hidden" }}>
       <div className="gamePlayerStrip" style={{ display: "grid", gridTemplateColumns: "repeat(15, minmax(0, 1fr))", gap: 4, alignItems: "start" }}>
         {players.map((p) => {
           const isPov = p.userId === povUserId;
@@ -116,8 +116,8 @@ export default function PlayerStrip(props: {
                   width: "100%",
                   borderRadius: 6,
                   border: "1px solid rgba(0,0,0,0.25)",
-                  background: nomOn ? "#111" : "#fff",
-                  color: nomOn ? "#fff" : "#111",
+                  background: nomOn ? "var(--bg-btn-send)" : "var(--bg-card)",
+                  color: nomOn ? "var(--text-btn-send)" : "var(--text-primary)",
                   fontWeight: 1000,
                   fontSize: 10,
                   cursor: "pointer",
@@ -168,7 +168,7 @@ export default function PlayerStrip(props: {
                   marginTop: 4,
                   fontSize: 10,
                   fontWeight: 1000,
-                  color: "#111",
+                  color: "var(--text-primary)",
                   textDecoration: "none",
                   textAlign: "center",
                   whiteSpace: "nowrap",

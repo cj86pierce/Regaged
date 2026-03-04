@@ -314,14 +314,14 @@ function colorToSwatch(name: string) {
   return COLOR_SWATCH[key] ?? "#ffffff";
 }
 
-function StatLine({ label, value, suffixText }: { label: string; value: React.ReactNode; suffixText?: string }) {
+function StatLine({ label, value, suffixText, isCurrency }: { label: string; value: React.ReactNode; suffixText?: string; isCurrency?: boolean }) {
   return (
     <div className="profileStatLine" style={{ display: "grid", gridTemplateColumns: "80px auto 1fr", alignItems: "center", gap: 10, marginTop: 8 }}>
-      <div style={{ fontSize: 22, color: "#666" }}>{label}</div>
-      <div style={{ padding: "6px 10px", background: "#e6e6e6", borderRadius: 4, fontSize: 26, fontWeight: 1000, lineHeight: 1 }}>
+      <div style={{ fontSize: 22, color: "var(--text-muted)" }}>{label}</div>
+      <div style={{ padding: "6px 10px", background: isCurrency ? "var(--bg-currency)" : "var(--bg-btn-disabled)", borderRadius: 4, fontSize: 26, fontWeight: 1000, lineHeight: 1, color: "var(--text-primary)" }}>
         {value}
       </div>
-      {suffixText ? <div style={{ fontSize: 22, color: "#666" }}>{suffixText}</div> : <div />}
+      {suffixText ? <div style={{ fontSize: 22, color: "var(--text-muted)" }}>{suffixText}</div> : <div />}
     </div>
   );
 }
@@ -441,11 +441,11 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
                 />
               </div>
 
-              <StatLine label="Karma:" value={data.karma} />
+              <StatLine label="Karma:" value={data.karma} isCurrency />
               {data.isOwnProfile && (
                 <>
-                  <StatLine label="Money:" value={data.tMoney} suffixText="R$" />
-                  <StatLine label="Premium" value={data.pMoney} suffixText="P$" />
+                  <StatLine label="Money:" value={data.tMoney} suffixText="R$" isCurrency />
+                  <StatLine label="Premium" value={data.pMoney} suffixText="P$" isCurrency />
                 </>
               )}
               <StatLine label="Played:" value={data.stats.gamesPlayed} suffixText="times" />

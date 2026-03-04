@@ -180,10 +180,10 @@ export default function ShopClient({
         <div style={{ fontWeight: 1000 }}>{me.username}</div>
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <div style={{ padding: "6px 10px", borderRadius: 10, border: "1px solid rgba(0,0,0,0.10)" }}>
+          <div style={{ padding: "6px 10px", borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg-currency)", color: "var(--text-primary)" }}>
             Karma: <b>{me.karma}</b>
           </div>
-          <div style={{ padding: "6px 10px", borderRadius: 10, border: "1px solid rgba(0,0,0,0.10)" }}>
+          <div style={{ padding: "6px 10px", borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg-currency)", color: "var(--text-primary)" }}>
             Money: <b>{me.tMoney}</b> R$
             <div style={{ fontSize: 11, opacity: 0.85 }}>Premium <b>{me.pMoney}</b> P$</div>
           </div>

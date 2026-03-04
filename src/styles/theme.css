@@ -33,6 +33,7 @@
   --vote-plus-border: #2e7d32;
   --vote-minus-bg: #ffebee;
   --vote-minus-border: #c62828;
+  --bg-currency: #ff8a80;
 }
 
 /* Dark: dark red & black */
@@ -69,6 +70,7 @@
   --vote-plus-border: #3d8b3d;
   --vote-minus-bg: #2a1a1a;
   --vote-minus-border: #b03030;
+  --bg-currency: #8b2828;
 }
 
 .theme-body {
