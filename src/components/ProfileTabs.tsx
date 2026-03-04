@@ -344,7 +344,7 @@ function Bubble({ g }: { g: ProfileGameBubble }) {
   const labelBottom = isActiveGame ? (isFilling ? "filling" : "enter") : g.eliminatedPlace ? suffix(g.eliminatedPlace) : "—";
 
   return (
-    <div style={{ textAlign: "center", width: 92 }}>
+    <div className="profileGameBubble" style={{ textAlign: "center", width: 92, flexShrink: 0 }}>
       <Link href={`/game/${g.gameId}`} style={{ textDecoration: "none", color: "inherit" }}>
         <div
           style={{
@@ -534,7 +534,7 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
           {/* My Games */}
           <div style={{ marginTop: 14 }}>
             <Card title="My Games">
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-start" }}>
+              <div className="profileGameBubbles" style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-start" }}>
                 {data.recentGames.map((g) => (
                   <Bubble key={g.gameId} g={g} />
                 ))}
@@ -679,12 +679,13 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
           <Card title="Friends">
               {data.friends.length > 0 && (
                 <div style={{ marginBottom: (data.canAddFriend || data.isFriend) ? 10 : 0 }}>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                  <div className="profileFriendsList" style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
                     {data.friends.map((f) => (
                       <Link
                         key={f.id}
                         href={`/u/${f.username.toLowerCase()}`}
                         title={f.username + (f.isMutual ? " (mutual)" : "")}
+                        className="profileFriendLink"
                         style={{
                           display: "block",
                           textDecoration: "none",
@@ -697,7 +698,7 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
                         }}
                       >
                         <Avatar config={f.avatar} width={48} />
-                        <div style={{ fontSize: 11, fontWeight: 700, marginTop: 4, color: f.isMutual ? "#1b5e20" : "inherit" }}>{f.username}</div>
+                        <div style={{ fontSize: 11, fontWeight: 700, marginTop: 4, color: f.isMutual ? "#1b5e20" : "inherit", wordBreak: "break-word" }}>{f.username}</div>
                       </Link>
                     ))}
                   </div>

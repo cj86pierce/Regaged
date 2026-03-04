@@ -144,6 +144,25 @@
   }
 }
 
+/* Profile: prevent avatars (friends + game bubbles) from overlapping */
+.profileFriendsList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.profileFriendLink {
+  flex-shrink: 0;
+  min-width: 60px;
+}
+.profileGameBubbles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.profileGameBubble {
+  flex-shrink: 0;
+}
+
 /* Right rail: hide earlier on tablet/mobile */
 @media (max-width: 900px) {
   .rightRail {
