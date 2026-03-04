@@ -32,6 +32,7 @@ export async function GET(req: Request) {
       id: d.id,
       title: d.title,
       description: d.description,
+      designType: d.designType,
       authorUsername: d.user.username,
       createdAt: d.createdAt.toISOString(),
       votingEndsAt: endsAt.toISOString(),
@@ -68,9 +69,16 @@ export async function POST(req: Request) {
   const file = form.get("file");
   const titleRaw = form.get("title");
   const descriptionRaw = form.get("description");
+  const designTypeRaw = form.get("designType");
 
   const title = (typeof titleRaw === "string" ? titleRaw : "").trim();
   const description = (typeof descriptionRaw === "string" ? descriptionRaw : "").trim();
+  const validTypes = ["BODY", "HAIR", "EYES", "MOUTH", "SHIRT", "ACCESSORY"] as const;
+  const designTypeRawStr = typeof designTypeRaw === "string" ? designTypeRaw.toUpperCase() : "";
+  if (!validTypes.includes(designTypeRawStr as (typeof validTypes)[number])) {
+    return NextResponse.json({ error: "Design type is required (Body, Hair, Eyes, Mouth, Shirt, or Accessory)" }, { status: 400 });
+  }
+  const designType = designTypeRawStr;
 
   if (!title) return NextResponse.json({ error: "Title is required" }, { status: 400 });
   if (!description) return NextResponse.json({ error: "Description is required" }, { status: 400 });
@@ -96,6 +104,7 @@ export async function POST(req: Request) {
       userId,
       title,
       description,
+      designType,
       image: buffer,
       contentType: file.type || "image/png",
     },

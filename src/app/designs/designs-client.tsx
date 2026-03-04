@@ -3,10 +3,20 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
+const DESIGN_TYPES = [
+  { value: "BODY", label: "Body" },
+  { value: "HAIR", label: "Hair" },
+  { value: "EYES", label: "Eyes" },
+  { value: "MOUTH", label: "Mouth" },
+  { value: "SHIRT", label: "Shirt" },
+  { value: "ACCESSORY", label: "Accessory" },
+] as const;
+
 type Design = {
   id: string;
   title: string;
   description: string;
+  designType?: string;
   authorUsername: string;
   createdAt: string;
   votingEndsAt: string;
@@ -39,6 +49,7 @@ export default function DesignsClient({ userId }: { userId: string | null }) {
   const [showForm, setShowForm] = useState(false);
   const [uploadTitle, setUploadTitle] = useState("");
   const [uploadDescription, setUploadDescription] = useState("");
+  const [uploadDesignType, setUploadDesignType] = useState<string>("HAIR");
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,13 +77,14 @@ export default function DesignsClient({ userId }: { userId: string | null }) {
 
   async function handleUpload(e: React.FormEvent) {
     e.preventDefault();
-    if (!userId || !uploadFile || !uploadTitle.trim() || !uploadDescription.trim()) return;
+    if (!userId || !uploadFile || !uploadTitle.trim() || !uploadDescription.trim() || !uploadDesignType) return;
     setUploading(true);
     setError(null);
     const fd = new FormData();
     fd.append("file", uploadFile);
     fd.append("title", uploadTitle.trim());
     fd.append("description", uploadDescription.trim());
+    fd.append("designType", uploadDesignType);
     const res = await fetch("/api/designs", { method: "POST", body: fd });
     const json = await res.json().catch(() => ({}));
     setUploading(false);
@@ -82,6 +94,7 @@ export default function DesignsClient({ userId }: { userId: string | null }) {
     }
     setUploadTitle("");
     setUploadDescription("");
+    setUploadDesignType("HAIR");
     setUploadFile(null);
     setShowForm(false);
     refresh();
@@ -147,6 +160,28 @@ export default function DesignsClient({ userId }: { userId: string | null }) {
                     fontFamily: "inherit",
                   }}
                 />
+                <div>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 800, marginBottom: 4 }}>Design type</label>
+                  <select
+                    value={uploadDesignType}
+                    onChange={(e) => setUploadDesignType(e.target.value)}
+                    required
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: 8,
+                      border: "1px solid rgba(0,0,0,0.15)",
+                      fontSize: 14,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {DESIGN_TYPES.map((t) => (
+                      <option key={t.value} value={t.value}>
+                        {t.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <input
                   type="file"
                   accept="image/png"
@@ -158,7 +193,7 @@ export default function DesignsClient({ userId }: { userId: string | null }) {
                 <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                   <button
                     type="submit"
-                    disabled={uploading || !uploadFile || !uploadTitle.trim() || !uploadDescription.trim()}
+                    disabled={uploading || !uploadFile || !uploadTitle.trim() || !uploadDescription.trim() || !uploadDesignType}
                     style={{
                       padding: "10px 14px",
                       borderRadius: 8,
@@ -177,6 +212,7 @@ export default function DesignsClient({ userId }: { userId: string | null }) {
                       setShowForm(false);
                       setUploadTitle("");
                       setUploadDescription("");
+                      setUploadDesignType("HAIR");
                       setUploadFile(null);
                       setError(null);
                     }}
@@ -299,7 +335,23 @@ function DesignCard({
           />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 1000, fontSize: 18, marginBottom: 4 }}>{design.title}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
+            <span style={{ fontWeight: 1000, fontSize: 18 }}>{design.title}</span>
+            {design.designType && (
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 800,
+                  padding: "2px 6px",
+                  borderRadius: 6,
+                  background: "#eaf2ff",
+                  color: "#0b2b66",
+                }}
+              >
+                {DESIGN_TYPES.find((t) => t.value === design.designType)?.label ?? design.designType}
+              </span>
+            )}
+          </div>
           <div style={{ fontSize: 13, color: "#666", marginBottom: 6 }}>
             by {design.authorUsername} · {new Date(design.createdAt).toLocaleDateString()}
           </div>

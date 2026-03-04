@@ -51,6 +51,7 @@ export async function getDesign(designId: string, userId: string | null) {
     id: design.id,
     title: design.title,
     description: design.description,
+    designType: design.designType,
     author: design.user,
     createdAt: design.createdAt.toISOString(),
     votingEndsAt: endsAt.toISOString(),

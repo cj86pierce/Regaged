@@ -16,10 +16,20 @@ type Comment = {
   canVote: boolean;
 };
 
+const DESIGN_TYPE_LABELS: Record<string, string> = {
+  BODY: "Body",
+  HAIR: "Hair",
+  EYES: "Eyes",
+  MOUTH: "Mouth",
+  SHIRT: "Shirt",
+  ACCESSORY: "Accessory",
+};
+
 type Design = {
   id: string;
   title: string;
   description: string;
+  designType?: string;
   author: { id: string; username: string };
   createdAt: string;
   votingEndsAt: string;
@@ -174,6 +184,11 @@ export default function DesignDetailClient({ initialDesign }: { initialDesign: D
           />
         </div>
         <h1 style={{ margin: "0 0 8px 0", fontSize: "clamp(18px, 5vw, 24px)", fontWeight: 1000 }}>{design.title}</h1>
+        {design.designType && (
+          <div style={{ fontSize: 12, color: "#0b5ed7", fontWeight: 800, marginBottom: 6 }}>
+            {DESIGN_TYPE_LABELS[design.designType] ?? design.designType}
+          </div>
+        )}
         <div style={{ fontSize: 13, color: "#666", marginBottom: 12 }}>
           by{" "}
           <Link href={`/u/${design.author.username.toLowerCase()}`} style={{ fontWeight: 800, color: "#0b5ed7" }}>
