@@ -85,7 +85,7 @@ export default function CastingVoteBox(props: {
   }
 
   return (
-    <div style={{ border: "1px solid rgba(0,0,0,0.10)", borderRadius: 12, background: "#fff", padding: 12, maxHeight: 340, overflowY: "auto" }}>
+    <div className="theme-sidebar-panel" style={{ borderRadius: 12, padding: 12, maxHeight: 340, overflowY: "auto" }}>
       <div style={{ fontWeight: 1000, marginBottom: 8 }}>Vote</div>
 
       <div style={{ display: "grid", gap: 10 }}>
@@ -110,8 +110,8 @@ export default function CastingVoteBox(props: {
                         padding: "6px 10px",
                         borderRadius: 10,
                         border: "1px solid rgba(0,0,0,0.18)",
-                        background: selected ? "#111" : "#fff",
-                        color: selected ? "#fff" : "#111",
+                        background: selected ? "var(--bg-btn-send)" : "var(--bg-card)",
+                        color: selected ? "var(--text-btn-send)" : "var(--text-primary)",
                         fontWeight: 1000,
                         cursor: disabled ? "not-allowed" : "pointer",
                         opacity: disabled ? 0.45 : 1,
@@ -140,7 +140,7 @@ export default function CastingVoteBox(props: {
           borderRadius: 12,
           border: "1px solid rgba(0,0,0,0.12)",
           background: saving || !complete ? "#f3f6f9" : "#111",
-          color: saving || !complete ? "#111" : "#fff",
+          color: saving || !complete ? "var(--text-primary)" : "var(--text-btn-send)",
           fontWeight: 1000,
           cursor: saving || !complete ? "not-allowed" : "pointer",
         }}

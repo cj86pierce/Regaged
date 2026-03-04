@@ -79,19 +79,20 @@ export default function PmPanel({
   }
 
   if (!meUserId) {
-    return <div style={{ border: "1px solid #d7d7d7", borderRadius: 10, padding: 12, background: "#fff" }}>Login required.</div>;
+    return <div className="theme-sidebar-panel" style={{ borderRadius: 10, padding: 12 }}>Login required.</div>;
   }
 
   return (
     <div style={{ display: "grid", gap: 12 }}>
-      <div style={{ border: "1px solid #d7d7d7", borderRadius: 10, padding: 12, background: "#fff" }}>
+      <div className="theme-sidebar-panel" style={{ borderRadius: 10, padding: 12 }}>
         <div style={{ fontWeight: 1000, marginBottom: 8 }}>PM</div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 140px", gap: 10, alignItems: "center" }}>
           <select
             value={toUserId}
             onChange={(e) => setToUserId(e.target.value)}
-            style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(0,0,0,0.15)" }}
+            className="theme-chat-input"
+            style={{ padding: 10, borderRadius: 10 }}
           >
             {options.map((o) => (
               <option key={o.value} value={o.value}>
@@ -106,8 +107,8 @@ export default function PmPanel({
               padding: "10px 12px",
               borderRadius: 10,
               border: "1px solid rgba(0,0,0,0.12)",
-              background: "#111",
-              color: "#fff",
+              background: "var(--bg-btn-send)",
+              color: "var(--text-btn-send)",
               fontWeight: 1000,
               cursor: "pointer",
             }}
@@ -121,7 +122,8 @@ export default function PmPanel({
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="Write a private message…"
-            style={{ flex: 1, padding: 10, borderRadius: 10, border: "1px solid rgba(0,0,0,0.15)" }}
+            className="theme-chat-input"
+            style={{ flex: 1, padding: 10, borderRadius: 10 }}
             onKeyDown={(e) => {
               if (e.key === "Enter") send();
             }}
@@ -131,7 +133,7 @@ export default function PmPanel({
         {err && <div style={{ marginTop: 10, color: "crimson", fontWeight: 900 }}>{err}</div>}
       </div>
 
-      <div style={{ border: "1px solid #d7d7d7", borderRadius: 10, padding: 10, background: "#fff" }}>
+      <div className="theme-sidebar-panel" style={{ borderRadius: 10, padding: 10 }}>
         {messages.length === 0 ? (
           <div style={{ opacity: 0.7 }}>No PMs yet.</div>
         ) : (
@@ -145,7 +147,7 @@ export default function PmPanel({
                   borderRadius: 10,
                   padding: 10,
                   marginBottom: 8,
-                  background: mine ? "#eaf2ff" : "#fff",
+                  background: mine ? "var(--bg-pm-mine)" : "var(--bg-card)",
                 }}
               >
                 <div style={{ fontWeight: 1000, fontSize: 12, opacity: 0.8 }}>

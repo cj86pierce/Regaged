@@ -8,7 +8,7 @@ export default function CastingsPanel(props: {
 }) {
   return (
     <div style={{ display: "grid", gap: 12 }}>
-      <div style={{ border: "1px solid rgba(0,0,0,0.10)", borderRadius: 12, background: "#fff", padding: 12 }}>
+      <div className="theme-sidebar-panel" style={{ borderRadius: 12, padding: 12 }}>
         <div style={{ fontWeight: 1000, marginBottom: 8 }}>Castings</div>
         <div style={{ fontSize: 12, opacity: 0.8 }}>
           Game #{props.gameNumber} · Day {props.dayNumber}
@@ -24,7 +24,7 @@ export default function CastingsPanel(props: {
         </div>
       </div>
 
-      <div style={{ border: "1px solid rgba(0,0,0,0.10)", borderRadius: 12, background: "#fff", padding: 12 }}>
+      <div className="theme-sidebar-panel" style={{ borderRadius: 12, padding: 12 }}>
         <div style={{ fontWeight: 1000, marginBottom: 8 }}>Your Stats</div>
         {props.me ? (
           <div style={{ display: "grid", gap: 10, fontSize: 13 }}>

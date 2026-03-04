@@ -285,7 +285,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
   const meStats = data.meUserId ? data.players.find((p) => p.userId === data.meUserId) ?? null : null;
 
   return (
-    <div style={{ padding: 12 }}>
+    <div className="theme-text-primary" style={{ padding: 12 }}>
       <div style={{ marginBottom: 8 }}>
         <div style={{ fontSize: 22, fontWeight: 800 }}>
           {data.game.gameType} <span style={{ opacity: 0.6, fontWeight: 900 }}>· Game #{data.game.number}</span>
@@ -335,8 +335,8 @@ export default function GamePage({ params }: { params: { id: string } }) {
               style={{
                 padding: "8px 14px",
                 borderRadius: 8,
-                border: "1px solid rgba(0,0,0,0.2)",
-                background: nudging ? "#e0e0e0" : "#fff3cd",
+                border: "1px solid var(--border)",
+                background: nudging ? "var(--bg-btn-disabled)" : "var(--bg-msg-system)",
                 fontWeight: 700,
                 cursor: nudging ? "not-allowed" : "pointer",
                 fontSize: 14,

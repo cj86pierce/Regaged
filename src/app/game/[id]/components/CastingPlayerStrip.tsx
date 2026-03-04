@@ -53,11 +53,10 @@ export default function CastingPlayerStrip(props: {
 
   return (
     <div
-      className="gameCastingStrip"
+      className="gameCastingStrip theme-sidebar-panel"
       style={{
-        border: "1px solid rgba(0,0,0,0.10)",
+        border: "1px solid var(--border)",
         borderRadius: 12,
-        background: "#fff",
         padding: 10,
       }}
     >
@@ -150,7 +149,7 @@ export default function CastingPlayerStrip(props: {
             border: "1px solid rgba(0,0,0,0.10)",
             borderRadius: 12,
             padding: 12,
-            background: "linear-gradient(#fff, #f7f9fb)",
+            background: "var(--bg-card)",
             minHeight: 140,
           }}
         >

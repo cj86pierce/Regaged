@@ -12,8 +12,8 @@ export default function Tabs({
   const btnStyle = (active: boolean) => ({
     padding: "8px 10px",
     borderRadius: 8,
-    border: "1px solid #cfd7df",
-    background: active ? "#ffffff" : "#f3f6f9",
+    border: "1px solid var(--border)",
+    background: active ? "var(--bg-card)" : "var(--bg-btn-disabled)",
     fontWeight: 800 as const,
     cursor: "pointer",
   });

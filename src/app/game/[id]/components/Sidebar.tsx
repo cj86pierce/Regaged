@@ -33,10 +33,10 @@ export default function Sidebar(props: {
   } = props;
 
   const box: React.CSSProperties = {
-    border: "1px solid rgba(0,0,0,0.10)",
+    border: "1px solid var(--border)",
     borderRadius: 10,
     padding: 10,
-    background: "#fff",
+    background: "var(--bg-card)",
     maxHeight: 240,
     overflowY: "auto",
     wordBreak: "break-word",
@@ -74,8 +74,8 @@ export default function Sidebar(props: {
                     padding: "10px 12px",
                     borderRadius: 10,
                     border: "1px solid rgba(0,0,0,0.12)",
-                    background: canConfirmNoms ? "#111" : "#f3f6f9",
-                    color: canConfirmNoms ? "#fff" : "#111",
+                    background: canConfirmNoms ? "var(--bg-btn-send)" : "var(--bg-btn-disabled)",
+                    color: canConfirmNoms ? "var(--text-btn-send)" : "var(--text-primary)",
                     fontWeight: 1000,
                     cursor: canConfirmNoms ? "pointer" : "not-allowed",
                   }}
@@ -104,8 +104,8 @@ export default function Sidebar(props: {
                     padding: "10px 12px",
                     borderRadius: 10,
                     border: "1px solid rgba(0,0,0,0.12)",
-                    background: canConfirmVote ? "#111" : "#f3f6f9",
-                    color: canConfirmVote ? "#fff" : "#111",
+                    background: canConfirmVote ? "var(--bg-btn-send)" : "var(--bg-btn-disabled)",
+                    color: canConfirmVote ? "var(--text-btn-send)" : "var(--text-primary)",
                     fontWeight: 1000,
                     cursor: canConfirmVote ? "pointer" : "not-allowed",
                   }}
@@ -140,7 +140,7 @@ export default function Sidebar(props: {
         ) : (
           <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
             {systemStory.map((m) => (
-              <div key={m.id} style={{ fontSize: 12, background: "#fff3cd", border: "1px solid rgba(0,0,0,0.12)", borderRadius: 10, padding: 8 }}>
+              <div key={m.id} className="theme-chat-msg-sys" style={{ fontSize: 12, border: "1px solid var(--border)", borderRadius: 10, padding: 8 }}>
                 <div style={{ fontWeight: 900, opacity: 0.8 }}>{new Date(m.createdAt).toLocaleString()}</div>
                 <div style={{ marginTop: 4 }}>{m.body}</div>
               </div>

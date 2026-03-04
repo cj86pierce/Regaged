@@ -36,14 +36,7 @@ export default function CastingSidebar(props: {
       )}
 
       {/* READ THIS */}
-      <div
-        style={{
-          border: "1px solid rgba(0,0,0,0.10)",
-          borderRadius: 12,
-          background: "#fff",
-          padding: 12,
-        }}
-      >
+      <div className="theme-sidebar-panel" style={{ borderRadius: 12, padding: 12 }}>
         <div style={{ fontWeight: 1000, marginBottom: 8 }}>Read this</div>
         <div style={{ fontSize: 12, opacity: 0.8, lineHeight: 1.35 }}>
           <b>Castings</b> runs in 12-hour days.<br />
@@ -54,16 +47,7 @@ export default function CastingSidebar(props: {
       </div>
 
       {/* STORY */}
-      <div
-        style={{
-          border: "1px solid rgba(0,0,0,0.10)",
-          borderRadius: 12,
-          background: "#fff",
-          padding: 12,
-          maxHeight: 260,
-          overflowY: "auto",
-        }}
-      >
+      <div className="theme-sidebar-panel" style={{ padding: 12, maxHeight: 260, overflowY: "auto" }}>
         <div style={{ fontWeight: 1000, marginBottom: 8 }}>Story</div>
 
         {/* show recent system lines as “story” */}
@@ -74,14 +58,8 @@ export default function CastingSidebar(props: {
             .map((m) => (
               <div
                 key={m.id}
-                style={{
-                  fontSize: 12,
-                  opacity: 0.8,
-                  border: "1px solid rgba(0,0,0,0.08)",
-                  borderRadius: 10,
-                  padding: 8,
-                  background: "#fff9b8",
-                }}
+                className="theme-chat-msg-sys"
+                style={{ fontSize: 12, opacity: 0.8, border: "1px solid var(--border)", borderRadius: 10, padding: 8 }}
               >
                 <div style={{ fontWeight: 900, marginBottom: 4 }}>{m.username}</div>
                 <div style={{ whiteSpace: "pre-wrap" }}>{m.body}</div>

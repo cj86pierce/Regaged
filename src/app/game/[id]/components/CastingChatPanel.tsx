@@ -131,11 +131,11 @@ export default function CastingChatPanel(props: {
           onChange={(e) => setChatText(e.target.value)}
           placeholder="Type a message…"
           disabled={!meUserId || sending}
+          className="theme-chat-input"
           style={{
             flex: 1,
             padding: 10,
             borderRadius: 12,
-            border: "1px solid rgba(0,0,0,0.12)",
             opacity: !meUserId ? 0.6 : 1,
           }}
         />
@@ -145,9 +145,9 @@ export default function CastingChatPanel(props: {
           style={{
             padding: "10px 12px",
             borderRadius: 12,
-            border: "1px solid rgba(0,0,0,0.12)",
-            background: sending ? "#f3f6f9" : "#111",
-            color: sending ? "#111" : "#fff",
+            border: "1px solid var(--border)",
+            background: sending ? "var(--bg-btn-disabled)" : "var(--bg-btn-send)",
+            color: sending ? "var(--text-primary)" : "var(--text-btn-send)",
             fontWeight: 1000,
             cursor: sending ? "not-allowed" : "pointer",
             opacity: !meUserId ? 0.6 : 1,
@@ -169,15 +169,7 @@ export default function CastingChatPanel(props: {
             const busy = claiming[dropId] === true;
 
             return (
-              <div
-                key={m.id}
-                style={{
-                  border: "1px solid rgba(0,0,0,0.10)",
-                  borderRadius: 12,
-                  padding: 10,
-                  background: "#fff9b8",
-                }}
-              >
+              <div key={m.id} className="theme-chat-msg-sys" style={{ border: "1px solid var(--border)", borderRadius: 12, padding: 10 }}>
                 <div style={{ fontWeight: 1000, marginBottom: 8 }}>
                   Drop {claimed ? <span style={{ fontSize: 12, opacity: 0.75 }}>(claimed)</span> : null}
                 </div>
@@ -194,8 +186,8 @@ export default function CastingChatPanel(props: {
                         style={{
                           padding: "10px 0",
                           borderRadius: 12,
-                          border: "1px solid rgba(0,0,0,0.18)",
-                          background: busy ? "#f3f6f9" : "#fff",
+                          border: "1px solid var(--border)",
+                          background: busy ? "var(--bg-btn-disabled)" : "var(--bg-card)",
                           cursor: busy ? "not-allowed" : "pointer",
                           fontSize: 18,
                         }}
@@ -221,12 +213,8 @@ export default function CastingChatPanel(props: {
           return (
             <div
               key={m.id}
-              style={{
-                border: "1px solid rgba(0,0,0,0.08)",
-                borderRadius: 12,
-                padding: 10,
-                background: m.isSystem ? "#fff9b8" : "#fff",
-              }}
+              className={m.isSystem ? "theme-chat-msg-sys" : "theme-chat-msg"}
+              style={{ border: "1px solid var(--border)", borderRadius: 12, padding: 10 }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
                 <div style={{ fontWeight: 1000 }}>{m.username}</div>
@@ -244,8 +232,8 @@ export default function CastingChatPanel(props: {
                     style={{
                       padding: "4px 8px",
                       borderRadius: 10,
-                      border: "1px solid rgba(0,0,0,0.12)",
-                      background: busyReact ? "#f3f6f9" : "#fff",
+                      border: "1px solid var(--border)",
+                      background: busyReact ? "var(--bg-btn-disabled)" : "var(--bg-card)",
                       cursor: busyReact ? "not-allowed" : "pointer",
                       fontWeight: 900,
                       minWidth: 44,
@@ -262,8 +250,8 @@ export default function CastingChatPanel(props: {
                     style={{
                       padding: "4px 8px",
                       borderRadius: 10,
-                      border: "1px solid rgba(0,0,0,0.12)",
-                      background: busyReact ? "#f3f6f9" : "#fff",
+                      border: "1px solid var(--border)",
+                      background: busyReact ? "var(--bg-btn-disabled)" : "var(--bg-card)",
                       cursor: busyReact ? "not-allowed" : "pointer",
                       fontWeight: 900,
                       minWidth: 44,
@@ -289,19 +277,21 @@ export default function CastingChatPanel(props: {
         <button
           onClick={() => setPage(Math.max(1, page - 1))}
           disabled={page <= 1}
-          style={{ padding: "6px 10px", borderRadius: 10, border: "1px solid rgba(0,0,0,0.12)", background: "#fff" }}
+          className="theme-pager-btn"
+          style={{ padding: "6px 10px", borderRadius: 10 }}
         >
           ◀ Prev
         </button>
 
-        <div style={{ fontSize: 12, opacity: 0.75 }}>
+        <div style={{ fontSize: 12, opacity: 0.75 }} className="theme-text-secondary">
           Page <b>{page}</b> / {totalPages}
         </div>
 
         <button
           onClick={() => setPage(Math.min(totalPages, page + 1))}
           disabled={page >= totalPages}
-          style={{ padding: "6px 10px", borderRadius: 10, border: "1px solid rgba(0,0,0,0.12)", background: "#fff" }}
+          className="theme-pager-btn"
+          style={{ padding: "6px 10px", borderRadius: 10 }}
         >
           Next ▶
         </button>

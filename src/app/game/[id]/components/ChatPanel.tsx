@@ -113,21 +113,22 @@ export default function ChatPanel(props: {
   return (
     <div style={{ display: "grid", gap: 10 }}>
       {/* Input */}
-      <div style={{ border: "1px solid #d7d7d7", borderRadius: 10, background: "#fff", padding: 10 }}>
+      <div className="theme-chat-wrap">
         <div style={{ display: "flex", gap: 8 }}>
           <input
             value={chatText}
             onChange={(e) => setChatText(e.target.value)}
             placeholder="Write a message…"
-            style={{ flex: 1, padding: 10, borderRadius: 10, border: "1px solid #cfd7df" }}
+            className="theme-chat-input"
+            style={{ flex: 1, padding: 10, borderRadius: 10 }}
           />
           <button
             onClick={onSend}
             style={{
               padding: "10px 14px",
               borderRadius: 10,
-              border: "1px solid rgba(0,0,0,0.10)",
-              background: "#eaf2ff",
+              border: "1px solid var(--border)",
+              background: "var(--accent-bg)",
               fontWeight: 1000,
               cursor: "pointer",
             }}
@@ -152,13 +153,13 @@ export default function ChatPanel(props: {
       </div>
 
       {/* Feed */}
-      <div style={{ border: "1px solid #d7d7d7", borderRadius: 10, background: "#fff", padding: 6 }}>
+      <div className="theme-chat-feed">
         {messages.map((m) => {
           const sys = m.isSystem;
           const sysParsed = sys ? parseSystemRows(m.body) : null;
 
           // System blocks are already yellow; normal new messages flash once.
-          const bg = sys ? "#fff3cd" : isFlashing(m.id) ? "#fff3cd" : "#fff";
+          const msgBg = sys || isFlashing(m.id) ? "var(--bg-msg-system)" : "var(--bg-msg)";
 
           // ✅ System vote blocks (compact + titled)
           if (sysParsed) {
@@ -172,7 +173,7 @@ export default function ChatPanel(props: {
                   marginBottom: 6,
                   border: "1px solid rgba(0,0,0,0.18)",
                   borderRadius: 10,
-                  background: "#fff3cd",
+                  background: "var(--bg-msg-system)",
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
@@ -191,7 +192,7 @@ export default function ChatPanel(props: {
                         gap: 8,
                         padding: "4px 6px",
                         borderRadius: 8,
-                        background: "rgba(255,255,255,0.6)",
+                        background: "var(--bg-msg)",
                       }}
                     >
                       <div style={{ fontWeight: 900, fontSize: 12, color: "#111" }}>
@@ -247,9 +248,9 @@ export default function ChatPanel(props: {
                 gap: 10,
                 padding: 10,
                 marginBottom: 6,
-                border: "1px solid rgba(0,0,0,0.18)",
+                border: "1px solid var(--border)",
                 borderRadius: 10,
-                background: bg,
+                background: msgBg,
                 transition: "background 0.35s ease",
               }}
             >
@@ -257,7 +258,7 @@ export default function ChatPanel(props: {
                 {sys ? (
                   <div style={{ fontWeight: 1000, color: "#111" }}>{authorLabel}</div>
                 ) : (
-                  <Link href={`/u/${encodeURIComponent(m.username)}`} style={{ color: "#0b5ed7", textDecoration: "underline", fontWeight: 900 }}>
+                    <Link href={`/u/${encodeURIComponent(m.username)}`} className="theme-link" style={{ textDecoration: "underline", fontWeight: 900 }}>
                     {m.username.length > 16 ? m.username.slice(0, 16) + "…" : m.username}
                   </Link>
                 )}
