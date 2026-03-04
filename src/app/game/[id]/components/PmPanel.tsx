@@ -142,7 +142,6 @@ export default function PmPanel({
             return (
               <div
                 key={m.id}
-                className="game-pm-msg"
                 style={{
                   border: "1px solid rgba(0,0,0,0.18)",
                   borderRadius: 10,
@@ -151,10 +150,10 @@ export default function PmPanel({
                   background: mine ? "var(--bg-pm-mine)" : "var(--bg-card)",
                 }}
               >
-                <div style={{ fontWeight: 1000, fontSize: 12, opacity: 0.8, color: "#fff" }}>
+                <div style={{ fontWeight: 1000, fontSize: 12, opacity: 0.8, color: "var(--text-game)" }}>
                   {mine ? "You" : <span className="theme-username">{m.senderUsername}</span>} · {new Date(m.createdAt).toLocaleString()}
                 </div>
-                <div style={{ marginTop: 6, color: "#fff" }}>{m.body}</div>
+                <div style={{ marginTop: 6, color: "var(--text-game)" }}>{m.body}</div>
               </div>
             );
           })

@@ -186,7 +186,6 @@ export default function ChatPanel(props: {
                   {sysParsed.rows.map((r, idx) => (
                     <div
                       key={idx}
-                      className="game-chat-sys-row"
                       style={{
                         display: "grid",
                         gridTemplateColumns: "1fr 62px 52px",
@@ -194,6 +193,7 @@ export default function ChatPanel(props: {
                         gap: 8,
                         padding: "4px 6px",
                         borderRadius: 8,
+                        background: "var(--bg-msg)",
                       }}
                     >
                       <div className="theme-username" style={{ fontSize: 12 }}>
@@ -267,7 +267,7 @@ export default function ChatPanel(props: {
                 <div style={{ opacity: 0.6 }}>{new Date(m.createdAt).toLocaleString()}</div>
               </div>
 
-              <div style={{ fontSize: 14, color: "#fff" }}>
+              <div style={{ fontSize: 14, color: "var(--text-game)" }}>
                 {m.body.replace(/^\[SYSTEM\]\s*/i, "")}
               </div>
 
