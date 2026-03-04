@@ -308,34 +308,36 @@ export default function GamePage({ params }: { params: { id: string } }) {
         </div>
       </div>
 
-      {isCasting && data.game.state === "ROUND_VOTE" && timeLeft !== null && timeLeft <= 0 && (
-        <div style={{ marginBottom: 10 }}>
-          <button
-            type="button"
-            disabled={nudging}
-            onClick={async () => {
-              setNudging(true);
-              try {
-                await fetch(`/api/game/${gameId}/nudge`, { credentials: "include" });
-                await load();
-              } finally {
-                setNudging(false);
-              }
-            }}
-            style={{
-              padding: "8px 14px",
-              borderRadius: 8,
-              border: "1px solid rgba(0,0,0,0.2)",
-              background: nudging ? "#e0e0e0" : "#fff3cd",
-              fontWeight: 700,
-              cursor: nudging ? "not-allowed" : "pointer",
-              fontSize: 14,
-            }}
-          >
-            {nudging ? "Advancing…" : "Day ended? Advance day"}
-          </button>
-        </div>
-      )}
+      {(data.game.state === "ROUND_NOMINATE" || data.game.state === "ROUND_VOTE") &&
+        timeLeft !== null &&
+        timeLeft <= 0 && (
+          <div style={{ marginBottom: 10 }}>
+            <button
+              type="button"
+              disabled={nudging}
+              onClick={async () => {
+                setNudging(true);
+                try {
+                  await fetch(`/api/game/${gameId}/nudge`, { credentials: "include" });
+                  await load();
+                } finally {
+                  setNudging(false);
+                }
+              }}
+              style={{
+                padding: "8px 14px",
+                borderRadius: 8,
+                border: "1px solid rgba(0,0,0,0.2)",
+                background: nudging ? "#e0e0e0" : "#fff3cd",
+                fontWeight: 700,
+                cursor: nudging ? "not-allowed" : "pointer",
+                fontSize: 14,
+              }}
+            >
+              {nudging ? "Advancing…" : "Timer ended? Nudge to advance"}
+            </button>
+          </div>
+        )}
 
       {isCasting ? (
         <CastingPlayerStrip
