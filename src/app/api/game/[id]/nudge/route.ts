@@ -36,7 +36,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     if (game.gameType === "CASTING") {
       result = await catchUpCastingGame(gameId, { forceDue: force });
     } else if (game.gameType === "CASTING_BOT") {
-      result = await catchUpCastingBotGame(gameId);
+      result = await catchUpCastingBotGame(gameId, { forceDue: force });
     } else if (game.gameType === "FASTING") {
       result = await advanceFastingIfDue(gameId);
     } else if (game.gameType === "FASTING_BOT") {

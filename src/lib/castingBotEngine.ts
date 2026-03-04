@@ -36,7 +36,11 @@ function pickNominees(
   return sorted.slice(0, count).map((x) => x.userId);
 }
 
-export async function catchUpCastingBotGame(gameId: string) {
+/**
+ * forceDue: when true (manual nudge), treat as due despite timer.
+ */
+export async function catchUpCastingBotGame(gameId: string, options?: { forceDue?: boolean }) {
+  const forceDue = options?.forceDue === true;
   const now = new Date();
 
   try {
@@ -54,8 +58,41 @@ export async function catchUpCastingBotGame(gameId: string) {
     if (!game || game.gameType !== "CASTING_BOT") return { ok: false, reason: "not_found" as const };
     if (game.state !== "ROUND_NOMINATE" && game.state !== "ROUND_VOTE") return { ok: false, reason: "wrong_state" as const };
 
+    // ROUND_NOMINATE = start of new day; process without timer check (like CASTING).
+    if (game.state === "ROUND_NOMINATE") {
+      const dayNum = game.roundNumber ?? 1;
+      const activeCount = await tx.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
+      const ev2 = evictCount(activeCount);
+      const nom2 = nomineeCount(ev2);
+      const rows = await tx.gamePlayer.findMany({
+        where: { gameId, status: "ACTIVE" },
+        select: { userId: true, keys: true, plusCount: true, minusCount: true, health: true },
+      });
+      const nominees2 = pickNominees(
+        rows.map((r) => ({ ...r, keys: r.keys ?? 0 })),
+        nom2
+      );
+      await tx.castingDayResult.upsert({
+        where: { gameId_dayNumber: { gameId, dayNumber: dayNum } },
+        update: { nomineeUserIds: nominees2, evictedUserIds: [] },
+        create: { gameId, dayNumber: dayNum, nomineeUserIds: nominees2, evictedUserIds: [] },
+      });
+      await tx.game.update({
+        where: { id: gameId },
+        data: {
+          state: "ROUND_VOTE",
+          stateEndsAt: new Date(now.getTime() + BOT_DAY_MS),
+        },
+      });
+      const sysId = await getSystemUserId();
+      await tx.gameMessage.create({
+        data: { gameId, userId: sysId, channel: "PUBLIC", body: `[SYSTEM] Day ${dayNum} voting has begun.` },
+      });
+      return { ok: true, advanced: true as const };
+    }
+
     const endAt = game.stateEndsAt?.getTime() ?? 0;
-    const grace = 5000;
+    const grace = forceDue ? 12 * 60 * 60 * 1000 : 5000;
     if (endAt > now.getTime() + grace) return { ok: false, reason: "not_due" as const };
 
     const dayNum = game.roundNumber ?? 1;
@@ -313,36 +350,6 @@ export async function catchUpCastingBotGame(gameId: string) {
         data: { gameId, userId: sysId, channel: "PUBLIC", body: `[SYSTEM] Day ${nextDay} voting has begun.` },
       });
       return { ok: true, advanced: true as const, day: nextDay };
-    }
-
-    if (game.state === "ROUND_NOMINATE") {
-      const ev2 = evictCount(activeCount);
-      const nom2 = nomineeCount(ev2);
-      const rows = await tx.gamePlayer.findMany({
-        where: { gameId, status: "ACTIVE" },
-        select: { userId: true, keys: true, plusCount: true, minusCount: true, health: true },
-      });
-      const nominees2 = pickNominees(
-        rows.map((r) => ({ ...r, keys: r.keys ?? 0 })),
-        nom2
-      );
-      await tx.castingDayResult.upsert({
-        where: { gameId_dayNumber: { gameId, dayNumber: dayNum } },
-        update: { nomineeUserIds: nominees2, evictedUserIds: [] },
-        create: { gameId, dayNumber: dayNum, nomineeUserIds: nominees2, evictedUserIds: [] },
-      });
-      await tx.game.update({
-        where: { id: gameId },
-        data: {
-          state: "ROUND_VOTE",
-          stateEndsAt: new Date(now.getTime() + BOT_DAY_MS),
-        },
-      });
-      const sysId = await getSystemUserId();
-      await tx.gameMessage.create({
-        data: { gameId, userId: sysId, channel: "PUBLIC", body: `[SYSTEM] Day ${dayNum} voting has begun.` },
-      });
-      return { ok: true, advanced: true as const };
     }
 
     return { ok: false, reason: "unknown" as const };
