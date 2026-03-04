@@ -8,7 +8,7 @@ import { resolveFastingNominations } from "@/lib/fastingNoms";
 import { resolveFastingEviction } from "@/lib/fastingVotes";
 import { performBotActions } from "@/lib/botActions";
 
-const BOT_ROUND_MS = 60 * 1000;
+const BOT_ROUND_MS = 2 * 60 * 1000; // 2 min for testing
 
 export async function advanceFastingBotIfDue(gameId: string) {
   const lockRows = await prisma.$queryRaw<{ locked: boolean }[]>`

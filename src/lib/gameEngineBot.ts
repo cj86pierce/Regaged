@@ -5,7 +5,7 @@
 import { prisma } from "@/lib/prisma";
 import { assignFastingPov } from "@/lib/fastingPov";
 
-const BOT_ROUND_MS = 60 * 1000;
+const BOT_ROUND_MS = 2 * 60 * 1000; // 2 min for testing
 const FASTING_BOT_MAX = 15;
 const CASTING_BOT_MAX = 20;
 

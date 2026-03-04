@@ -3,7 +3,7 @@
  * Set CASTING_DAY_SECONDS in env (e.g. 60) to use shorter days for testing.
  */
 const DEFAULT_CASTING_DAY_MS = 12 * 60 * 60 * 1000;
-export const BOT_DAY_MS = 60 * 1000; // 60 seconds for bot games
+export const BOT_DAY_MS = 2 * 60 * 1000; // 2 minutes for bot games (testing)
 
 export function getCastingDayMs(): number {
   const sec = process.env.CASTING_DAY_SECONDS;
@@ -14,7 +14,7 @@ export function getCastingDayMs(): number {
   return DEFAULT_CASTING_DAY_MS;
 }
 
-/** Returns 60s for CASTING_BOT games, else getCastingDayMs() */
+/** Returns 2 min for CASTING_BOT games, else getCastingDayMs() */
 export async function getDayMsForGame(gameId: string): Promise<number> {
   const { prisma } = await import("@/lib/prisma");
   const game = await prisma.game.findUnique({

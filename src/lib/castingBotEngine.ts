@@ -1,12 +1,12 @@
 /**
- * CASTING_BOT advancement - 60s days, self-contained.
+ * CASTING_BOT advancement - 2 min days (testing), self-contained.
  * Uses transactions only (no advisory locks).
  */
 import { prisma } from "@/lib/prisma";
 import { getSystemUserId } from "@/lib/systemUser";
 import { performBotActions } from "@/lib/botActions";
 
-const BOT_DAY_MS = 60 * 1000;
+const BOT_DAY_MS = 2 * 60 * 1000; // 2 min for testing
 
 function evictCount(active: number) {
   if (active >= 6) return 2;

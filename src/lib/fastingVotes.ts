@@ -3,7 +3,7 @@ import { getSystemUserId } from "@/lib/systemUser";
 import { assignFastingPov } from "@/lib/fastingPov";
 
 const NOM_PHASE_MS = 3 * 60 * 1000;
-const BOT_ROUND_MS = 60 * 1000;
+const BOT_ROUND_MS = 2 * 60 * 1000; // 2 min for testing
 
 export async function resolveFastingEviction(gameId: string) {
   const lockRows = await prisma.$queryRaw<{ locked: boolean }[]>`

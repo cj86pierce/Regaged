@@ -3,7 +3,7 @@ import { getSystemUserId } from "@/lib/systemUser";
 import { assignFastingPov } from "@/lib/fastingPov";
 
 const VOTE_PHASE_MS = 2 * 60 * 1000;
-const BOT_ROUND_MS = 60 * 1000;
+const BOT_ROUND_MS = 2 * 60 * 1000; // 2 min for testing
 
 export async function resolveFastingNominations(gameId: string) {
   const game = await prisma.game.findUnique({

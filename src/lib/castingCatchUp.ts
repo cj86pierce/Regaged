@@ -40,17 +40,9 @@ export async function catchUpCastingGame(gameId: string) {
         continue;
       }
 
+      // Already at start of next day (e.g. after advanceToNextDay). Just start voting for this day.
       if (g.state === "ROUND_NOMINATE") {
-        const nextDay = (g.roundNumber ?? 1) + 1;
-        await prisma.game.update({
-          where: { id: gameId },
-          data: {
-            roundNumber: nextDay,
-            state: "ROUND_NOMINATE",
-            stateEndsAt: new Date(Date.now() + getCastingDayMs()),
-          },
-        });
-        await ensureCastingVotingStarted(gameId, nextDay);
+        await ensureCastingVotingStarted(gameId, g.roundNumber ?? 1);
         continue;
       }
 

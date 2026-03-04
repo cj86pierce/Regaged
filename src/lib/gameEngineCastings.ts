@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getCastingDayMs } from "@/lib/castingDayLength";
+import { ensureCastingVotingStarted } from "@/lib/castingDay";
 
 const CASTING_MAX = 20;
 
@@ -25,4 +26,6 @@ export async function tryStartCastingsGame(gameId: string) {
       stateEndsAt: new Date(now.getTime() + getCastingDayMs()),
     },
   });
+
+  await ensureCastingVotingStarted(gameId, 1);
 }
