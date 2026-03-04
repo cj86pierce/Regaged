@@ -288,7 +288,7 @@ function DesignCard({
             )}
           </div>
           <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 6 }}>
-            by {design.authorUsername} · {new Date(design.createdAt).toLocaleDateString()}
+            by <span className="theme-username">{design.authorUsername}</span> · {new Date(design.createdAt).toLocaleDateString()}
           </div>
           <div
             style={{

@@ -195,7 +195,7 @@ export default function ChatPanel(props: {
                         background: "var(--bg-msg)",
                       }}
                     >
-                      <div style={{ fontWeight: 900, fontSize: 12, color: "#111" }}>
+                      <div className="theme-username" style={{ fontSize: 12 }}>
                         {r.name}
                       </div>
 
@@ -256,16 +256,16 @@ export default function ChatPanel(props: {
             >
               <div style={{ fontSize: 12 }}>
                 {sys ? (
-                  <div style={{ fontWeight: 1000, color: "#111" }}>{authorLabel}</div>
+                  <div style={{ fontWeight: 1000, color: "var(--text-game)" }}>{authorLabel}</div>
                 ) : (
-                    <Link href={`/u/${encodeURIComponent(m.username)}`} className="theme-link" style={{ textDecoration: "underline", fontWeight: 900 }}>
+                  <Link href={`/u/${encodeURIComponent(m.username)}`} className="theme-username" style={{ textDecoration: "underline" }}>
                     {m.username.length > 16 ? m.username.slice(0, 16) + "…" : m.username}
                   </Link>
                 )}
                 <div style={{ opacity: 0.6 }}>{new Date(m.createdAt).toLocaleString()}</div>
               </div>
 
-              <div style={{ fontSize: 14, color: sys ? "#6c757d" : "#111" }}>
+              <div style={{ fontSize: 14, color: sys ? "var(--text-muted)" : "var(--text-game)" }}>
                 {m.body.replace(/^\[SYSTEM\]\s*/i, "")}
               </div>
 

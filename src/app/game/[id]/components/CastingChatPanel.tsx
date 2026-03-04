@@ -217,12 +217,12 @@ export default function CastingChatPanel(props: {
               style={{ border: "1px solid var(--border)", borderRadius: 12, padding: 10 }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
-                <div style={{ fontWeight: 1000 }}>{m.username}</div>
+                <div className="theme-username">{m.username}</div>
                 <div style={{ fontSize: 11, opacity: 0.6 }}>{new Date(m.createdAt).toLocaleTimeString()}</div>
               </div>
 
               <div style={{ marginTop: 6, display: "flex", gap: 10, alignItems: "flex-start" }}>
-                <div style={{ flex: 1, whiteSpace: "pre-wrap", fontSize: 13 }}>{m.body}</div>
+                <div style={{ flex: 1, whiteSpace: "pre-wrap", fontSize: 13, color: "var(--text-game)" }}>{m.body}</div>
 
                 {/* reactions on the right, horizontal ✅ ❌ */}
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>

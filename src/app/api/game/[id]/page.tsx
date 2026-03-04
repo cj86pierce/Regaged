@@ -74,7 +74,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
         {(data?.players ?? []).map((p) => (
           <div key={p.userId} style={{ border: "1px solid #ddd", borderRadius: 8, padding: 8, minWidth: 140 }}>
-            <div style={{ fontWeight: 700 }}>{p.username}</div>
+            <div className="theme-username" style={{ fontWeight: 700 }}>{p.username}</div>
             <div style={{ fontSize: 12, opacity: 0.8 }}>
               ✅ {p.plusCount} | ❌ {p.minusCount} | 💬 {p.chatCount} | POV {p.povWins}
             </div>
@@ -87,7 +87,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
         {(data?.messages ?? []).map((m) => (
           <div key={m.id} style={{ padding: "6px 0", borderBottom: "1px solid #f0f0f0" }}>
             <div>
-              <b>{m.username}</b>: {m.body}
+              <b className="theme-username">{m.username}</b>: {m.body}
             </div>
             <div style={{ display: "flex", gap: 8, fontSize: 12, marginTop: 2 }}>
               <button onClick={() => react(m.id, "PLUS")}>✅ {m.plus}</button>

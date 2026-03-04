@@ -177,7 +177,7 @@ export default function ShopClient({
           flexWrap: "wrap",
         }}
       >
-        <div style={{ fontWeight: 1000 }}>{me.username}</div>
+        <div className="theme-username" style={{ fontWeight: 1000 }}>{me.username}</div>
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <div style={{ padding: "6px 10px", borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg-currency)", color: "var(--text-primary)" }}>

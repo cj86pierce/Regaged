@@ -183,7 +183,7 @@ export default function DesignDetailClient({ initialDesign }: { initialDesign: D
         )}
         <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 12 }}>
           by{" "}
-          <Link href={`/u/${design.author.username.toLowerCase()}`} style={{ fontWeight: 800, color: "var(--link-color)" }}>
+          <Link href={`/u/${design.author.username.toLowerCase()}`} className="theme-username" style={{ fontWeight: 800 }}>
             {design.author.username}
           </Link>
           {" · "}
@@ -378,7 +378,8 @@ export default function DesignDetailClient({ initialDesign }: { initialDesign: D
               <div>
                 <Link
                   href={`/u/${c.author.username.toLowerCase()}`}
-                  style={{ fontWeight: 800, fontSize: 13, color: "var(--link-color)" }}
+                  className="theme-username"
+                  style={{ fontWeight: 800, fontSize: 13 }}
                 >
                   {c.author.username}
                 </Link>

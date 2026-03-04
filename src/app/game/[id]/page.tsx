@@ -285,7 +285,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
   const meStats = data.meUserId ? data.players.find((p) => p.userId === data.meUserId) ?? null : null;
 
   return (
-    <div className="theme-text-primary" style={{ padding: 12 }}>
+    <div className="game-page-content" style={{ padding: 12 }}>
       <div style={{ marginBottom: 8 }}>
         <div style={{ fontSize: 22, fontWeight: 800 }}>
           {data.game.gameType} <span style={{ opacity: 0.6, fontWeight: 900 }}>· Game #{data.game.number}</span>

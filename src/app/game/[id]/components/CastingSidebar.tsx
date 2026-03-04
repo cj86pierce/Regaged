@@ -61,7 +61,7 @@ export default function CastingSidebar(props: {
                 className="theme-chat-msg-sys"
                 style={{ fontSize: 12, opacity: 0.8, border: "1px solid var(--border)", borderRadius: 10, padding: 8 }}
               >
-                <div style={{ fontWeight: 900, marginBottom: 4 }}>{m.username}</div>
+                <div className="theme-username" style={{ marginBottom: 4 }}>{m.username}</div>
                 <div style={{ whiteSpace: "pre-wrap" }}>{m.body}</div>
               </div>
             ))}

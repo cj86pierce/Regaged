@@ -93,7 +93,7 @@ export default function CastingVoteBox(props: {
           const myP = pointsMap[n.userId];
           return (
             <div key={n.userId} style={{ display: "grid", gap: 6 }}>
-              <div title={n.username} style={{ fontWeight: 900, fontSize: 12, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              <div title={n.username} className="theme-username" style={{ fontSize: 12, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                 {n.username}
               </div>
 

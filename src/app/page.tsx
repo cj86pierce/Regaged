@@ -64,7 +64,7 @@ export default async function HomePage() {
 
               {me ? (
                 <div className="theme-text-secondary" style={{ marginTop: 10, fontSize: 12, lineHeight: 1.4 }}>
-                  <div>Logged in as <b>{me.username}</b></div>
+                  <div>Logged in as <b className="theme-username">{me.username}</b></div>
                   <div>Karma: <b>{me.karma}</b> · R$: <b>{me.tMoney}</b></div>
                   <div>Premium <b>{me.pMoney}</b> P$</div>
                   <div style={{ marginTop: 8, display: "flex", gap: 10, flexWrap: "wrap" }}>

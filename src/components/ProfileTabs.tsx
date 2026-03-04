@@ -417,7 +417,7 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
               {/* ✅ Wrap name + bar so bar spans under swatch too */}
               <div style={{ position: "relative" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
-                  <div className="profileUsername" style={{ fontSize: 38, fontWeight: 1000, color: "#2b83c6", lineHeight: 1 }}>
+                  <div className="profileUsername theme-username" style={{ fontSize: 38, lineHeight: 1 }}>
                     {data.username}
                   </div>
 
@@ -649,7 +649,7 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
                         }}
                       >
                         <Avatar config={f.avatar} width={48} />
-                        <div style={{ fontSize: 11, fontWeight: 700, marginTop: 4, color: f.isMutual ? "#1b5e20" : "inherit", wordBreak: "break-word" }}>{f.username}</div>
+                        <div className="theme-username" style={{ fontSize: 11, marginTop: 4, wordBreak: "break-word" }}>{f.username}</div>
                       </Link>
                     ))}
                   </div>

@@ -34,6 +34,8 @@
   --vote-minus-bg: #ffebee;
   --vote-minus-border: #c62828;
   --bg-currency: #ff8a80;
+  --text-username: #d11b1b;
+  --text-game: #111;
 }
 
 /* Dark: dark red & black */
@@ -71,6 +73,8 @@
   --vote-minus-bg: #2a1a1a;
   --vote-minus-border: #b03030;
   --bg-currency: #8b2828;
+  --text-username: #ff6060;
+  --text-game: #fff;
 }
 
 .theme-body {
@@ -187,6 +191,11 @@
   color: var(--text-muted);
 }
 
+.theme-username {
+  color: var(--text-username) !important;
+  font-weight: 800;
+}
+
 .theme-link {
   color: var(--accent);
   font-weight: 900;
@@ -275,4 +284,14 @@
 .theme-chat-input::placeholder {
   color: var(--text-muted);
   opacity: 0.8;
+}
+
+/* Game page: normal text white in dark mode */
+.game-page-content {
+  color: var(--text-game);
+}
+.game-page-content .theme-sidebar-panel,
+.game-page-content .theme-chat-feed,
+.game-page-content .theme-chat-wrap {
+  color: var(--text-game);
 }

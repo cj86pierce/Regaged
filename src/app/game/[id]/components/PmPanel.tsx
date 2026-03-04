@@ -150,10 +150,10 @@ export default function PmPanel({
                   background: mine ? "var(--bg-pm-mine)" : "var(--bg-card)",
                 }}
               >
-                <div style={{ fontWeight: 1000, fontSize: 12, opacity: 0.8 }}>
-                  {mine ? "You" : m.senderUsername} · {new Date(m.createdAt).toLocaleString()}
+                <div style={{ fontWeight: 1000, fontSize: 12, opacity: 0.8, color: "var(--text-game)" }}>
+                  {mine ? "You" : <span className="theme-username">{m.senderUsername}</span>} · {new Date(m.createdAt).toLocaleString()}
                 </div>
-                <div style={{ marginTop: 6 }}>{m.body}</div>
+                <div style={{ marginTop: 6, color: "var(--text-game)" }}>{m.body}</div>
               </div>
             );
           })

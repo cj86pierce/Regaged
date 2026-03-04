@@ -104,17 +104,16 @@ export default function CastingPlayerStrip(props: {
 
                 <Link
                   href={`/u/${encodeURIComponent(p.username.toLowerCase())}`}
+                  className="theme-username"
                   style={{
                     display: "block",
                     marginTop: 6,
-                    fontWeight: 1000,
                     fontSize: 12,
                     textAlign: "center",
                     whiteSpace: "nowrap",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     textDecoration: "none",
-                    color: "#111",
                   }}
                   title={p.username}
                 >
@@ -132,7 +131,7 @@ export default function CastingPlayerStrip(props: {
                     fontSize: isCompleted ? 14 : 13,
                     fontWeight: isCompleted ? 800 : undefined,
                     textAlign: "center",
-                    color: "#111",
+                    color: "var(--text-game)",
                   }}
                 >
                   {icon}

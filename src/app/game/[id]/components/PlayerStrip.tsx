@@ -135,8 +135,8 @@ export default function PlayerStrip(props: {
                   width: "100%",
                   borderRadius: 6,
                   border: "1px solid rgba(0,0,0,0.25)",
-                  background: evictOn ? "#111" : "#fff",
-                  color: evictOn ? "#fff" : "#111",
+                  background: evictOn ? "var(--bg-btn-send)" : "var(--bg-card)",
+                  color: evictOn ? "var(--text-btn-send)" : "var(--text-primary)",
                   fontWeight: 1000,
                   fontSize: 10,
                   cursor: "pointer",
@@ -163,12 +163,11 @@ export default function PlayerStrip(props: {
               {/* ✅ name is black */}
               <Link
                 href={`/u/${encodeURIComponent(p.username)}`}
+                className="theme-username"
                 style={{
                   display: "block",
                   marginTop: 4,
                   fontSize: 10,
-                  fontWeight: 1000,
-                  color: "var(--text-primary)",
                   textDecoration: "none",
                   textAlign: "center",
                   whiteSpace: "nowrap",
