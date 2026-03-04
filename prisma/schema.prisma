@@ -147,9 +147,11 @@ model User {
   blogComments   BlogComment[]
   commentVotes   CommentVote[]
 
-  designs     Design[]
-  designVotes DesignVote[]
-  auctionBids AuctionBid[]
+  designs           Design[]
+  designVotes       DesignVote[]
+  designComments    DesignComment[]
+  designCommentVotes DesignCommentVote[]
+  auctionBids       AuctionBid[]
 
   friendsAsUser   Friendship[] @relation("UserFriends")
   friendsAsFriend Friendship[] @relation("FriendOf")
@@ -241,25 +243,56 @@ model Design {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  user  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  votes DesignVote[]
-
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  votes    DesignVote[]
+  comments DesignComment[]
   auctions Auction[]
 
   @@index([createdAt])
 }
 
 model DesignVote {
-  id        String   @id @default(cuid())
+  id        String       @id @default(cuid())
   designId  String
   userId    String
-  createdAt DateTime @default(now())
+  type      ReactionType
+  points    Int
+  createdAt DateTime     @default(now())
 
   design Design @relation(fields: [designId], references: [id], onDelete: Cascade)
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([designId, userId])
   @@index([designId])
+}
+
+model DesignComment {
+  id        String   @id @default(cuid())
+  designId  String
+  authorId  String
+  content   String
+  createdAt DateTime @default(now())
+
+  design Design            @relation(fields: [designId], references: [id], onDelete: Cascade)
+  author User               @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  votes  DesignCommentVote[]
+
+  @@index([designId])
+}
+
+model DesignCommentVote {
+  id        String       @id @default(cuid())
+  commentId String
+  userId    String
+  type      ReactionType
+  points    Int
+  createdAt DateTime     @default(now())
+
+  comment DesignComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@index([commentId])
 }
 
 model Auction {

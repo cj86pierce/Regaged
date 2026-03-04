@@ -2,30 +2,58 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/getCurrentUserId";
 
-export async function GET() {
+const DESIGN_VOTING_DAYS = 2;
+
+function votingEndsAt(createdAt: Date): Date {
+  const d = new Date(createdAt);
+  d.setDate(d.getDate() + DESIGN_VOTING_DAYS);
+  return d;
+}
+
+export async function GET(req: Request) {
+  const userId = await getCurrentUserId(req);
   const designs = await prisma.design.findMany({
     include: {
       user: { select: { username: true } },
-      _count: { select: { votes: true } },
+      votes: true,
+      _count: { select: { comments: true } },
     },
   });
 
-  const mapped = designs.map((d) => ({
-    id: d.id,
-    title: d.title,
-    description: d.description,
-    authorUsername: d.user.username,
-    createdAt: d.createdAt.toISOString(),
-    voteCount: d._count.votes,
-  }));
+  const now = new Date();
+  const mapped = designs.map((d) => {
+    const plus = d.votes.filter((v) => v.type === "PLUS").reduce((s, v) => s + v.points, 0);
+    const minus = d.votes.filter((v) => v.type === "MINUS").reduce((s, v) => s + v.points, 0);
+    const score = plus - minus;
+    const endsAt = votingEndsAt(d.createdAt);
+    const canVote = endsAt > now;
+    const myVote = userId ? d.votes.find((v) => v.userId === userId)?.type ?? null : null;
+    return {
+      id: d.id,
+      title: d.title,
+      description: d.description,
+      authorUsername: d.user.username,
+      createdAt: d.createdAt.toISOString(),
+      votingEndsAt: endsAt.toISOString(),
+      plus,
+      minus,
+      score,
+      commentCount: d._count.comments,
+      canVote,
+      myVote,
+    };
+  });
 
   const recent = [...mapped].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   );
-  const top = [...mapped].sort((a, b) => {
-    if (b.voteCount !== a.voteCount) return b.voteCount - a.voteCount;
-    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-  });
+  // Top: only designs still in voting window (votingEndsAt > now); then by score
+  const top = mapped
+    .filter((d) => new Date(d.votingEndsAt) > now)
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
 
   return NextResponse.json({ recent, top });
 }
@@ -75,4 +103,3 @@ export async function POST(req: Request) {
 
   return NextResponse.json({ ok: true, id: design.id });
 }
-

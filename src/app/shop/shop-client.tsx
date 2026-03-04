@@ -14,15 +14,6 @@ type ColorLevel = {
   isAnimated: boolean;
 };
 
-type DesignDto = {
-  id: string;
-  title: string;
-  description: string;
-  authorUsername: string;
-  createdAt: string;
-  voteCount: number;
-};
-
 type AuctionDto = {
   id: string;
   designId: string;
@@ -87,26 +78,14 @@ export default function ShopClient({
 }) {
   const searchParams = useSearchParams();
   const initialTabParam = searchParams.get("tab");
-  const initialTab: "colors" | "items" | "designs" | "auctions" =
-    initialTabParam === "designs"
-      ? "designs"
-      : initialTabParam === "items"
+  const initialTab: "colors" | "items" | "auctions" =
+    initialTabParam === "items"
       ? "items"
       : initialTabParam === "auctions"
       ? "auctions"
       : "colors";
 
-  const [tab, setTab] = useState<"colors" | "items" | "designs" | "auctions">(initialTab);
-
-  const [designsRecent, setDesignsRecent] = useState<DesignDto[]>([]);
-  const [designsTop, setDesignsTop] = useState<DesignDto[]>([]);
-  const [designsLoading, setDesignsLoading] = useState(false);
-  const [designsError, setDesignsError] = useState<string | null>(null);
-
-  const [uploadTitle, setUploadTitle] = useState("");
-  const [uploadDescription, setUploadDescription] = useState("");
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
+  const [tab, setTab] = useState<"colors" | "items" | "auctions">(initialTab);
 
   const [auctions, setAuctions] = useState<AuctionDto[]>([]);
   const [auctionsLoading, setAuctionsLoading] = useState(false);
@@ -129,107 +108,6 @@ export default function ShopClient({
     const json = await res.json().catch(() => ({}));
     if (!res.ok) return alert(json?.error ?? "Purchase failed");
     window.location.reload();
-  }
-
-  async function refreshDesigns() {
-    setDesignsLoading(true);
-    setDesignsError(null);
-    try {
-      const res = await fetch("/api/designs", { cache: "no-store" });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setDesignsError(json?.error ?? "Failed to load designs");
-        setDesignsRecent([]);
-        setDesignsTop([]);
-        return;
-      }
-      setDesignsRecent(json.recent ?? []);
-      setDesignsTop(json.top ?? []);
-    } catch {
-      setDesignsError("Failed to load designs");
-      setDesignsRecent([]);
-      setDesignsTop([]);
-    } finally {
-      setDesignsLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    if (tab === "designs") {
-      void refreshDesigns();
-    }
-  }, [tab]);
-
-  async function handleUpload(e: React.FormEvent) {
-    e.preventDefault();
-    if (!uploadFile) {
-      alert("Please choose a 200x230 PNG file.");
-      return;
-    }
-    if (!uploadTitle.trim()) {
-      alert("Please enter a title.");
-      return;
-    }
-    if (!uploadDescription.trim()) {
-      alert("Please enter a description.");
-      return;
-    }
-
-    setUploading(true);
-    setDesignsError(null);
-    try {
-      const fd = new FormData();
-      fd.append("file", uploadFile);
-      fd.append("title", uploadTitle.trim());
-      fd.append("description", uploadDescription.trim());
-
-      const res = await fetch("/api/designs", {
-        method: "POST",
-        body: fd,
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setDesignsError(json?.error ?? "Upload failed");
-        return;
-      }
-
-      setUploadTitle("");
-      setUploadDescription("");
-      setUploadFile(null);
-      await refreshDesigns();
-    } catch {
-      setDesignsError("Upload failed");
-    } finally {
-      setUploading(false);
-    }
-  }
-
-  async function voteDesign(id: string) {
-    try {
-      const res = await fetch(`/api/designs/${id}/vote`, { method: "POST" });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        alert(json?.error ?? "Vote failed");
-        return;
-      }
-      const votes = json.votes as number | undefined;
-      if (typeof votes !== "number") return;
-
-      setDesignsRecent((prev) =>
-        prev.map((d) => (d.id === id ? { ...d, voteCount: votes } : d)),
-      );
-      setDesignsTop((prev) =>
-        prev
-          .map((d) => (d.id === id ? { ...d, voteCount: votes } : d))
-          .slice()
-          .sort((a, b) => {
-            if (b.voteCount !== a.voteCount) return b.voteCount - a.voteCount;
-            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-          }),
-      );
-    } catch {
-      alert("Vote failed");
-    }
   }
 
   async function refreshAuctions() {
@@ -320,9 +198,6 @@ export default function ShopClient({
         </TabButton>
         <TabButton active={tab === "items"} onClick={() => setTab("items")}>
           Items (soon)
-        </TabButton>
-        <TabButton active={tab === "designs"} onClick={() => setTab("designs")}>
-          Designs
         </TabButton>
         <TabButton active={tab === "auctions"} onClick={() => setTab("auctions")}>
           Auction House
@@ -422,235 +297,6 @@ export default function ShopClient({
         <div style={{ padding: 12, borderRadius: 12, border: "1px solid rgba(0,0,0,0.12)", background: "#fff" }}>
           <div style={{ fontWeight: 1000 }}>More shop items soon.</div>
           <div style={{ marginTop: 6, fontSize: 12, opacity: 0.8 }}>Next: avatar items, buttons, cosmetic frames, and more.</div>
-        </div>
-      )}
-
-      {tab === "designs" && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "minmax(0, 1.3fr) minmax(0, 1fr)",
-            gap: 12,
-            alignItems: "flex-start",
-          }}
-        >
-          {/* Left: upload form + most recent */}
-          <div style={{ display: "grid", gap: 12 }}>
-            <div
-              style={{
-                padding: 12,
-                borderRadius: 12,
-                border: "1px solid rgba(0,0,0,0.12)",
-                background: "#fff",
-              }}
-            >
-              <div style={{ fontWeight: 1000, marginBottom: 8 }}>Submit a design</div>
-              <form onSubmit={handleUpload} style={{ display: "grid", gap: 8 }}>
-                <input
-                  type="text"
-                  placeholder="Title"
-                  value={uploadTitle}
-                  onChange={(e) => setUploadTitle(e.target.value)}
-                  style={{
-                    padding: 8,
-                    borderRadius: 8,
-                    border: "1px solid rgba(0,0,0,0.15)",
-                  }}
-                />
-                <textarea
-                  placeholder="Description"
-                  value={uploadDescription}
-                  onChange={(e) => setUploadDescription(e.target.value)}
-                  rows={3}
-                  style={{
-                    padding: 8,
-                    borderRadius: 8,
-                    border: "1px solid rgba(0,0,0,0.15)",
-                    resize: "vertical",
-                  }}
-                />
-                <input
-                  type="file"
-                  accept="image/png"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0] ?? null;
-                    setUploadFile(f || null);
-                  }}
-                />
-                <div style={{ fontSize: 11, opacity: 0.75 }}>
-                  Please upload a 200x230 PNG. Designs with the most votes may be featured in the
-                  auction house every 12 hours.
-                </div>
-                <button
-                  type="submit"
-                  disabled={uploading}
-                  style={{
-                    padding: "8px 10px",
-                    borderRadius: 10,
-                    border: "1px solid rgba(0,0,0,0.15)",
-                    background: uploading ? "#f3f6f9" : "linear-gradient(#ffd85a,#ffb703)",
-                    fontWeight: 1000,
-                    cursor: uploading ? "not-allowed" : "pointer",
-                  }}
-                >
-                  {uploading ? "Uploading..." : "Upload design"}
-                </button>
-                {designsError && (
-                  <div style={{ marginTop: 4, fontSize: 12, color: "#b02a37", fontWeight: 900 }}>
-                    {designsError}
-                  </div>
-                )}
-              </form>
-            </div>
-
-            <div
-              style={{
-                padding: 12,
-                borderRadius: 12,
-                border: "1px solid rgba(0,0,0,0.12)",
-                background: "#fff",
-              }}
-            >
-              <div style={{ fontWeight: 1000, marginBottom: 8 }}>Most recent designs</div>
-              {designsLoading && <div style={{ fontSize: 12 }}>Loading designs…</div>}
-              {!designsLoading && designsRecent.length === 0 && (
-                <div style={{ fontSize: 12, opacity: 0.8 }}>No designs yet.</div>
-              )}
-              <div style={{ display: "grid", gap: 8 }}>
-                {designsRecent.map((d) => (
-                  <div
-                    key={d.id}
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "120px minmax(0, 1fr)",
-                      gap: 8,
-                      padding: 8,
-                      borderRadius: 10,
-                      border: "1px solid rgba(0,0,0,0.08)",
-                      background: "#fdfdfd",
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: 120,
-                        height: Math.round((120 * 230) / 200),
-                        borderRadius: 8,
-                        overflow: "hidden",
-                        border: "1px solid rgba(0,0,0,0.08)",
-                        background: "#eee",
-                      }}
-                    >
-                      <img
-                        src={`/api/designs/${d.id}/image`}
-                        alt={d.title}
-                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                      />
-                    </div>
-                    <div style={{ display: "grid", gap: 4, alignContent: "space-between" }}>
-                      <div>
-                        <div style={{ fontWeight: 1000 }}>{d.title}</div>
-                        <div style={{ fontSize: 11, opacity: 0.75 }}>
-                          by {d.authorUsername} ·{" "}
-                          {new Date(d.createdAt).toLocaleString(undefined, {
-                            month: "short",
-                            day: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </div>
-                        <div style={{ marginTop: 4, fontSize: 12, opacity: 0.9 }}>
-                          {d.description}
-                        </div>
-                      </div>
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: 8,
-                          alignItems: "center",
-                          justifyContent: "flex-start",
-                          marginTop: 4,
-                        }}
-                      >
-                        <button
-                          onClick={() => voteDesign(d.id)}
-                          style={{
-                            padding: "4px 8px",
-                            borderRadius: 8,
-                            border: "1px solid rgba(0,0,0,0.15)",
-                            background: "linear-gradient(#ffd85a,#ffb703)",
-                            fontSize: 12,
-                            fontWeight: 900,
-                            cursor: "pointer",
-                          }}
-                        >
-                          Vote
-                        </button>
-                        <div style={{ fontSize: 12 }}>
-                          <b>{d.voteCount}</b> vote{d.voteCount === 1 ? "" : "s"}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Right: highest votes */}
-          <div
-            style={{
-              padding: 12,
-              borderRadius: 12,
-              border: "1px solid rgba(0,0,0,0.12)",
-              background: "#fff",
-            }}
-          >
-            <div style={{ fontWeight: 1000, marginBottom: 8 }}>Highest votes</div>
-            {designsLoading && <div style={{ fontSize: 12 }}>Loading designs…</div>}
-            {!designsLoading && designsTop.length === 0 && (
-              <div style={{ fontSize: 12, opacity: 0.8 }}>No designs yet.</div>
-            )}
-            <div style={{ display: "grid", gap: 8 }}>
-              {designsTop.map((d) => (
-                <div
-                  key={d.id}
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "80px minmax(0, 1fr)",
-                    gap: 8,
-                    padding: 8,
-                    borderRadius: 10,
-                    border: "1px solid rgba(0,0,0,0.08)",
-                    background: "#fdfdfd",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 80,
-                      height: Math.round((80 * 230) / 200),
-                      borderRadius: 8,
-                      overflow: "hidden",
-                      border: "1px solid rgba(0,0,0,0.08)",
-                      background: "#eee",
-                    }}
-                  >
-                    <img
-                      src={`/api/designs/${d.id}/image`}
-                      alt={d.title}
-                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                    />
-                  </div>
-                  <div style={{ display: "grid", gap: 2 }}>
-                    <div style={{ fontWeight: 1000 }}>{d.title}</div>
-                    <div style={{ fontSize: 11, opacity: 0.75 }}>
-                      by {d.authorUsername} · <b>{d.voteCount}</b> vote
-                      {d.voteCount === 1 ? "" : "s"}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       )}
 
