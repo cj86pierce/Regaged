@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { DesignType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/getCurrentUserId";
 
@@ -78,7 +79,7 @@ export async function POST(req: Request) {
   if (!validTypes.includes(designTypeRawStr as (typeof validTypes)[number])) {
     return NextResponse.json({ error: "Design type is required (Body, Hair, Eyes, Mouth, Shirt, or Accessory)" }, { status: 400 });
   }
-  const designType = designTypeRawStr;
+  const designType = designTypeRawStr as DesignType;
 
   if (!title) return NextResponse.json({ error: "Title is required" }, { status: 400 });
   if (!description) return NextResponse.json({ error: "Description is required" }, { status: 400 });
