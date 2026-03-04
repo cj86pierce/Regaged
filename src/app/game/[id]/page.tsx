@@ -318,7 +318,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
               onClick={async () => {
                 setNudging(true);
                 try {
-                  await fetch(`/api/game/${gameId}/nudge`, { credentials: "include" });
+                  await fetch(`/api/game/${gameId}/nudge?force=1`, { credentials: "include" });
                   await load();
                 } finally {
                   setNudging(false);

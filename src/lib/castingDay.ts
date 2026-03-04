@@ -105,8 +105,14 @@ export async function ensureCastingVotingStarted(gameId: string, dayNumber: numb
 /**
  * Resolve a due vote day (ROUND_VOTE with stateEndsAt <= now).
  * This function is **unstick-safe**: it will always advance the timer/day.
+ * forceDue: when true (manual nudge), skip timer check so we advance anyway.
  */
-export async function resolveCastingVoteDue(gameId: string, dayNumber: number) {
+export async function resolveCastingVoteDue(
+  gameId: string,
+  dayNumber: number,
+  options?: { forceDue?: boolean }
+) {
+  const forceDue = options?.forceDue === true;
   const now = new Date();
 
   // Caller (cron catchUpCastingGame) already holds the per-game lock; no nested lock here
@@ -123,9 +129,9 @@ export async function resolveCastingVoteDue(gameId: string, dayNumber: number) {
     // If dayNumber mismatch, use actual
     const actualDay = game.roundNumber ?? dayNumber;
 
-    // If not actually due yet, bail (20s grace for clock skew / cold starts)
-    const graceMs = 20000;
-    if (game.stateEndsAt && game.stateEndsAt.getTime() > now.getTime() + graceMs) return;
+    // If not actually due yet, bail (unless force: manual nudge)
+    const graceMs = forceDue ? 12 * 60 * 60 * 1000 : 20000;
+    if (!forceDue && game.stateEndsAt && game.stateEndsAt.getTime() > now.getTime() + graceMs) return;
 
     // ✅ ALWAYS ensure nominees exist so resolution can proceed
     await ensureCastingVotingStarted(gameId, actualDay);

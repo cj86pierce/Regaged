@@ -9,11 +9,15 @@ import { advanceFastingBotIfDue } from "@/lib/fastingBotAdvance";
 /**
  * GET /api/game/[id]/nudge
  * Advances the game when timer expired (Casting, Fasting, and bot modes).
+ * ?force=1 = treat as due (for manual "Timer ended? Nudge" so we advance despite clock skew).
  */
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   const gameId = params.id;
   const userId = await getCurrentUserId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const url = new URL(req.url);
+  const force = url.searchParams.get("force") === "1" || url.searchParams.get("force") === "true";
 
   const game = await prisma.game.findUnique({
     where: { id: gameId },
@@ -30,7 +34,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   try {
     let result: unknown;
     if (game.gameType === "CASTING") {
-      result = await catchUpCastingGame(gameId);
+      result = await catchUpCastingGame(gameId, { forceDue: force });
     } else if (game.gameType === "CASTING_BOT") {
       result = await catchUpCastingBotGame(gameId);
     } else if (game.gameType === "FASTING") {

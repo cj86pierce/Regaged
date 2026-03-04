@@ -1,12 +1,15 @@
 /**
  * Casting game catch-up logic (advance day when timer expired).
  * Used by cron and nudge route.
+ * forceDue: when true (e.g. manual nudge button), treat ROUND_VOTE as due even if timer not past.
  */
 import { prisma } from "@/lib/prisma";
 import { ensureCastingVotingStarted, resolveCastingVoteDue } from "@/lib/castingDay";
 import { getCastingDayMs } from "@/lib/castingDayLength";
 
-export async function catchUpCastingGame(gameId: string) {
+export async function catchUpCastingGame(gameId: string, options?: { forceDue?: boolean }) {
+  const forceDue = options?.forceDue === true;
+
   const lockRows = await prisma.$queryRaw<{ locked: boolean }[]>`
     SELECT pg_try_advisory_lock(hashtext(${gameId})) as locked
   `;
@@ -40,11 +43,11 @@ export async function catchUpCastingGame(gameId: string) {
         });
         continue;
       }
-      const graceMs = 20000; // 20s grace for clock skew / cold starts
+      const graceMs = forceDue ? 12 * 60 * 60 * 1000 : 20000; // force: treat as due within 12h; else 20s grace
       if (g.stateEndsAt.getTime() > now.getTime() + graceMs) break;
 
       if (g.state === "ROUND_VOTE") {
-        await resolveCastingVoteDue(gameId, g.roundNumber ?? 1);
+        await resolveCastingVoteDue(gameId, g.roundNumber ?? 1, { forceDue });
         continue;
       }
 
