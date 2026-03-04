@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Avatar, { type AvatarConfig } from "@/components/Avatar";
 
 type Comment = {
   id: string;
@@ -49,6 +50,10 @@ export default function DesignDetailClient({ initialDesign }: { initialDesign: D
   const [commentText, setCommentText] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewAvatar, setPreviewAvatar] = useState<AvatarConfig | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
 
   useEffect(() => {
     const t = setInterval(() => {
@@ -116,6 +121,27 @@ export default function DesignDetailClient({ initialDesign }: { initialDesign: D
 
   const timeLabel = formatTimeLeft(design.votingEndsAt);
   const ended = !design.canVote;
+
+  async function openPreview() {
+    setShowPreview(true);
+    setPreviewError(null);
+    setPreviewAvatar(null);
+    setPreviewLoading(true);
+    const res = await fetch("/api/me/avatar", { credentials: "include" });
+    const json = await res.json().catch(() => ({}));
+    setPreviewLoading(false);
+    if (!res.ok) {
+      setPreviewError(res.status === 401 ? "Log in to preview this design on your avatar." : json?.error ?? "Could not load avatar.");
+      return;
+    }
+    setPreviewAvatar(json.avatar ?? null);
+  }
+
+  function closePreview() {
+    setShowPreview(false);
+    setPreviewAvatar(null);
+    setPreviewError(null);
+  }
 
   return (
     <div>
@@ -194,10 +220,103 @@ export default function DesignDetailClient({ initialDesign }: { initialDesign: D
           )}
           <span style={{ fontSize: 16, fontWeight: 1000 }}>Score: {design.score}</span>
           <span style={{ fontSize: 13, color: ended ? "#888" : "#666" }}>{timeLabel}</span>
+          <button
+            onClick={openPreview}
+            style={{
+              padding: "6px 12px",
+              borderRadius: 8,
+              border: "1px solid rgba(0,0,0,0.15)",
+              background: "linear-gradient(#eaf2ff, #d6e6ff)",
+              color: "#0b2b66",
+              fontWeight: 1000,
+              cursor: "pointer",
+            }}
+          >
+            Preview on my avatar
+          </button>
         </div>
 
         <div style={{ whiteSpace: "pre-wrap", fontSize: 15, lineHeight: 1.5 }}>{design.description}</div>
       </div>
+
+      {/* Preview modal: avatar + design overlay */}
+      {showPreview && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Preview design on your avatar"
+          onClick={closePreview}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 100,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 20,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "#fff",
+              borderRadius: 14,
+              padding: 20,
+              boxShadow: "0 12px 40px rgba(0,0,0,0.2)",
+              maxWidth: 360,
+              width: "100%",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <div style={{ fontWeight: 1000, fontSize: 18 }}>Preview on your avatar</div>
+              <button
+                onClick={closePreview}
+                style={{
+                  border: "none",
+                  background: "none",
+                  fontSize: 24,
+                  cursor: "pointer",
+                  lineHeight: 1,
+                  opacity: 0.7,
+                }}
+              >
+                ×
+              </button>
+            </div>
+            {previewLoading && (
+              <div style={{ padding: 40, textAlign: "center", color: "#666" }}>Loading…</div>
+            )}
+            {previewError && (
+              <div style={{ padding: 20, textAlign: "center", color: "#c00" }}>{previewError}</div>
+            )}
+            {!previewLoading && !previewError && previewAvatar && (
+              <div style={{ display: "grid", placeItems: "center", gap: 12 }}>
+                <div style={{ position: "relative", width: 200, height: 230 }}>
+                  <div style={{ position: "absolute", inset: 0 }}>
+                    <Avatar config={previewAvatar} width={200} />
+                  </div>
+                  <img
+                    src={`/api/designs/${design.id}/image`}
+                    alt=""
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "contain",
+                      pointerEvents: "none",
+                    }}
+                  />
+                </div>
+                <div style={{ fontSize: 13, color: "#666", textAlign: "center" }}>
+                  This is how the design would look on your avatar. Win it in the Auction House to use it.
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <div style={{ marginBottom: 10, fontWeight: 1000, fontSize: 16 }}>Comments ({design.comments.length})</div>
 
