@@ -192,7 +192,7 @@ export default function ShopClient({
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
+      <div className="mobileWrapped" style={{ display: "flex", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
         <TabButton active={tab === "colors"} onClick={() => setTab("colors")}>
           Color Levels
         </TabButton>
@@ -226,6 +226,7 @@ export default function ShopClient({
               return (
                 <div
                   key={lvl.id}
+                  className="shopColorRow"
                   style={{
                     border: "1px solid rgba(0,0,0,0.12)",
                     borderRadius: 12,
@@ -323,6 +324,7 @@ export default function ShopClient({
             {auctions.map((a) => (
               <div
                 key={a.id}
+                className="shopAuctionRow"
                 style={{
                   display: "grid",
                   gridTemplateColumns: "120px minmax(0, 1fr)",
@@ -334,6 +336,7 @@ export default function ShopClient({
                 }}
               >
                 <div
+                  className="shopAuctionThumb"
                   style={{
                     width: 120,
                     height: Math.round((120 * 230) / 200),

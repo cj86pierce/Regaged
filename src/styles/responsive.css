@@ -1,0 +1,103 @@
+/* Mobile-first responsive helpers – breakpoint 640px */
+@media (max-width: 640px) {
+  .mobileStack {
+    flex-direction: column !important;
+  }
+  .mobileStack > * {
+    min-width: 0 !important;
+  }
+  .mobileGrid1 {
+    grid-template-columns: 1fr !important;
+  }
+  .mobileCenter {
+    justify-content: center !important;
+  }
+  .mobileFullWidth {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .mobileTextSmall {
+    font-size: 12px !important;
+  }
+  .mobileHide {
+    display: none !important;
+  }
+  .mobileBlock {
+    display: block !important;
+  }
+  .mobileWrapped {
+    flex-wrap: wrap !important;
+  }
+  /* Design card image: full width when stacked, keep aspect ratio */
+  .designCardThumb {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 200px;
+    height: auto !important;
+    aspect-ratio: 200 / 230;
+  }
+  /* Design detail hero image: responsive */
+  .designDetailImage {
+    width: 100% !important;
+    max-width: 200px;
+    height: auto !important;
+    aspect-ratio: 200 / 230;
+  }
+}
+
+/* Nav: compact on small screens */
+@media (max-width: 640px) {
+  .navInner {
+    padding: 8px 10px !important;
+    gap: 8px !important;
+  }
+  .navLinks {
+    gap: 8px !important;
+    font-size: 12px !important;
+  }
+  .navLogo {
+    font-size: 18px !important;
+  }
+}
+
+/* Main content: prevent overflow */
+@media (max-width: 640px) {
+  .mainContent {
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+    min-width: 0 !important;
+  }
+}
+
+/* Home page hero grid: stack on mobile */
+@media (max-width: 640px) {
+  .homeGrid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Shop: color level and auction rows stack on mobile */
+@media (max-width: 640px) {
+  .shopColorRow {
+    grid-template-columns: 1fr !important;
+  }
+  .shopColorRow button {
+    width: 100% !important;
+  }
+  .shopAuctionRow {
+    grid-template-columns: 1fr !important;
+  }
+  .shopAuctionThumb {
+    width: 100% !important;
+    max-width: 160px;
+    height: auto !important;
+    aspect-ratio: 200 / 230;
+  }
+}
+
+/* Right rail: hide earlier on tablet/mobile */
+@media (max-width: 900px) {
+  .rightRail {
+    display: none;
+  }
+}

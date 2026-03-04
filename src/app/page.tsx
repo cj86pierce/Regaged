@@ -39,7 +39,7 @@ export default async function HomePage() {
         }}
       >
         <div style={{ padding: 18 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 240px", gap: 16, alignItems: "start" }}>
+          <div className="homeGrid" style={{ display: "grid", gridTemplateColumns: "1fr 240px", gap: 16, alignItems: "start" }}>
             {/* Left hero */}
             <div>
               <div style={{ color: "#d11b1b", fontWeight: 1000, fontSize: 28, letterSpacing: -0.3 }}>
@@ -169,18 +169,17 @@ export default async function HomePage() {
               border: "1px solid rgba(0,0,0,0.08)",
               overflow: "hidden",
               background: "linear-gradient(90deg, #1a1a1a, #2c2c2c)",
-              height: 130,
+              minHeight: 100,
               position: "relative",
             }}
           >
             <div style={{ position: "absolute", inset: 0, opacity: 0.22, background: "radial-gradient(circle at 30% 20%, #ffffff, transparent 55%)" }} />
-            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: 18 }}>
-              <div style={{ color: "#fff", fontWeight: 1000, fontSize: 32, letterSpacing: -0.4 }}>
+            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 12px", flexWrap: "wrap", gap: 8 }}>
+              <div style={{ color: "#fff", fontWeight: 1000, fontSize: "clamp(20px, 6vw, 32px)", letterSpacing: -0.4 }}>
                 FASTINGS
                 <div style={{ fontSize: 12, opacity: 0.85 }}>nominate · evict · alliances</div>
               </div>
-
-              <div style={{ color: "#ffeb3b", fontWeight: 1000, fontSize: 18, textAlign: "right" }}>
+              <div style={{ color: "#ffeb3b", fontWeight: 1000, fontSize: 16, textAlign: "right" }}>
                 Beta build
                 <div style={{ fontSize: 12, opacity: 0.9 }}>bugs expected</div>
               </div>

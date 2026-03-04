@@ -5,6 +5,7 @@ import NavBar from "@/components/NavBar";
 import RightRail from "@/components/RightRail";
 import "@/styles/colorLevels.css";
 import "@/styles/layout.css";
+import "@/styles/responsive.css";
 
 export const metadata: Metadata = {
   title: "Regaged",
@@ -32,8 +33,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </Suspense>
           </div>
 
-          <div style={{ padding: "16px 12px 40px" }}>
-            <div style={{ maxWidth: 1120, margin: "0 auto" }}>{children}</div>
+          <div style={{ padding: "16px 12px 40px" }} className="mainContent">
+            <div style={{ maxWidth: 1120, margin: "0 auto", minWidth: 0 }}>{children}</div>
           </div>
         </Providers>
       </body>

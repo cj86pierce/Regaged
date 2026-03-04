@@ -37,6 +37,7 @@ export default function NavBar() {
       }}
     >
       <div
+        className="navInner"
         style={{
           maxWidth: 980,
           margin: "0 auto",
@@ -48,12 +49,12 @@ export default function NavBar() {
         }}
       >
         <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
-          <div style={{ fontWeight: 1000, fontSize: 22, letterSpacing: -0.3 }}>
+          <div className="navLogo" style={{ fontWeight: 1000, fontSize: 22, letterSpacing: -0.3 }}>
             Regaged<span style={{ opacity: 0.7 }}>🎞️</span>
           </div>
         </Link>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+        <div className="navLinks" style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
           <Link href="/" style={{ color: "#123", textDecoration: "none", fontWeight: 700, fontSize: 13 }}>
             Community
           </Link>

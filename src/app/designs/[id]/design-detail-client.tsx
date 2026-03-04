@@ -130,6 +130,7 @@ export default function DesignDetailClient({ initialDesign }: { initialDesign: D
         }}
       >
         <div
+          className="designDetailImage"
           style={{
             width: 200,
             height: 230,
@@ -146,7 +147,7 @@ export default function DesignDetailClient({ initialDesign }: { initialDesign: D
             style={{ width: "100%", height: "100%", objectFit: "cover" }}
           />
         </div>
-        <h1 style={{ margin: "0 0 8px 0", fontSize: 24, fontWeight: 1000 }}>{design.title}</h1>
+        <h1 style={{ margin: "0 0 8px 0", fontSize: "clamp(18px, 5vw, 24px)", fontWeight: 1000 }}>{design.title}</h1>
         <div style={{ fontSize: 13, color: "#666", marginBottom: 12 }}>
           by{" "}
           <Link href={`/u/${design.author.username.toLowerCase()}`} style={{ fontWeight: 800, color: "#0b5ed7" }}>

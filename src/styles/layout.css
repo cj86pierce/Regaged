@@ -6,6 +6,7 @@
   z-index: 40;
 }
 
+/* Right rail hidden via responsive.css at 900px */
 @media (max-width: 1150px) {
   .rightRail {
     display: none;

@@ -278,10 +278,12 @@ function DesignCard({
         boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
       }}
     >
-      <div style={{ display: "flex", gap: 14 }}>
+      <div className="mobileStack" style={{ display: "flex", gap: 14 }}>
         <div
+          className="designCardThumb"
           style={{
             width: 120,
+            minWidth: 120,
             height: Math.round((120 * 230) / 200),
             borderRadius: 8,
             overflow: "hidden",
