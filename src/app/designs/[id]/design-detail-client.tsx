@@ -220,16 +220,23 @@ export default function DesignDetailClient({ initialDesign }: { initialDesign: D
           )}
           <span style={{ fontSize: 16, fontWeight: 1000 }}>Score: {design.score}</span>
           <span style={{ fontSize: 13, color: ended ? "#888" : "#666" }}>{timeLabel}</span>
+        </div>
+
+        <div style={{ marginBottom: 14 }}>
           <button
+            type="button"
             onClick={openPreview}
             style={{
-              padding: "6px 12px",
-              borderRadius: 8,
+              padding: "10px 16px",
+              borderRadius: 10,
               border: "1px solid rgba(0,0,0,0.15)",
               background: "linear-gradient(#eaf2ff, #d6e6ff)",
               color: "#0b2b66",
               fontWeight: 1000,
+              fontSize: 15,
               cursor: "pointer",
+              width: "100%",
+              maxWidth: 280,
             }}
           >
             Preview on my avatar
