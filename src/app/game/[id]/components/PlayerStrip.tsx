@@ -70,7 +70,7 @@ export default function PlayerStrip(props: {
 
   return (
     <div style={{ border: "1px solid #cfd7df", borderRadius: 10, padding: "6px 8px", background: "#eef7ff", overflow: "hidden" }}>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(15, minmax(0, 1fr))", gap: 4, alignItems: "start" }}>
+      <div className="gamePlayerStrip" style={{ display: "grid", gridTemplateColumns: "repeat(15, minmax(0, 1fr))", gap: 4, alignItems: "start" }}>
         {players.map((p) => {
           const isPov = p.userId === povUserId;
           const lastSeenLabel = formatLastSeen(typeof p.lastActiveAt === "string" ? p.lastActiveAt : p.lastActiveAt.toISOString());
@@ -154,7 +154,7 @@ export default function PlayerStrip(props: {
           }
 
           return (
-            <div key={p.userId} style={{ minWidth: 0 }}>
+            <div key={p.userId} className="gamePlayerStripItem" style={{ minWidth: 0 }}>
               {/* ✅ avatar clickable */}
               <Link href={`/u/${encodeURIComponent(p.username)}`} style={{ display: "grid", placeItems: "center", textDecoration: "none" }}>
                 <Avatar config={p.avatar} width={64} grayscale={grayscale} />

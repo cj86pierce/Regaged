@@ -163,6 +163,28 @@
   flex-shrink: 0;
 }
 
+/* Game page: player strip avatars – allow wrap on mobile so they don't squish */
+@media (max-width: 640px) {
+  .gamePlayerStrip {
+    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)) !important;
+  }
+  .gamePlayerStripItem {
+    min-width: 72px;
+  }
+}
+
+@media (max-width: 640px) {
+  .gameCastingStripLayout {
+    grid-template-columns: 1fr !important;
+  }
+  .gameCastingStripPlayers {
+    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)) !important;
+  }
+  .gameCastingStripItem {
+    min-width: 72px;
+  }
+}
+
 /* Right rail: hide earlier on tablet/mobile */
 @media (max-width: 900px) {
   .rightRail {

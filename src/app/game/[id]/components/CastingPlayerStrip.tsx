@@ -53,6 +53,7 @@ export default function CastingPlayerStrip(props: {
 
   return (
     <div
+      className="gameCastingStrip"
       style={{
         border: "1px solid rgba(0,0,0,0.10)",
         borderRadius: 12,
@@ -60,8 +61,9 @@ export default function CastingPlayerStrip(props: {
         padding: 10,
       }}
     >
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 240px", gap: 12, alignItems: "start" }}>
+      <div className="gameCastingStripLayout" style={{ display: "grid", gridTemplateColumns: "1fr 240px", gap: 12, alignItems: "start" }}>
         <div
+          className="gameCastingStripPlayers"
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(10, minmax(0, 1fr))",
@@ -87,6 +89,7 @@ export default function CastingPlayerStrip(props: {
             return (
               <div
                 key={p.userId}
+                className="gameCastingStripItem"
                 style={{
                   padding: 8,
                   background: "transparent",
@@ -142,6 +145,7 @@ export default function CastingPlayerStrip(props: {
 
         {/* RIGHT: your stats bubble */}
         <div
+          className="gameCastingStripStats"
           style={{
             border: "1px solid rgba(0,0,0,0.10)",
             borderRadius: 12,
