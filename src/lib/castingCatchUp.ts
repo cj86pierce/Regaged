@@ -25,6 +25,14 @@ export async function catchUpCastingGame(gameId: string) {
       if (!g) break;
 
       const now = new Date();
+
+      // ROUND_NOMINATE = start of a new day; always start voting for this day (no timer check).
+      // This ensures we never get stuck in NOMINATE if ensureCastingVotingStarted failed in advanceToNextDay.
+      if (g.state === "ROUND_NOMINATE") {
+        await ensureCastingVotingStarted(gameId, g.roundNumber ?? 1);
+        continue;
+      }
+
       if (!g.stateEndsAt) {
         await prisma.game.update({
           where: { id: gameId },
@@ -37,12 +45,6 @@ export async function catchUpCastingGame(gameId: string) {
 
       if (g.state === "ROUND_VOTE") {
         await resolveCastingVoteDue(gameId, g.roundNumber ?? 1);
-        continue;
-      }
-
-      // Already at start of next day (e.g. after advanceToNextDay). Just start voting for this day.
-      if (g.state === "ROUND_NOMINATE") {
-        await ensureCastingVotingStarted(gameId, g.roundNumber ?? 1);
         continue;
       }
 

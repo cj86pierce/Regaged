@@ -1,6 +1,6 @@
 # Cron setup for game advancement
 
-Games advance rounds/days when the cron runs. On **Vercel Hobby**, crons are limited to once per day—so casting and fasting will stay stuck unless you use an external cron.
+Games advance rounds/days when the cron runs. **vercel.json** is set to `*/1 * * * *` (every minute) so Fasting and Casting auto-advance when the phase timer ends. On **Vercel Hobby**, crons are limited to once per day—use an external cron (Option 1) so casting and fasting don’t stay stuck.
 
 ## Option 1: External cron (recommended for Hobby)
 
