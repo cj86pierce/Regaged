@@ -12,18 +12,19 @@ export default async function GamesPage() {
   });
 
   return (
-    <main style={{ padding: 12 }}>
+    <main style={{ padding: 12 }} className="gamesPage">
       <h1 style={{ marginTop: 0 }}>Games</h1>
 
       <div style={{ marginBottom: 10, fontSize: 12, opacity: 0.75 }}>
         Anyone can spectate. Only players in a game can act.
       </div>
 
-      <div style={{ display: "grid", gap: 10 }}>
+      <div className="gamesList" style={{ display: "grid", gap: 10 }}>
         {games.map((g) => (
           <Link
             key={g.id}
             href={`/game/${g.id}`}
+            className="gamesListItem"
             style={{
               textDecoration: "none",
               color: "#111",
@@ -37,9 +38,9 @@ export default async function GamesPage() {
               alignItems: "center",
             }}
           >
-            <div style={{ fontWeight: 1000 }}>
+            <div style={{ fontWeight: 1000, minWidth: 0 }}>
               {g.gameType} #{g.number}
-              <div style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>{g.id}</div>
+              <div className="gamesListItemId" style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>{g.id}</div>
             </div>
             <div style={{ fontWeight: 900, fontSize: 12, opacity: 0.8 }}>{g.state}</div>
           </Link>

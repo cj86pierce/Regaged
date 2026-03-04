@@ -326,7 +326,7 @@ function colorToSwatch(name: string) {
 
 function StatLine({ label, value, suffixText }: { label: string; value: React.ReactNode; suffixText?: string }) {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "80px auto 1fr", alignItems: "center", gap: 10, marginTop: 8 }}>
+    <div className="profileStatLine" style={{ display: "grid", gridTemplateColumns: "80px auto 1fr", alignItems: "center", gap: 10, marginTop: 8 }}>
       <div style={{ fontSize: 22, color: "#666" }}>{label}</div>
       <div style={{ padding: "6px 10px", background: "#e6e6e6", borderRadius: 4, fontSize: 26, fontWeight: 1000, lineHeight: 1 }}>
         {value}
@@ -415,10 +415,10 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
   const swatchClass = `lvlSwatch ${isTvStar ? "tvstar" : ""} ${(data.colorAnimated || isTvStar) ? "animated" : "static"}`;
 
   return (
-    <main style={{ padding: 8 }}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 14 }}>
+    <main style={{ padding: 8 }} className="profilePage">
+      <div className="profileLayout" style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 14 }}>
         <Card title="Profile">
-          <div style={{ display: "grid", gridTemplateColumns: "220px 1fr 110px", gap: 14, alignItems: "start" }}>
+          <div className="profileCardInner" style={{ display: "grid", gridTemplateColumns: "220px 1fr 110px", gap: 14, alignItems: "start" }}>
             <div style={{ display: "grid", placeItems: "start" }}>
               <Avatar config={data.avatar} width={190} />
             </div>
@@ -427,7 +427,7 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
               {/* ✅ Wrap name + bar so bar spans under swatch too */}
               <div style={{ position: "relative" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
-                  <div style={{ fontSize: 38, fontWeight: 1000, color: "#2b83c6", lineHeight: 1 }}>
+                  <div className="profileUsername" style={{ fontSize: 38, fontWeight: 1000, color: "#2b83c6", lineHeight: 1 }}>
                     {data.username}
                   </div>
 
@@ -613,7 +613,7 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
         </Card>
 
         {/* RIGHT */}
-        <div style={{ display: "grid", gap: 14 }}>
+        <div className="profileSidebar" style={{ display: "grid", gap: 14 }}>
           <Card title="Participate!">
             <div style={{ display: "grid", gap: 10 }}>
               <Link

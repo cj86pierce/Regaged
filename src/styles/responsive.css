@@ -95,6 +95,55 @@
   }
 }
 
+/* Games page: fit on mobile */
+@media (max-width: 640px) {
+  .gamesPage {
+    padding: 10px !important;
+  }
+  .gamesListItem {
+    grid-template-columns: 1fr !important;
+    align-items: flex-start !important;
+  }
+  .gamesListItemId {
+    word-break: break-all;
+    font-size: 11px !important;
+  }
+}
+
+/* Profile page: stack layout on mobile, keep desktop unchanged */
+@media (max-width: 640px) {
+  .profilePage {
+    padding: 10px !important;
+  }
+  .profileLayout {
+    grid-template-columns: 1fr !important;
+  }
+  .profileCardInner {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  .profileCardInner > div:first-child {
+    justify-self: start;
+  }
+  .profileCardInner > div:last-child {
+    justify-self: start;
+  }
+  .profileUsername {
+    font-size: clamp(24px, 8vw, 38px) !important;
+  }
+  .profileStatLine {
+    grid-template-columns: 70px 1fr auto !important;
+    gap: 8px !important;
+    font-size: 18px;
+  }
+  .profileStatLine > div:first-child {
+    font-size: 16px !important;
+  }
+  .profileStatLine > div:nth-child(2) {
+    font-size: 20px !important;
+  }
+}
+
 /* Right rail: hide earlier on tablet/mobile */
 @media (max-width: 900px) {
   .rightRail {
