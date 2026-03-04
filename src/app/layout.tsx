@@ -3,7 +3,9 @@ import { Suspense } from "react";
 import { Providers } from "@/app/providers";
 import NavBar from "@/components/NavBar";
 import RightRail from "@/components/RightRail";
+import { ThemeInitScript } from "@/app/theme-init";
 import "@/styles/colorLevels.css";
+import "@/styles/theme.css";
 import "@/styles/layout.css";
 import "@/styles/responsive.css";
 
@@ -14,15 +16,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body
-        style={{
-          margin: 0,
-          fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif",
-          background: "linear-gradient(#a9cfe8, #d6eaf6 260px, #f5f7fb 900px)",
-          color: "#111",
-        }}
-      >
+    <html lang="en" suppressHydrationWarning>
+      <body className="theme-body">
+        <ThemeInitScript />
         <Providers>
           <NavBar />
 
@@ -33,7 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </Suspense>
           </div>
 
-          <div style={{ padding: "16px 12px 40px" }} className="mainContent">
+          <div className="mainContent">
             <div style={{ maxWidth: 1120, margin: "0 auto", minWidth: 0 }}>{children}</div>
           </div>
         </Providers>

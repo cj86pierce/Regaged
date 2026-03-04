@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
+import { useTheme } from "@/app/ThemeProvider";
 
 type SteamMe = { userId: string; username: string } | null;
 
 export default function NavBar() {
+  const { theme, setTheme } = useTheme();
   const { data: session, status } = useSession();
   const [steamMe, setSteamMe] = useState<SteamMe>(null);
   const loggedIn = !!session?.user || !!steamMe;
@@ -26,16 +28,7 @@ export default function NavBar() {
   }
 
   return (
-    <div
-      style={{
-        position: "sticky",
-        top: 0,
-        zIndex: 50,
-        background: "rgba(169, 207, 232, 0.92)",
-        backdropFilter: "blur(6px)",
-        borderBottom: "1px solid rgba(0,0,0,0.08)",
-      }}
-    >
+    <div className="navBar">
       <div
         className="navInner"
         style={{
@@ -54,70 +47,46 @@ export default function NavBar() {
           </div>
         </Link>
 
-        <div className="navLinks" style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
-          <Link href="/" style={{ color: "#123", textDecoration: "none", fontWeight: 700, fontSize: 13 }}>
+        <div className="navLinks">
+          <Link href="/" className="navLink">
             Community
           </Link>
-          <Link href="/" style={{ color: "#123", textDecoration: "none", fontWeight: 700, fontSize: 13 }}>
-            Groups
-          </Link>
-          <Link href="/games" style={{ color: "#123", textDecoration: "none", fontWeight: 700, fontSize: 13 }}>
-            Games
-          </Link>
-          <Link href="/blogs" style={{ color: "#123", textDecoration: "none", fontWeight: 700, fontSize: 13 }}>
-            Blogs
-          </Link>
-          <Link href="/designs" style={{ color: "#123", textDecoration: "none", fontWeight: 700, fontSize: 13 }}>
-            Designs
-          </Link>
-          <Link href="/shop" style={{ color: "#123", textDecoration: "none", fontWeight: 700, fontSize: 13 }}>
-           Shop
-          </Link>
+          <Link href="/" className="navLink">Groups</Link>
+          <Link href="/games" className="navLink">Games</Link>
+          <Link href="/blogs" className="navLink">Blogs</Link>
+          <Link href="/designs" className="navLink">Designs</Link>
+          <Link href="/shop" className="navLink">Shop</Link>
 
-          
+          <div className="navDivider" />
 
-          <div style={{ width: 1, height: 18, background: "rgba(0,0,0,0.15)" }} />
+          <button
+            type="button"
+            onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+            className="navThemeBtn"
+            title={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+            aria-label="Toggle theme"
+          >
+            {theme === "light" ? "🌙" : "☀️"}
+          </button>
+
+          <div className="navDivider" />
 
           {status === "loading" && !steamMe ? (
-            <span style={{ fontSize: 13, fontWeight: 800, opacity: 0.8 }}>Loading…</span>
+            <span className="navLoading">Loading…</span>
           ) : !loggedIn ? (
             <>
-              <Link href="/register" style={{ color: "#123", textDecoration: "none", fontWeight: 800, fontSize: 13 }}>
-                Register
-              </Link>
-              <Link href="/login" style={{ color: "#123", textDecoration: "none", fontWeight: 800, fontSize: 13 }}>
-                Login
-              </Link>
+              <Link href="/register" className="navLink navLinkBold">Register</Link>
+              <Link href="/login" className="navLink navLinkBold">Login</Link>
             </>
           ) : steamMe && !session?.user ? (
             <>
-              <Link href="/profile" style={{ color: "#123", textDecoration: "none", fontWeight: 900, fontSize: 13 }}>
-                Profile
-              </Link>
-              <button
-                type="button"
-                onClick={logoutSteam}
-                style={{
-                  background: "none",
-                  border: "none",
-                  color: "#123",
-                  fontWeight: 800,
-                  fontSize: 13,
-                  cursor: "pointer",
-                  padding: 0,
-                }}
-              >
-                Logout
-              </button>
+              <Link href="/profile" className="navLink navLinkBold">Profile</Link>
+              <button type="button" onClick={logoutSteam} className="navLogoutBtn">Logout</button>
             </>
           ) : (
             <>
-              <Link href="/profile" style={{ color: "#123", textDecoration: "none", fontWeight: 900, fontSize: 13 }}>
-                Profile
-              </Link>
-              <Link href="/logout" style={{ color: "#123", textDecoration: "none", fontWeight: 800, fontSize: 13 }}>
-                Logout
-              </Link>
+              <Link href="/profile" className="navLink navLinkBold">Profile</Link>
+              <Link href="/logout" className="navLink navLinkBold">Logout</Link>
             </>
           )}
         </div>

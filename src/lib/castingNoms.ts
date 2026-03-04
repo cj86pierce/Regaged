@@ -17,9 +17,7 @@ function evictCount(activeCount: number) {
 }
 
 function nomineeCountForEvict(ev: number) {
-  if (ev === 2) return 4;
-  if (ev === 1) return 3;
-  return 0;
+  return ev >= 1 ? 3 : 0; // always 3 nominees when we evict
 }
 
 function pickNominees(

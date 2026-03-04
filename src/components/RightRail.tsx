@@ -6,16 +6,8 @@ import { prisma } from "@/lib/prisma";
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div
-      style={{
-        border: "1px solid rgba(0,0,0,0.10)",
-        borderRadius: 12,
-        background: "#fff",
-        overflow: "hidden",
-        boxShadow: "0 6px 18px rgba(0,0,0,0.06)",
-      }}
-    >
-      <div style={{ padding: "10px 12px", borderBottom: "1px solid rgba(0,0,0,0.06)", fontWeight: 1000, fontSize: 13 }}>
+    <div className="theme-card">
+      <div style={{ padding: "10px 12px", borderBottom: "1px solid var(--border)", fontWeight: 1000, fontSize: 13 }}>
         {title}
       </div>
       <div style={{ padding: 10 }}>{children}</div>
@@ -25,18 +17,7 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 
 function GameBtn({ href, label, sub }: { href: string; label: string; sub: string }) {
   return (
-    <Link
-      href={href}
-      style={{
-        display: "block",
-        textDecoration: "none",
-        color: "#111",
-        border: "1px solid rgba(0,0,0,0.14)",
-        borderRadius: 10,
-        padding: "8px 10px",
-        background: "#fff",
-      }}
-    >
+    <Link href={href} className="theme-game-btn">
       <div style={{ fontWeight: 1000, fontSize: 12 }}>{label}</div>
       <div style={{ fontSize: 11, opacity: 0.7, marginTop: 2 }}>{sub}</div>
     </Link>
