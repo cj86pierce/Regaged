@@ -1,9 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { getCastingDayMs } from "@/lib/castingDayLength";
-import { ensureCastingVotingStarted } from "@/lib/castingDay";
 
 const CASTING_MAX = 20;
 
+/**
+ * Wiki: Day 1 has no nominees. Just set timer; resolveDay1 will expel 1 by algorithm at end.
+ */
 export async function tryStartCastingsGame(gameId: string) {
   const g = await prisma.game.findUnique({
     where: { id: gameId },
@@ -26,6 +28,4 @@ export async function tryStartCastingsGame(gameId: string) {
       stateEndsAt: new Date(now.getTime() + getCastingDayMs()),
     },
   });
-
-  await ensureCastingVotingStarted(gameId, 1);
 }

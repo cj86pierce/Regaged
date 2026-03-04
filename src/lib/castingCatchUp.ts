@@ -4,7 +4,7 @@
  * forceDue: when true (e.g. manual nudge button), treat ROUND_VOTE as due even if timer not past.
  */
 import { prisma } from "@/lib/prisma";
-import { ensureCastingVotingStarted, resolveCastingVoteDue } from "@/lib/castingDay";
+import { ensureCastingVotingStarted, resolveCastingVoteDue, resolveDay1 } from "@/lib/castingDay";
 import { getCastingDayMs } from "@/lib/castingDayLength";
 
 export async function catchUpCastingGame(gameId: string, options?: { forceDue?: boolean }) {
@@ -47,7 +47,12 @@ export async function catchUpCastingGame(gameId: string, options?: { forceDue?: 
       if (g.stateEndsAt.getTime() > now.getTime() + graceMs) break;
 
       if (g.state === "ROUND_VOTE") {
-        await resolveCastingVoteDue(gameId, g.roundNumber ?? 1, { forceDue });
+        const day = g.roundNumber ?? 1;
+        if (day === 1) {
+          await resolveDay1(gameId);
+        } else {
+          await resolveCastingVoteDue(gameId, day, { forceDue });
+        }
         continue;
       }
 

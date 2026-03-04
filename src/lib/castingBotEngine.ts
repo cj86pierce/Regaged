@@ -96,6 +96,107 @@ export async function catchUpCastingBotGame(gameId: string, options?: { forceDue
     if (endAt > now.getTime() + grace) return { ok: false, reason: "not_due" as const };
 
     const dayNum = game.roundNumber ?? 1;
+
+    // Wiki Day 1: No nominees. Expel 1 by algorithm (worst keys, checks, health).
+    if (dayNum === 1) {
+      const rows = await tx.gamePlayer.findMany({
+        where: { gameId, status: "ACTIVE" },
+        select: { userId: true, keys: true, plusCount: true, minusCount: true, health: true },
+      });
+      const ranked = rows
+        .map((p) => ({
+          userId: p.userId,
+          keys: p.keys ?? 0,
+          checks: netChecks(p.plusCount, p.minusCount),
+          health: p.health ?? 70,
+        }))
+        .sort((a, b) => {
+          if (a.keys !== b.keys) return a.keys - b.keys;
+          if (a.checks !== b.checks) return a.checks - b.checks;
+          return a.health - b.health;
+        });
+      const evicted = ranked[0]?.userId;
+      if (!evicted) return { ok: false, reason: "no_players" as const };
+
+      const activeCount = await tx.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
+      const place = activeCount;
+
+      await tx.gamePlayer.update({
+        where: { gameId_userId: { gameId, userId: evicted } },
+        data: { status: "ELIMINATED", eliminatedAt: now, eliminatedPlace: place },
+      });
+      await tx.castingDayResult.upsert({
+        where: { gameId_dayNumber: { gameId, dayNumber: 1 } },
+        update: { evictedUserIds: [evicted] },
+        create: { gameId, dayNumber: 1, nomineeUserIds: [], evictedUserIds: [evicted] },
+      });
+      const sysId = await getSystemUserId();
+      await tx.gameMessage.create({
+        data: { gameId, userId: sysId, channel: "PUBLIC", body: `[SYSTEM] Day 1 resolved. One contestant eliminated by algorithm.` },
+      });
+
+      const activeAfter = await tx.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
+      if (activeAfter <= 4) {
+        const actives = await tx.gamePlayer.findMany({
+          where: { gameId, status: "ACTIVE" },
+          select: { userId: true, health: true, keys: true, plusCount: true, minusCount: true },
+        });
+        const finalRanked = [...actives].sort((a, b) => {
+          const ah = a.health ?? 70, bh = b.health ?? 70;
+          if (bh !== ah) return bh - ah;
+          const ak = a.keys ?? 0, bk = b.keys ?? 0;
+          if (bk !== ak) return bk - ak;
+          const ac = netChecks(a.plusCount, a.minusCount), bc = netChecks(b.plusCount, b.minusCount);
+          return bc - ac;
+        });
+        for (let i = 0; i < finalRanked.length; i++) {
+          await tx.gamePlayer.update({
+            where: { gameId_userId: { gameId, userId: finalRanked[i].userId } },
+            data: { status: "ELIMINATED", eliminatedAt: now, eliminatedPlace: i + 1 },
+          });
+        }
+        const users = await tx.user.findMany({
+          where: { id: { in: finalRanked.map((r) => r.userId) } },
+          select: { id: true, username: true },
+        });
+        const nameOf = (id: string) => users.find((u) => u.id === id)?.username ?? id;
+        await tx.game.update({
+          where: { id: gameId },
+          data: { state: "COMPLETED", completedAt: now, stateEndsAt: null },
+        });
+        await tx.gameMessage.create({
+          data: {
+            gameId,
+            userId: sysId,
+            channel: "PUBLIC",
+            body: `[SYSTEM] Castings finished!\n- 1st: ${nameOf(finalRanked[0]?.userId ?? "?")}\n- 2nd: ${nameOf(finalRanked[1]?.userId ?? "?")}\n- 3rd: ${nameOf(finalRanked[2]?.userId ?? "?")}\n- 4th: ${nameOf(finalRanked[3]?.userId ?? "?")}`,
+          },
+        });
+        return { ok: true, advanced: true as const };
+      }
+
+      const rows2 = await tx.gamePlayer.findMany({
+        where: { gameId, status: "ACTIVE" },
+        select: { userId: true, keys: true, plusCount: true, minusCount: true, health: true },
+      });
+      const ev2 = evictCount(rows2.length);
+      const nom2 = nomineeCount(ev2);
+      const nominees2 = pickNominees(rows2.map((r) => ({ ...r, keys: r.keys ?? 0 })), nom2);
+      await tx.castingDayResult.upsert({
+        where: { gameId_dayNumber: { gameId, dayNumber: 2 } },
+        update: { nomineeUserIds: nominees2, evictedUserIds: [] },
+        create: { gameId, dayNumber: 2, nomineeUserIds: nominees2, evictedUserIds: [] },
+      });
+      await tx.game.update({
+        where: { id: gameId },
+        data: { state: "ROUND_VOTE", roundNumber: 2, stateEndsAt: new Date(now.getTime() + BOT_DAY_MS) },
+      });
+      await tx.gameMessage.create({
+        data: { gameId, userId: sysId, channel: "PUBLIC", body: `[SYSTEM] Day 2 voting has begun.` },
+      });
+      return { ok: true, advanced: true as const };
+    }
+
     const activeCount = await tx.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
     const ev = evictCount(activeCount);
     const nomCount = nomineeCount(ev);
