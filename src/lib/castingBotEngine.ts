@@ -91,9 +91,11 @@ export async function catchUpCastingBotGame(gameId: string, options?: { forceDue
       return { ok: true, advanced: true as const };
     }
 
-    const endAt = game.stateEndsAt?.getTime() ?? 0;
-    const grace = forceDue ? 12 * 60 * 60 * 1000 : 5000;
-    if (endAt > now.getTime() + grace) return { ok: false, reason: "not_due" as const };
+    if (!forceDue) {
+      const endAt = game.stateEndsAt?.getTime() ?? 0;
+      const grace = 5000;
+      if (endAt > now.getTime() + grace) return { ok: false, reason: "not_due" as const };
+    }
 
     const dayNum = game.roundNumber ?? 1;
 

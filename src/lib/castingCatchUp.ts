@@ -10,12 +10,7 @@ import { getCastingDayMs } from "@/lib/castingDayLength";
 export async function catchUpCastingGame(gameId: string, options?: { forceDue?: boolean }) {
   const forceDue = options?.forceDue === true;
 
-  const lockRows = await prisma.$queryRaw<{ locked: boolean }[]>`
-    SELECT pg_try_advisory_lock(hashtext(${gameId})) as locked
-  `;
-  if (!lockRows?.[0]?.locked) return { skipped: true as const };
-
-  try {
+  const run = async () => {
     let loops = 0;
 
     while (loops < 5) {
@@ -43,8 +38,10 @@ export async function catchUpCastingGame(gameId: string, options?: { forceDue?: 
         });
         continue;
       }
-      const graceMs = forceDue ? 12 * 60 * 60 * 1000 : 20000; // force: treat as due within 12h; else 20s grace
-      if (g.stateEndsAt.getTime() > now.getTime() + graceMs) break;
+      if (!forceDue) {
+        const graceMs = 20000;
+        if (g.stateEndsAt.getTime() > now.getTime() + graceMs) break;
+      }
 
       if (g.state === "ROUND_VOTE") {
         const day = g.roundNumber ?? 1;
@@ -64,7 +61,18 @@ export async function catchUpCastingGame(gameId: string, options?: { forceDue?: 
     }
 
     return { ok: true, loops };
-  } finally {
-    await prisma.$queryRaw`SELECT pg_advisory_unlock(hashtext(${gameId}))`;
+  };
+
+  if (!forceDue) {
+    const lockRows = await prisma.$queryRaw<{ locked: boolean }[]>`
+      SELECT pg_try_advisory_lock(hashtext(${gameId})) as locked
+    `;
+    if (!lockRows?.[0]?.locked) return { skipped: true as const };
+    try {
+      return await run();
+    } finally {
+      await prisma.$queryRaw`SELECT pg_advisory_unlock(hashtext(${gameId}))`;
+    }
   }
+  return await run();
 }
