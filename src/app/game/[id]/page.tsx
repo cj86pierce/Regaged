@@ -79,6 +79,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
 
   const [now, setNow] = useState<number>(() => Date.now());
   const lastNudgeRef = useRef<number>(0);
+  const [nudging, setNudging] = useState(false);
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
@@ -124,7 +125,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
     lastNudgeRef.current = now;
     let cancelled = false;
     const delays = [0, 400, 1200, 2500, 5000];
-    fetch(`/api/game/${gameId}/nudge`)
+    fetch(`/api/game/${gameId}/nudge`, { credentials: "include" })
       .then(() => {
         if (cancelled) return;
         for (const d of delays) {
@@ -306,6 +307,35 @@ export default function GamePage({ params }: { params: { id: string } }) {
           )}
         </div>
       </div>
+
+      {isCasting && data.game.state === "ROUND_VOTE" && timeLeft !== null && timeLeft <= 0 && (
+        <div style={{ marginBottom: 10 }}>
+          <button
+            type="button"
+            disabled={nudging}
+            onClick={async () => {
+              setNudging(true);
+              try {
+                await fetch(`/api/game/${gameId}/nudge`, { credentials: "include" });
+                await load();
+              } finally {
+                setNudging(false);
+              }
+            }}
+            style={{
+              padding: "8px 14px",
+              borderRadius: 8,
+              border: "1px solid rgba(0,0,0,0.2)",
+              background: nudging ? "#e0e0e0" : "#fff3cd",
+              fontWeight: 700,
+              cursor: nudging ? "not-allowed" : "pointer",
+              fontSize: 14,
+            }}
+          >
+            {nudging ? "Advancing…" : "Day ended? Advance day"}
+          </button>
+        </div>
+      )}
 
       {isCasting ? (
         <CastingPlayerStrip
