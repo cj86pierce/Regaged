@@ -85,8 +85,9 @@ export default function GamePage({ params }: { params: { id: string } }) {
     return () => clearInterval(t);
   }, []);
 
-  async function load() {
-    const res = await fetch(`/api/game/${gameId}/state?page=${page}&pageSize=25`, { cache: "no-store" });
+  async function load(opts?: { bust?: boolean }) {
+    const q = `page=${page}&pageSize=25${opts?.bust ? `&_=${Date.now()}` : ""}`;
+    const res = await fetch(`/api/game/${gameId}/state?${q}`, { cache: "no-store" });
     const json = await res.json();
     if (!res.ok) throw new Error(json?.error ?? "Failed to load game");
     setData(json);
@@ -321,12 +322,14 @@ export default function GamePage({ params }: { params: { id: string } }) {
                 try {
                   const res = await fetch(`/api/game/${gameId}/nudge?force=1`, { credentials: "include" });
                   const json = await res.json().catch(() => ({}));
-                  await load();
                   if (!res.ok) setError(json?.error ?? "Nudge failed");
                   else if (json.skipped) setError(`Nudge skipped: ${json.reason ?? "lock"}`);
                   else if (json.nudge?.reason && json.nudge.reason !== "not_due") setError(`Nudge: ${json.nudge.reason}`);
                   else if (json.day1Result && !["advanced", "day2+", "finalized"].includes(json.day1Result))
                     setError(`Nudge: ${json.day1Result} (state=${json.state ?? "?"}, round=${json.round ?? "?"})`);
+                  else setError(`Server: day1Result=${json.day1Result ?? (json.nudge?.advanced ? "advanced" : "—")} loops=${json.nudge?.loops ?? "—"} (refresh if day unchanged)`);
+                  await new Promise((r) => setTimeout(r, 400));
+                  await load({ bust: true });
                 } catch (e) {
                   setError("Nudge request failed");
                 } finally {

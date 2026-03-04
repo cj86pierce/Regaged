@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+
+export const dynamic = "force-dynamic";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/getCurrentUserId";
 import { touchUser } from "@/lib/touchUser";
