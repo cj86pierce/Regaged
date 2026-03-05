@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Providers } from "@/app/providers";
 import NavBar from "@/components/NavBar";
-import RightRail from "@/components/RightRail";
+import RightRailClient from "@/components/RightRailClient";
 import { ThemeInitScript } from "@/app/theme-init";
 import "@/styles/colorLevels.css";
 import "@/styles/theme.css";
@@ -25,7 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {/* Floating rail - Suspense so page content loads first */}
           <div className="rightRail">
             <Suspense fallback={<div style={{ minWidth: 180 }} />}>
-              <RightRail />
+              <RightRailClient />
             </Suspense>
           </div>
 
