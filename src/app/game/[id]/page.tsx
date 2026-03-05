@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import PlayerStrip from "./components/PlayerStrip";
 import CastingPlayerStrip from "./components/CastingPlayerStrip";
 import ChatPanel from "./components/ChatPanel";
@@ -78,8 +78,6 @@ export default function GamePage({ params }: { params: { id: string } }) {
   const [reactingIds, setReactingIds] = useState<Record<string, boolean>>({});
 
   const [now, setNow] = useState<number>(() => Date.now());
-  const lastNudgeRef = useRef<number>(0);
-  const [nudging, setNudging] = useState(false);
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
@@ -118,28 +116,6 @@ export default function GamePage({ params }: { params: { id: string } }) {
     return Math.max(0, Math.ceil(ms / 1000));
   }, [data?.game.stateEndsAt, now]);
 
-  // When timer is low, nudge server and reload aggressively (throttle: max 1 nudge per 8s)
-  useEffect(() => {
-    if (!data?.game || timeLeft === null || timeLeft > 5) return;
-    const now = Date.now();
-    if (now - lastNudgeRef.current < 8000) return;
-    lastNudgeRef.current = now;
-    let cancelled = false;
-    const delays = [0, 400, 1200, 2500, 5000];
-    fetch(`/api/game/${gameId}/nudge`, { credentials: "include" })
-      .then(() => {
-        if (cancelled) return;
-        for (const d of delays) {
-          setTimeout(() => {
-            if (!cancelled) load().catch(() => {});
-          }, d);
-        }
-      })
-      .catch(() => {});
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameId, data?.game?.gameType, data?.game?.stateEndsAt, timeLeft]);
-
   async function sendChat() {
     if (sending) return;
     setError(null);
@@ -148,24 +124,6 @@ export default function GamePage({ params }: { params: { id: string } }) {
     if (!text.trim()) return;
 
     setSending(true);
-
-    // optimistic insert
-    const tempId = `temp_${Date.now()}`;
-    setData((prev) => {
-      if (!prev) return prev;
-      const optimistic: Message = {
-        id: tempId,
-        userId: prev.meUserId ?? "me",
-        username: "you",
-        body: text,
-        createdAt: new Date().toISOString(),
-        plus: 0,
-        minus: 0,
-        myReaction: null,
-        isSystem: false,
-      };
-      return { ...prev, messages: [optimistic, ...prev.messages] };
-    });
 
     const res = await fetch(`/api/game/${gameId}/chat`, {
       method: "POST",
@@ -178,20 +136,16 @@ export default function GamePage({ params }: { params: { id: string } }) {
 
     if (!res.ok) {
       setError(json?.error ?? "Chat failed");
-      // remove optimistic temp
-      setData((prev) => (prev ? { ...prev, messages: prev.messages.filter((m) => m.id !== tempId) } : prev));
       return;
     }
 
     setChatText("");
     setPage(1);
 
-    // replace temp message with real message
+    const real = json.message as Message;
     setData((prev) => {
       if (!prev) return prev;
-      const real = json.message as Message;
-      const msgs = prev.messages.map((m) => (m.id === tempId ? real : m));
-      return { ...prev, messages: msgs };
+      return { ...prev, messages: [real, ...prev.messages] };
     });
   }
 
@@ -308,44 +262,6 @@ export default function GamePage({ params }: { params: { id: string } }) {
           )}
         </div>
       </div>
-
-      {(data.game.state === "ROUND_NOMINATE" || data.game.state === "ROUND_VOTE") &&
-        timeLeft !== null &&
-        timeLeft <= 0 && (
-          <div style={{ marginBottom: 10 }}>
-            <button
-              type="button"
-              disabled={nudging}
-              onClick={async () => {
-                setNudging(true);
-                setError(null);
-                try {
-                  const res = await fetch(`/api/game/${gameId}/nudge?force=1`, { credentials: "include" });
-                  const json = await res.json().catch(() => ({}));
-                  if (!res.ok) setError(json?.error ?? "Nudge failed");
-                  else if (json.skipped) setError(`Nudge skipped: ${json.reason ?? "lock"}`);
-                  else if (json.nudge?.reason && json.nudge.reason !== "not_due") setError(`Nudge: ${json.nudge.reason}`);
-                  await load({ bust: true });
-                } catch (e) {
-                  setError("Nudge request failed");
-                } finally {
-                  setNudging(false);
-                }
-              }}
-              style={{
-                padding: "8px 14px",
-                borderRadius: 8,
-                border: "1px solid var(--border)",
-                background: nudging ? "var(--bg-btn-disabled)" : "var(--bg-msg-system)",
-                fontWeight: 700,
-                cursor: nudging ? "not-allowed" : "pointer",
-                fontSize: 14,
-              }}
-            >
-              {nudging ? "Advancing…" : "Timer ended? Nudge to advance"}
-            </button>
-          </div>
-        )}
 
       {isCasting ? (
         <CastingPlayerStrip
