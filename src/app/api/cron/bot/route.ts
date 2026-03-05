@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { advanceFastingBotIfDue } from "@/lib/fastingBotAdvance";
 import { advanceCastingBotIfDue } from "@/lib/castingBotAdvance";
+import { tryStartFastingBotGame, tryStartCastingBotGame } from "@/lib/gameEngineBot";
 
 function requireCronAuth(req: Request) {
   const secret = process.env.CRON_SECRET;
@@ -32,12 +33,31 @@ async function runBotTick() {
   if (!lockRows?.[0]?.locked) return { skipped: true, reason: "locked" as const };
 
   try {
-    // FASTING_BOT: advance games that are due
+    // Start full ENROLLING bot games (safety net)
+    const enrollingBots = await prisma.game.findMany({
+      where: {
+        gameType: { in: ["FASTING_BOT", "CASTING_BOT"] },
+        state: "ENROLLING",
+      },
+      select: { id: true, gameType: true },
+      take: 20,
+    });
+    for (const g of enrollingBots) {
+      try {
+        if (g.gameType === "FASTING_BOT") await tryStartFastingBotGame(g.id);
+        else await tryStartCastingBotGame(g.id);
+      } catch {}
+    }
+
+    // FASTING_BOT: advance games that are due or stuck (same logic as main tick)
     const fastingBotDue = await prisma.game.findMany({
       where: {
         gameType: "FASTING_BOT",
         state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] },
-        stateEndsAt: { not: null, lte: now },
+        OR: [
+          { stateEndsAt: { not: null, lte: now } },
+          { stateEndsAt: null },
+        ],
       },
       select: { id: true },
       take: 50,

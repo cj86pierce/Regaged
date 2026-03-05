@@ -4,6 +4,7 @@ import { advanceFastingIfDue } from "@/lib/fastingAdvance";
 import { advanceFastingBotIfDue } from "@/lib/fastingBotAdvance";
 import { advanceCastingIfDue } from "@/lib/castingAdvance";
 import { advanceCastingBotIfDue } from "@/lib/castingBotAdvance";
+import { tryStartFastingBotGame, tryStartCastingBotGame } from "@/lib/gameEngineBot";
 import { maybeSpawnCastingsDrops } from "@/lib/castingsDrops";
 import { applyCastingHealthDecay } from "@/lib/castingHealth";
 import { createAuctionsFromDesigns } from "@/lib/createAuctionsFromDesigns";
@@ -30,6 +31,24 @@ async function runTick() {
   if (!lockRows?.[0]?.locked) return { skipped: true, reason: "locked" as const };
 
   try {
+    // -----------------------
+    // Start full ENROLLING bot games (safety net)
+    // -----------------------
+    const enrollingBots = await prisma.game.findMany({
+      where: {
+        gameType: { in: ["FASTING_BOT", "CASTING_BOT"] },
+        state: "ENROLLING",
+      },
+      select: { id: true, gameType: true },
+      take: 20,
+    });
+    for (const g of enrollingBots) {
+      try {
+        if (g.gameType === "FASTING_BOT") await tryStartFastingBotGame(g.id);
+        else await tryStartCastingBotGame(g.id);
+      } catch {}
+    }
+
     // -----------------------
     // CASTING_BOT (Fasting-style day rolling)
     // -----------------------
