@@ -33,8 +33,8 @@
   --vote-plus-border: #2e7d32;
   --vote-minus-bg: #ffebee;
   --vote-minus-border: #c62828;
-  --bg-currency: #ff8a80;
-  --text-username: #d11b1b;
+  --bg-currency: var(--bg-btn-disabled);
+  --text-username: var(--text-primary);
   --text-game: #111;
 }
 

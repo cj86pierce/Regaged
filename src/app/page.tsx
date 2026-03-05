@@ -5,27 +5,33 @@ import { getCurrentUserIdFromHeaders } from "@/lib/getCurrentUserId";
 import { prisma } from "@/lib/prisma";
 
 export default async function HomePage() {
-  const userId = await getCurrentUserIdFromHeaders();
+  let me: { username: string; karma: number; tMoney: number; pMoney: number } | null = null;
+  let activeGameId: string | null = null;
 
-  const me = userId
-    ? await prisma.user.findUnique({
+  try {
+    const userId = await getCurrentUserIdFromHeaders();
+
+    if (userId) {
+      me = await prisma.user.findUnique({
         where: { id: userId },
         select: { username: true, karma: true, tMoney: true, pMoney: true },
-      })
-    : null;
+      }) ?? null;
 
-  const activeGameId = userId
-    ? (
-        await prisma.gamePlayer.findFirst({
-          where: {
-            userId,
-            status: "ACTIVE",
-            game: { state: { in: ["ENROLLING", "ROUND_NOMINATE", "ROUND_VOTE", "FINAL3"] } },
-          },
-          select: { gameId: true },
-        })
-      )?.gameId ?? null
-    : null;
+      activeGameId =
+        (
+          await prisma.gamePlayer.findFirst({
+            where: {
+              userId,
+              status: "ACTIVE",
+              game: { state: { in: ["ENROLLING", "ROUND_NOMINATE", "ROUND_VOTE", "FINAL3"] } },
+            },
+            select: { gameId: true },
+          })
+        )?.gameId ?? null;
+    }
+  } catch (e) {
+    console.error("HomePage data fetch failed:", e);
+  }
 
   return (
     <main style={{ padding: 12 }}>
