@@ -6,7 +6,6 @@ import bcrypt from "bcryptjs";
 // Required for NextAuth (VPS: set in .env). Generate with: openssl rand -base64 32
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
-  trustHost: true, // required when behind nginx/reverse proxy
   session: { strategy: "jwt" },
   providers: [
     CredentialsProvider({
