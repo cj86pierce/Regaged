@@ -35,6 +35,7 @@
   --vote-minus-border: #c62828;
   --bg-currency: var(--bg-btn-disabled);
   --text-username: var(--text-primary);
+  /* Currency/username red styling is dark-mode only; see [data-theme="dark"] below */
   --text-game: #111;
 }
 
@@ -192,8 +193,14 @@
 }
 
 .theme-username {
-  color: var(--text-username) !important;
   font-weight: 800;
+}
+[data-theme="light"] .theme-username,
+html:not([data-theme]) .theme-username {
+  color: var(--text-primary) !important;
+}
+[data-theme="dark"] .theme-username {
+  color: #ff6060 !important;
 }
 
 .theme-link {
