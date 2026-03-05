@@ -6,6 +6,7 @@ import { advanceCastingIfDue } from "@/lib/castingAdvance";
 import { advanceCastingBotIfDue } from "@/lib/castingBotAdvance";
 import { maybeSpawnCastingsDrops } from "@/lib/castingsDrops";
 import { applyCastingHealthDecay } from "@/lib/castingHealth";
+import { createAuctionsFromDesigns } from "@/lib/createAuctionsFromDesigns";
 
 function requireCronAuth(req: Request) {
   const secret = process.env.CRON_SECRET;
@@ -19,6 +20,8 @@ function requireCronAuth(req: Request) {
 
 async function runTick() {
   const now = new Date();
+
+  // Only process active games (ROUND_NOMINATE, ROUND_VOTE). ENROLLING and COMPLETED are skipped.
 
   // global lock
   const lockRows = await prisma.$queryRaw<{ locked: boolean }[]>`
@@ -140,12 +143,21 @@ async function runTick() {
       console.error("CASTING decay failed", { err: String(e) });
     }
 
-    return {
+    const result: Record<string, unknown> = {
       fasting: { due: fastingDue.length, advanced: fastingAdvanced },
       fastingBot: { due: fastingBotDue.length, advanced: fastingBotAdvanced },
       castingBot: { due: castingBotDue.length, advanced: castingBotAdvanced },
       casting: { due: castingDue.length, advanced: castingAdvanced },
     };
+
+    try {
+      const { created } = await createAuctionsFromDesigns();
+      if (created > 0) result.auctionsCreated = created;
+    } catch (e) {
+      console.error("Auction creation failed", { err: String(e) });
+    }
+
+    return result;
   } finally {
     await prisma.$queryRaw`SELECT pg_advisory_unlock(hashtext('cron_tick'))`;
   }

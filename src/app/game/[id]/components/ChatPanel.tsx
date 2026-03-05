@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import SystemMessageRenderer from "@/components/chat/SystemMessageRenderer";
 
 type Message = {
   id: string;
@@ -14,30 +15,6 @@ type Message = {
   myReaction: "PLUS" | "MINUS" | null;
   isSystem: boolean;
 };
-
-type SysRow = { name: string; points: number; tag: string };
-
-function parseSystemRows(body: string): { kind: "NOM" | "EVICT"; rows: SysRow[] } | null {
-  if (body.startsWith("[SYSTEM:NOM_VOTES]")) {
-    const lines = body.split("\n").slice(1).filter(Boolean);
-    const rows = lines.map((ln) => {
-      const [name, pts, tag] = ln.split("|");
-      return { name: name ?? "?", points: Number(pts ?? "0"), tag: tag ?? "" };
-    });
-    return { kind: "NOM", rows };
-  }
-
-  if (body.startsWith("[SYSTEM:EVICT_VOTES]")) {
-    const lines = body.split("\n").slice(1).filter(Boolean);
-    const rows = lines.map((ln) => {
-      const [name, pts, tag] = ln.split("|");
-      return { name: name ?? "?", points: Number(pts ?? "0"), tag: tag ?? "" };
-    });
-    return { kind: "EVICT", rows };
-  }
-
-  return null;
-}
 
 export default function ChatPanel(props: {
   meUserId: string | null;
@@ -156,94 +133,32 @@ export default function ChatPanel(props: {
       <div className="theme-chat-feed">
         {messages.map((m) => {
           const sys = m.isSystem;
-          const sysParsed = sys ? parseSystemRows(m.body) : null;
 
-          // System blocks are already yellow; normal new messages flash once.
-          const msgBg = sys || isFlashing(m.id) ? "var(--bg-msg-system)" : "var(--bg-msg)";
-
-          // ✅ System vote blocks (compact + titled)
-          if (sysParsed) {
-            const title = sysParsed.kind === "NOM" ? "Nomination votes" : "Eviction votes";
-
+          if (sys) {
             return (
-              <div
-                key={m.id}
-                className="theme-chat-msg-sys"
-                style={{
-                  padding: 8,
-                  marginBottom: 6,
-                  border: "1px solid rgba(0,0,0,0.18)",
-                  borderRadius: 10,
-                  background: "var(--bg-msg-system)",
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
-                  <div style={{ fontWeight: 1000, fontSize: 12 }}>{title}</div>
-                  <div style={{ fontSize: 11, opacity: 0.7 }}>{new Date(m.createdAt).toLocaleString()}</div>
-                </div>
-
-                <div style={{ display: "grid", gap: 4, marginTop: 6 }}>
-                  {sysParsed.rows.map((r, idx) => (
-                    <div
-                      key={idx}
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "1fr 62px 52px",
-                        alignItems: "center",
-                        gap: 8,
-                        padding: "4px 6px",
-                        borderRadius: 8,
-                        background: "var(--bg-msg)",
-                      }}
-                    >
-                      <div className="theme-username" style={{ fontSize: 12 }}>
-                        {r.name}
-                      </div>
-
-                      <div style={{ fontSize: 11 }}>
-                        <span style={{ fontWeight: 900 }}>{r.points}</span> pts
-                      </div>
-
-                      <div style={{ justifySelf: "end" }}>
-                        {r.tag ? (
-                          <span
-                            style={{
-                              display: "inline-block",
-                              padding: "1px 6px",
-                              borderRadius: 4,
-                              background: "#111",
-                              color: "#ffeb3b",
-                              fontWeight: 1000,
-                              fontSize: 11,
-                            }}
-                          >
-                            {r.tag}
-                          </span>
-                        ) : (
-                          <span />
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              <div key={m.id} style={{ marginBottom: 6 }}>
+                <SystemMessageRenderer
+                  messageId={m.id}
+                  body={m.body}
+                  createdAt={m.createdAt}
+                  meUserId={meUserId}
+                />
               </div>
             );
           }
 
-          // Normal message rendering (includes POV system message as a normal yellow system message)
+          // Normal message rendering
           const isMine = !!meUserId && m.userId === meUserId;
           const alreadyReacted = m.myReaction !== null;
-          const disableReact = isMine || sys || alreadyReacted;
+          const disableReact = isMine || alreadyReacted;
 
           const net = m.plus - m.minus;
-
-          // System messages look like normal chat but yellow + no reactions
-          const authorLabel = sys ? "SYSTEM" : m.username;
+          const msgBg = isFlashing(m.id) ? "var(--bg-msg-system)" : "var(--bg-msg)";
 
           return (
             <div
               key={m.id}
-              className={sys ? "theme-chat-msg-sys" : "theme-chat-msg"}
+              className="theme-chat-msg"
               style={{
                 display: "grid",
                 gridTemplateColumns: "170px 1fr 90px",
@@ -257,19 +172,13 @@ export default function ChatPanel(props: {
               }}
             >
               <div style={{ fontSize: 12 }}>
-                {sys ? (
-                  <div style={{ fontWeight: 1000, color: "var(--text-game)" }}>{authorLabel}</div>
-                ) : (
-                  <Link href={`/u/${encodeURIComponent(m.username)}`} className="theme-username" style={{ textDecoration: "underline" }}>
-                    {m.username.length > 16 ? m.username.slice(0, 16) + "…" : m.username}
-                  </Link>
-                )}
+                <Link href={`/u/${encodeURIComponent(m.username)}`} className="theme-username" style={{ textDecoration: "underline" }}>
+                  {m.username.length > 16 ? m.username.slice(0, 16) + "…" : m.username}
+                </Link>
                 <div style={{ opacity: 0.6 }}>{new Date(m.createdAt).toLocaleString()}</div>
               </div>
 
-              <div style={{ fontSize: 14, color: "var(--text-game)" }}>
-                {m.body.replace(/^\[SYSTEM\]\s*/i, "")}
-              </div>
+              <div style={{ fontSize: 14, color: "var(--text-game)" }}>{m.body}</div>
 
               <div style={{ textAlign: "right" }}>
                 <div style={{ fontSize: 12, fontWeight: 1000, opacity: 0.85 }}>

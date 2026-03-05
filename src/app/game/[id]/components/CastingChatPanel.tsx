@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import SystemMessageRenderer, { parseDropId } from "@/components/chat/SystemMessageRenderer";
 
 type Message = {
   id: string;
@@ -18,17 +19,6 @@ type DropEventsMap = Record<
   string,
   { eventId: string; claimedAt: string | null; options: { slotIndex: number; kind: "APPLE" | "KEY" | "POISON" }[] }
 >;
-
-function parseDropId(body: string) {
-  const m = /^\[CASTDROP:([a-z0-9]+)\]$/i.exec((body ?? "").trim());
-  return m ? m[1] : null;
-}
-
-function iconFor(kind: "APPLE" | "KEY" | "POISON") {
-  if (kind === "APPLE") return "🍎";
-  if (kind === "KEY") return "🔑";
-  return "🧪";
-}
 
 export default function CastingChatPanel(props: {
   gameId: string;
@@ -163,47 +153,18 @@ export default function CastingChatPanel(props: {
           const dropId = parseDropId(m.body);
           const drop = dropId ? dropEvents[dropId] : null;
 
-          // DROP message
-          if (dropId) {
-            const claimed = !!drop?.claimedAt;
-            const busy = claiming[dropId] === true;
-
+          if (dropId || m.isSystem) {
             return (
-              <div key={m.id} className="theme-chat-msg-sys" style={{ border: "1px solid var(--border)", borderRadius: 12, padding: 10 }}>
-                <div style={{ fontWeight: 1000, marginBottom: 8 }}>
-                  Drop {claimed ? <span style={{ fontSize: 12, opacity: 0.75 }}>(claimed)</span> : null}
-                </div>
-
-                {claimed ? (
-                  <div style={{ fontSize: 12, opacity: 0.75 }}>This drop was claimed.</div>
-                ) : (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8 }}>
-                    {(drop?.options ?? []).map((o) => (
-                      <button
-                        key={o.slotIndex}
-                        onClick={() => claim(dropId, o.slotIndex)}
-                        disabled={!meUserId || busy}
-                        style={{
-                          padding: "10px 0",
-                          borderRadius: 12,
-                          border: "1px solid var(--border)",
-                          background: busy ? "var(--bg-btn-disabled)" : "var(--bg-card)",
-                          cursor: busy ? "not-allowed" : "pointer",
-                          fontSize: 18,
-                        }}
-                        title={o.kind}
-                      >
-                        {iconFor(o.kind)}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {!meUserId && !claimed && (
-                  <div style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}>Login to claim.</div>
-                )}
-                {busy && <div style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}>Claiming...</div>}
-              </div>
+              <SystemMessageRenderer
+                key={m.id}
+                messageId={m.id}
+                body={m.body}
+                createdAt={m.createdAt}
+                dropEvent={drop ?? undefined}
+                onClaim={claim}
+                meUserId={meUserId}
+                claiming={claiming}
+              />
             );
           }
 
