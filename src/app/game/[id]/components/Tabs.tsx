@@ -21,10 +21,10 @@ export default function Tabs({
   return (
     <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
       <button style={btnStyle(tab === "public")} onClick={() => setTab("public")}>
-        public comments <span style={{ opacity: 0.7 }}>({publicCount})</span>
+        Public comments <span style={{ opacity: 0.7 }}>({publicCount})</span>
       </button>
       <button style={btnStyle(tab === "private")} onClick={() => setTab("private")}>
-        private messages
+        Private messages
       </button>
     </div>
   );

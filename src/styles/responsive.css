@@ -86,10 +86,14 @@
     margin: 0 auto;
     width: 100%;
   }
-  .shopAuctionRow {
+  .shopAuctionsLayout {
     grid-template-columns: 1fr !important;
   }
-  .shopAuctionThumb {
+  .shopAuctionRow {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+  .shopAuctionRow .shopAuctionThumb {
     width: 100% !important;
     max-width: 160px;
     height: auto !important;

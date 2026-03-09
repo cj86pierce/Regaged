@@ -71,7 +71,7 @@ export default function CastingSidebar(props: {
           flexDirection: "column",
         }}
       >
-        <div style={{ fontWeight: 1000, marginBottom: 8, flexShrink: 0 }}>Story</div>
+        <div style={{ fontWeight: 1000, marginBottom: 8, flexShrink: 0 }}>Game Story</div>
 
         {/* show recent system lines as “story” */}
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>

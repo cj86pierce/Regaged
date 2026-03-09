@@ -7,8 +7,8 @@ function bad(msg: string, status = 400) {
 }
 
 /**
- * Vote for one player to eliminate.
- * Nominees are determined at day end from mini game scores; votes for anyone count toward nominees.
+ * Submit casting votes (pointsMap: { targetUserId -> points } for each nominee).
+ * Nominees are determined at day end from mini game scores.
  */
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   const voterUserId = await getCurrentUserId(req);
@@ -16,8 +16,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   const gameId = params.id;
   const body = await req.json().catch(() => null);
-  const targetUserId = (body?.targetUserId ?? "").toString();
-  if (!targetUserId) return bad("targetUserId required");
+  const pointsMap = body?.pointsMap;
+  if (!pointsMap || typeof pointsMap !== "object") return bad("pointsMap required");
 
   const g = await prisma.game.findUnique({
     where: { id: gameId },
@@ -33,20 +33,37 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   });
   if (!gp || gp.status !== "ACTIVE") return bad("Not in this game", 403);
 
-  const targetGp = await prisma.gamePlayer.findUnique({
-    where: { gameId_userId: { gameId, userId: targetUserId } },
-    select: { status: true },
-  });
-  if (!targetGp || targetGp.status !== "ACTIVE") return bad("Target must be an active player", 400);
-  if (targetUserId === voterUserId) return bad("Cannot vote for yourself", 400);
-
   const dayNumber = g.roundNumber;
+  const day = await prisma.castingDayResult.findUnique({
+    where: { gameId_dayNumber: { gameId, dayNumber } },
+    select: { nomineeUserIds: true },
+  });
+  const nominees = new Set(day?.nomineeUserIds ?? []);
+  if (nominees.size === 0) return bad("No nominees for this day", 400);
+
+  const entries: { targetUserId: string; points: number }[] = [];
+  for (const [targetUserId, rawPoints] of Object.entries(pointsMap)) {
+    const tid = String(targetUserId).trim();
+    if (!tid || !nominees.has(tid)) continue;
+    const points = Number(rawPoints);
+    if (!Number.isFinite(points) || points < 0) continue;
+    if (tid === voterUserId) return bad("Cannot vote for yourself", 400);
+    const targetGp = await prisma.gamePlayer.findUnique({
+      where: { gameId_userId: { gameId, userId: tid } },
+      select: { status: true },
+    });
+    if (!targetGp || targetGp.status !== "ACTIVE") return bad(`Target ${tid} must be active`, 400);
+    entries.push({ targetUserId: tid, points });
+  }
+  if (entries.length === 0) return bad("No valid votes in pointsMap", 400);
 
   await prisma.$transaction(async (tx) => {
     await tx.castingVote.deleteMany({ where: { gameId, dayNumber, voterUserId } });
-    await tx.castingVote.create({
-      data: { gameId, dayNumber, voterUserId, targetUserId, points: 1 },
-    });
+    for (const { targetUserId, points } of entries) {
+      await tx.castingVote.create({
+        data: { gameId, dayNumber, voterUserId, targetUserId, points },
+      });
+    }
     await tx.gamePlayer.update({
       where: { gameId_userId: { gameId, userId: voterUserId } },
       data: { lastActiveAt: new Date() },

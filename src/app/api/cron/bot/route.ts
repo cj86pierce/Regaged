@@ -8,6 +8,7 @@ import { advanceFastingBotIfDue } from "@/lib/fastingBotAdvance";
 import { advanceCastingBotIfDue } from "@/lib/castingBotAdvance";
 import { tryStartFastingBotGame, tryStartCastingBotGame } from "@/lib/gameEngineBot";
 import { applyCastingsPeriodicDecay } from "@/lib/castingsPeriodicDecay";
+import { maybeSpawnCastingsDrops } from "@/lib/castingsDrops";
 
 function requireCronAuth(req: Request) {
   const secret = process.env.CRON_SECRET;
@@ -102,6 +103,14 @@ async function runBotTick() {
       await applyCastingsPeriodicDecay({ gameType: "CASTING_BOT" });
     } catch (e) {
       console.error("CASTING_BOT periodic decay failed", { err: String(e) });
+    }
+
+    for (const g of castingBotDue) {
+      try {
+        await maybeSpawnCastingsDrops(g.id);
+      } catch (e) {
+        console.error("CASTING_BOT drops failed", { gameId: g.id, err: String(e) });
+      }
     }
 
     return {

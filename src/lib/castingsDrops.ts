@@ -21,7 +21,7 @@ function shuffle<T>(arr: T[]) {
   return a;
 }
 
-async function spawnDrop(gameId: string, kind: "APPLE" | "KEY") {
+async function spawnDrop(gameId: string, kind: "APPLE" | "KEY", dayNumber = 0) {
   const systemUserId = await getSystemUserId();
 
   const options = shuffle(["POISON", "POISON", "POISON", "POISON", kind]) as ("APPLE" | "KEY" | "POISON")[];
@@ -30,7 +30,7 @@ async function spawnDrop(gameId: string, kind: "APPLE" | "KEY") {
     const ev = await tx.castingDropEvent.create({
       data: {
         gameId,
-        dayNumber: 0, // optional; you can change to game.roundNumber later
+        dayNumber,
         kind,
         messageId: "temp",
         options: {
@@ -71,22 +71,38 @@ export async function maybeSpawnCastingsDrops(gameId: string) {
       id: true,
       gameType: true,
       state: true,
+      roundNumber: true,
       castingLastAppleHourKey: true,
       castingLastKeyHourKey: true,
     },
   });
 
-  if (!g || g.gameType !== "CASTING") return;
-  if (g.state !== "ROUND_VOTE") return;
+  if (!g || (g.gameType !== "CASTING" && g.gameType !== "CASTING_BOT")) return;
+  if (g.gameType === "CASTING" && g.state !== "ROUND_VOTE") return;
+  if (g.gameType === "CASTING_BOT" && g.state !== "ROUND_NOMINATE" && g.state !== "ROUND_VOTE") return;
 
-  // 1 per hour max, per kind
-  if (g.castingLastAppleHourKey !== hk && Math.random() < APPLE_CHANCE_PER_HOUR) {
-    await spawnDrop(gameId, "APPLE");
-    await prisma.game.update({ where: { id: gameId }, data: { castingLastAppleHourKey: hk } });
+  const dayNum = g.roundNumber ?? 1;
+
+  // CASTING_BOT: guarantee 1 drop per day
+  if (g.gameType === "CASTING_BOT") {
+    const existingForDay = await prisma.castingDropEvent.findFirst({
+      where: { gameId, dayNumber: dayNum },
+      select: { id: true },
+    });
+    if (!existingForDay) {
+      const kind: "APPLE" | "KEY" = Math.random() < 0.6 ? "APPLE" : "KEY";
+      await spawnDrop(gameId, kind, dayNum);
+    }
+    return;
   }
 
-  if (g.castingLastKeyHourKey !== hk && Math.random() < KEY_CHANCE_PER_HOUR) {
-    await spawnDrop(gameId, "KEY");
+  // CASTING (12h days): probabilistic per hour
+  if (g.state !== "ROUND_VOTE") return;
+  if (g.castingLastAppleHourKey !== hk && Math.random() < APPLE_CHANCE_PER_HOUR) {
+    await spawnDrop(gameId, "APPLE", dayNum);
+    await prisma.game.update({ where: { id: gameId }, data: { castingLastAppleHourKey: hk } });
+  } else if (g.castingLastKeyHourKey !== hk && Math.random() < KEY_CHANCE_PER_HOUR) {
+    await spawnDrop(gameId, "KEY", dayNum);
     await prisma.game.update({ where: { id: gameId }, data: { castingLastKeyHourKey: hk } });
   }
 }

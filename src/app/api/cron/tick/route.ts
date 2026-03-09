@@ -159,6 +159,11 @@ async function runTick() {
         console.error("CASTING drops failed", { gameId: g.id, err: String(e) });
       }
     }
+    for (const g of castingBotDue) {
+      try { await maybeSpawnCastingsDrops(g.id); } catch (e) {
+        console.error("CASTING_BOT drops failed", { gameId: g.id, err: String(e) });
+      }
+    }
 
     try {
       await applyCastingsPeriodicDecay({ gameType: "CASTING" });

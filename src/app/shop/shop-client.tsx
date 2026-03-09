@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 
 type Me = { username: string; karma: number; tMoney: number; pMoney: number };
 
@@ -161,35 +162,55 @@ export default function ShopClient({
     }
   }
 
-  const ShopCategory = ({ label, desc, tabKey, emoji }: { label: string; desc: string; tabKey: "colors" | "items" | "auctions"; emoji: string }) => (
+  const ShopBanner = ({ label, desc, tabKey, accent }: { label: string; desc: string; tabKey: "colors" | "items" | "auctions"; accent: string }) => (
     <button
       onClick={() => setTab(tabKey)}
       style={{
-        display: "block",
+        display: "grid",
+        gridTemplateColumns: "180px 1fr",
+        gap: 0,
         width: "100%",
         textAlign: "left",
-        padding: 16,
-        borderRadius: 12,
         border: "1px solid var(--border)",
+        borderRadius: 12,
+        overflow: "hidden",
         background: tab === tabKey ? "var(--accent-bg)" : "var(--bg-card)",
         cursor: "pointer",
       }}
     >
-      <div style={{ fontWeight: 1000, fontSize: 18, color: "var(--brand)", marginBottom: 6 }}>{emoji} {label}</div>
-      <div style={{ fontSize: 12, opacity: 0.8, lineHeight: 1.4 }}>{desc}</div>
+      <div
+        style={{
+          width: 180,
+          height: 100,
+          background: accent,
+          display: "grid",
+          placeItems: "center",
+          fontSize: 32,
+          opacity: 0.9,
+        }}
+      >
+        {tabKey === "colors" && "🎨"}
+        {tabKey === "items" && "👕"}
+        {tabKey === "auctions" && "🔨"}
+      </div>
+      <div style={{ padding: 16, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+        <div style={{ fontWeight: 1000, fontSize: 18, color: "var(--brand)", marginBottom: 6 }}>{label}</div>
+        <div style={{ fontSize: 12, opacity: 0.8, lineHeight: 1.4 }}>{desc}</div>
+      </div>
     </button>
   );
 
   return (
     <main style={{ padding: 12 }}>
-      <h1 style={{ marginTop: 0, color: "var(--brand)" }}>Shops</h1>
-      <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 12 }}>Choose a section below.</div>
+      <h1 style={{ marginTop: 0, color: "var(--brand)", fontSize: 28 }}>Shops</h1>
+      <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 16 }}>Choose a section below.</div>
 
-      {/* Tengaged-style category cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 12, marginBottom: 16 }}>
-        <ShopCategory label="Color Levels Shop" desc="Obtain higher color levels for vote weight and game access." tabKey="colors" emoji="🎨" />
-        <ShopCategory label="Items" desc="Avatar items and cosmetics. (Coming soon)" tabKey="items" emoji="👕" />
-        <ShopCategory label="Auctions" desc="Bid on designs. Latest designs from the community." tabKey="auctions" emoji="🔨" />
+      {/* Tengaged-style 4 banners: left image area, right text */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16 }}>
+        <ShopBanner label="Game Shops" desc="Avatar items and cosmetics. (Coming soon)" tabKey="items" accent="linear-gradient(135deg,#ffd85a,#ffb703)" />
+        <ShopBanner label="Auctions" desc="Bid on designs. Latest designs from the community." tabKey="auctions" accent="linear-gradient(135deg,#e53935,#b71c1c)" />
+        <ShopBanner label="Color Levels Shop" desc="Obtain higher color levels for vote weight and game access." tabKey="colors" accent="linear-gradient(135deg,#8e24aa,#4a148c)" />
+        <ShopBanner label="Ads Shop" desc="Promotional tools. (Coming soon)" tabKey="items" accent="linear-gradient(135deg,#1e88e5,#0d47a1)" />
       </div>
 
       <div
@@ -229,7 +250,38 @@ export default function ShopClient({
       </div>
 
       {tab === "colors" && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }} className="shopColorGrid">
+        <>
+          {/* Tengaged-style banner header */}
+          <div
+            className="theme-sidebar-panel"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              padding: 14,
+              borderRadius: 12,
+              marginBottom: 12,
+              border: "1px solid var(--border)",
+            }}
+          >
+            <div style={{ fontWeight: 1000, fontSize: 18, color: "var(--brand)" }}>COLOR LEVELS SHOP</div>
+            <span
+              style={{
+                padding: "4px 10px",
+                borderRadius: 6,
+                background: "var(--brand)",
+                color: "#fff",
+                fontSize: 11,
+                fontWeight: 1000,
+              }}
+            >
+              SALE
+            </span>
+            <div style={{ marginLeft: "auto", fontSize: 12, opacity: 0.85 }}>
+              Items available <b>{levels.length}</b> Items are stock
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }} className="shopColorGrid">
           {levels
             .slice()
             .sort((a, b) => a.id - b.id)
@@ -297,7 +349,8 @@ export default function ShopClient({
                 </div>
               );
             })}
-        </div>
+          </div>
+        </>
       )}
 
       {tab === "items" && (
@@ -308,109 +361,150 @@ export default function ShopClient({
       )}
 
       {tab === "auctions" && (
-        <div className="theme-sidebar-panel" style={{ padding: 12, borderRadius: 12 }}>
-          <div style={{ fontWeight: 1000, marginBottom: 8 }}>Active auctions</div>
-          {auctionsLoading && <div style={{ fontSize: 12 }}>Loading auctions…</div>}
-          {auctionsError && (
-            <div style={{ fontSize: 12, color: "#b02a37", fontWeight: 900, marginBottom: 4 }}>
-              {auctionsError}
-            </div>
-          )}
-          {!auctionsLoading && auctions.length === 0 && (
-            <div style={{ fontSize: 12, opacity: 0.8 }}>No active auctions right now.</div>
-          )}
-          <div style={{ display: "grid", gap: 10, marginTop: 4 }}>
-            {auctions.map((a) => (
-              <div
-                key={a.id}
-                className="shopAuctionRow"
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "120px minmax(0, 1fr)",
-                  gap: 10,
-                  padding: 8,
-                  borderRadius: 10,
-                  border: "1px solid var(--border)",
-                  background: "var(--bg-card)",
-                }}
-              >
-                <div
-                  className="shopAuctionThumb"
-                  style={{
-                    width: 120,
-                    height: Math.round((120 * 230) / 200),
-                    borderRadius: 8,
-                    overflow: "hidden",
-                    border: "1px solid var(--border)",
-                    background: "var(--bg-input)",
-                  }}
-                >
-                  <img
-                    src={`/api/designs/${a.designId}/image`}
-                    alt={a.designTitle}
-                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                  />
+        <div className="shopAuctionsLayout" style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: 14 }}>
+          {/* Left: Designer earnings - Tengaged style */}
+          <div className="theme-sidebar-panel" style={{ padding: 12, borderRadius: 12, height: "fit-content" }}>
+            <div style={{ fontWeight: 1000, marginBottom: 10, color: "var(--brand)" }}>Designer earnings</div>
+            <div style={{ fontSize: 12, opacity: 0.8, lineHeight: 1.5 }}>
+              {auctions.length === 0 && !auctionsLoading ? (
+                <div style={{ opacity: 0.7 }}>No designer earnings yet.</div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {auctions.slice(0, 5).map((a) => (
+                    <div key={a.id}>
+                      <Link href={`/u/${encodeURIComponent(a.designAuthorUsername)}`} className="theme-username" style={{ textDecoration: "underline", fontSize: 12 }}>
+                        {a.designAuthorUsername}
+                      </Link>
+                      <span style={{ opacity: 0.85 }}> won </span>
+                      <b>{a.currentBid} T$</b>
+                      <span style={{ opacity: 0.85 }}> as designer in auction </span>
+                      <span style={{ opacity: 0.7 }}>recently</span>
+                    </div>
+                  ))}
                 </div>
-                <div style={{ display: "grid", gap: 4, alignContent: "space-between" }}>
-                  <div>
-                    <div style={{ fontWeight: 1000 }}>{a.designTitle}</div>
-                    <div style={{ fontSize: 11, opacity: 0.75 }}>
-                      by {a.designAuthorUsername} · ends{" "}
-                      {new Date(a.endsAt).toLocaleString(undefined, {
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </div>
-                    <div style={{ marginTop: 4, fontSize: 12, opacity: 0.9 }}>
-                      {a.designDescription}
-                    </div>
-                  </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right: Auction list - Tengaged style */}
+          <div className="theme-sidebar-panel" style={{ padding: 12, borderRadius: 12 }}>
+            <div style={{ fontWeight: 1000, fontSize: 16, marginBottom: 4 }}>Auctions for Avatar Outfits</div>
+            <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 12 }}>Latest Auctions</div>
+            {auctionsLoading && <div style={{ fontSize: 12 }}>Loading auctions…</div>}
+            {auctionsError && (
+              <div style={{ fontSize: 12, color: "#b02a37", fontWeight: 900, marginBottom: 4 }}>{auctionsError}</div>
+            )}
+            {!auctionsLoading && auctions.length === 0 && (
+              <div style={{ fontSize: 12, opacity: 0.8 }}>No active auctions right now.</div>
+            )}
+            <div style={{ display: "grid", gap: 10, marginTop: 4 }}>
+              {auctions.map((a) => {
+                const now = Date.now();
+                const end = new Date(a.endsAt).getTime();
+                const isClosed = end <= now;
+                const timeLeft = isClosed ? 0 : Math.max(0, Math.ceil((end - now) / 1000));
+                const fmtTime = (s: number) => {
+                  const h = Math.floor(s / 3600);
+                  const m = Math.floor((s % 3600) / 60);
+                  return `${h}h ${m}m`;
+                };
+                return (
                   <div
+                    key={a.id}
+                    className="shopAuctionRow"
                     style={{
-                      display: "flex",
-                      gap: 8,
+                      display: "grid",
+                      gridTemplateColumns: "100px minmax(0, 1fr) auto auto",
+                      gap: 12,
+                      padding: 10,
+                      borderRadius: 10,
+                      border: "1px solid var(--border)",
+                      background: "var(--bg-card)",
                       alignItems: "center",
-                      justifyContent: "flex-start",
-                      marginTop: 4,
                     }}
                   >
-                    <button
-                      onClick={() => bid(a.id, 1)}
+                    <div
+                      className="shopAuctionThumb"
                       style={{
-                        padding: "4px 8px",
+                        width: 100,
+                        height: Math.round((100 * 230) / 200),
                         borderRadius: 8,
-                        border: "1px solid rgba(0,0,0,0.15)",
-                        background: "linear-gradient(#ffd85a,#ffb703)",
-                        fontSize: 12,
-                        fontWeight: 900,
-                        cursor: "pointer",
+                        overflow: "hidden",
+                        border: "1px solid var(--border)",
+                        background: "var(--bg-input)",
                       }}
                     >
-                      Bid +1
-                    </button>
-                    <button
-                      onClick={() => bid(a.id, 5)}
-                      style={{
-                        padding: "4px 8px",
-                        borderRadius: 8,
-                        border: "1px solid rgba(0,0,0,0.15)",
-                        background: "linear-gradient(#ffd85a,#ffb703)",
-                        fontSize: 12,
-                        fontWeight: 900,
-                        cursor: "pointer",
-                      }}
-                    >
-                      Bid +5
-                    </button>
-                    <div style={{ fontSize: 12 }}>
-                      Current bid: <b>{a.currentBid}</b>
+                      <img
+                        src={`/api/designs/${a.designId}/image`}
+                        alt={a.designTitle}
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      />
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 1000, fontSize: 14 }}>{a.designTitle}</div>
+                      <div style={{ fontSize: 11, opacity: 0.75 }}>by {a.designAuthorUsername}</div>
+                      <div style={{ fontSize: 11, opacity: 0.85, marginTop: 4 }}>
+                        Current bid · {a.currentBid} T$
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "center", minWidth: 90 }}>
+                      <span
+                        style={{
+                          padding: "4px 8px",
+                          borderRadius: 6,
+                          fontSize: 11,
+                          fontWeight: 1000,
+                          background: isClosed ? "var(--bg-btn-disabled)" : "#e8f5e9",
+                          color: isClosed ? "var(--text-muted)" : "#2e7d32",
+                          border: "1px solid var(--border)",
+                        }}
+                      >
+                        {isClosed ? "CLOSED" : "OPEN"}
+                      </span>
+                      {!isClosed && (
+                        <div style={{ fontSize: 10, marginTop: 4, opacity: 0.85 }}>{fmtTime(timeLeft)} left</div>
+                      )}
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+                      <div style={{ fontSize: 14, fontWeight: 1000, color: "var(--brand)" }}>{a.currentBid} T$</div>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button
+                          onClick={() => bid(a.id, 1)}
+                          disabled={isClosed}
+                          style={{
+                            padding: "4px 8px",
+                            borderRadius: 6,
+                            border: "1px solid rgba(0,0,0,0.15)",
+                            background: "linear-gradient(#ffd85a,#ffb703)",
+                            fontSize: 11,
+                            fontWeight: 900,
+                            cursor: isClosed ? "not-allowed" : "pointer",
+                            opacity: isClosed ? 0.6 : 1,
+                          }}
+                        >
+                          Bid +1
+                        </button>
+                        <Link
+                          href={`/designs/${a.designId}`}
+                          style={{
+                            padding: "6px 12px",
+                            borderRadius: 8,
+                            border: "1px solid var(--border)",
+                            background: "var(--bg-card)",
+                            fontSize: 12,
+                            fontWeight: 800,
+                            textDecoration: "none",
+                            color: "var(--text-primary)",
+                          }}
+                        >
+                          See Auction
+                        </Link>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            ))}
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
