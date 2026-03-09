@@ -259,6 +259,22 @@ export default function GamePage({ params }: { params: { id: string } }) {
               {timeLeft !== null && <> · Ends in <b>{fmtHMS(timeLeft)}</b></>}
             </>
           )}
+          {isCasting && (
+            <a
+              href={`/game/${gameId}/challenge`}
+              style={{
+                padding: "6px 12px",
+                borderRadius: 8,
+                background: "var(--accent-bg)",
+                fontWeight: 1000,
+                textDecoration: "none",
+                color: "inherit",
+                border: "1px solid var(--border)",
+              }}
+            >
+              Competition →
+            </a>
+          )}
         </div>
       </div>
 
