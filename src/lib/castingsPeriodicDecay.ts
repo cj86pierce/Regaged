@@ -3,6 +3,7 @@
  * CASTING: runs every hour.
  * CASTING_BOT: runs every minute.
  */
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getSystemUserId } from "@/lib/systemUser";
 
@@ -35,7 +36,7 @@ export async function applyCastingsPeriodicDecay(options: {
   const now = new Date();
   const hk = hourKey(now);
 
-  const where: Parameters<typeof prisma.game.findMany>[0]["where"] =
+  const where: Prisma.GameWhereInput =
     options.gameType === "CASTING"
       ? {
           gameType: "CASTING",
