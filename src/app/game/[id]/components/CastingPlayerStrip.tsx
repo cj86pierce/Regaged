@@ -35,6 +35,7 @@ function placeSuffix(n: number) {
 }
 
 export default function CastingPlayerStrip(props: {
+  gameId: string;
   players: Player[];
   me: null | { checks: number; health: number; keys: number };
   gameState: string;
@@ -176,6 +177,24 @@ export default function CastingPlayerStrip(props: {
           <div style={{ marginTop: 12, fontSize: 11, opacity: 0.65, lineHeight: 1.35 }}>
             Castings: keys win. Ties: checks → health.
           </div>
+
+          <Link
+            href={`/game/${props.gameId}/challenge`}
+            style={{
+              display: "block",
+              marginTop: 12,
+              padding: "10px 14px",
+              borderRadius: 10,
+              border: "1px solid var(--border)",
+              background: "var(--accent-bg)",
+              fontWeight: 1000,
+              textAlign: "center",
+              textDecoration: "none",
+              color: "inherit",
+            }}
+          >
+            Competition →
+          </Link>
         </div>
       </div>
     </div>

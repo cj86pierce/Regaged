@@ -185,6 +185,13 @@
   }
 }
 
+/* Game page: stack chat + sidebar on tablet/mobile so Competition button is visible */
+@media (max-width: 900px) {
+  .gamePageGrid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 /* Right rail: hide earlier on tablet/mobile */
 @media (max-width: 900px) {
   .rightRail {

@@ -259,27 +259,12 @@ export default function GamePage({ params }: { params: { id: string } }) {
               {timeLeft !== null && <> · Ends in <b>{fmtHMS(timeLeft)}</b></>}
             </>
           )}
-          {isCasting && data.game.state !== "COMPLETED" && (
-            <a
-              href={`/game/${gameId}/challenge`}
-              style={{
-                padding: "6px 12px",
-                borderRadius: 8,
-                background: "var(--accent-bg)",
-                fontWeight: 1000,
-                textDecoration: "none",
-                color: "inherit",
-                border: "1px solid var(--border)",
-              }}
-            >
-              Competition
-            </a>
-          )}
         </div>
       </div>
 
       {isCasting ? (
         <CastingPlayerStrip
+          gameId={gameId}
           players={data.players}
           me={meStats ? { checks: meStats.checks, health: meStats.health, keys: meStats.keys } : null}
           gameState={data.game.state}
@@ -299,7 +284,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
         />
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 14, marginTop: 10, alignItems: "stretch", minHeight: 400 }}>
+      <div className="gamePageGrid" style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 14, marginTop: 10, alignItems: "stretch", minHeight: 400 }}>
         <div>
           <Tabs tab={tab} setTab={setTab} publicCount={data.pagination.totalCount} />
 
