@@ -3,6 +3,7 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 COPY package.json package-lock.json* ./
+COPY prisma ./prisma
 RUN npm ci
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
