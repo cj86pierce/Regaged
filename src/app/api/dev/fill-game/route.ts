@@ -1,20 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/getCurrentUserId";
-import bcrypt from "bcryptjs";
+import { fillGameWithBots } from "@/lib/botUsers";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 function bad(msg: string, status = 400) {
   return NextResponse.json({ error: msg }, { status });
-}
-
-function randStr(n = 8) {
-  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
-  let s = "";
-  for (let i = 0; i < n; i++) s += chars[Math.floor(Math.random() * chars.length)];
-  return s;
 }
 
 export async function GET() {
@@ -49,28 +42,7 @@ export async function POST(req: Request) {
     await prisma.gamePlayer.create({ data: { gameId, userId: meId, status: "ACTIVE" } });
   }
 
-  let current = await prisma.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
+  const added = await fillGameWithBots(gameId, maxPlayers);
 
-  while (current < maxPlayers) {
-    const uname = `bot_${randStr(7)}`;
-    const unameLower = uname.toLowerCase();
-    const email = `${unameLower}@regaged.local`;
-    const passwordHash = await bcrypt.hash("bot-password", 4);
-
-    const u = await prisma.user.create({
-      data: {
-        username: uname,
-        usernameLower: unameLower,
-        passwordHash,
-        email,
-        emailVerifiedAt: new Date(),
-      },
-      select: { id: true },
-    });
-
-    await prisma.gamePlayer.create({ data: { gameId, userId: u.id, status: "ACTIVE" } });
-    current++;
-  }
-
-  return NextResponse.json({ ok: true, gameId, filledTo: maxPlayers });
+  return NextResponse.json({ ok: true, gameId, filledTo: maxPlayers, added });
 }

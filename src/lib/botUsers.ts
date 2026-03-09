@@ -1,8 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
-/** Fixed pool: Bot_01 .. Bot_20. Run seed-bots or ensure these exist. */
-const BOT_USERNAMES = Array.from({ length: 20 }, (_, i) => `Bot_${String(i + 1).padStart(2, "0")}`);
+/** Fixed pool: Bot_01 .. Bot_40. Run seed-bots or ensure these exist. */
+const BOT_USERNAMES = Array.from({ length: 40 }, (_, i) => `Bot_${String(i + 1).padStart(2, "0")}`);
 
 /** Ensure a bot user exists. Create if not. Returns userId. */
 async function getOrCreateBot(uname: string): Promise<string> {
