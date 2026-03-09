@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import SystemMessageRenderer, { parseDropId } from "@/components/chat/SystemMessageRenderer";
 
 type Message = {
@@ -149,7 +150,7 @@ export default function CastingChatPanel(props: {
 
       {/* messages */}
       <div style={{ display: "grid", gap: 8 }}>
-        {messages.map((m) => {
+        {messages.map((m, idx) => {
           const dropId = parseDropId(m.body);
           const drop = dropId ? dropEvents[dropId] : null;
 
@@ -171,59 +172,58 @@ export default function CastingChatPanel(props: {
           // NORMAL message
           const busyReact = reacting[m.id] === true;
 
+          const disableReact = !meUserId || m.myReaction !== null || busyReact;
+          const net = m.plus - m.minus;
+          const rowBg = idx % 2 === 0 ? "var(--bg-msg)" : "var(--bg-btn-disabled)";
+
           return (
             <div
               key={m.id}
               className={m.isSystem ? "theme-chat-msg-sys" : "theme-chat-msg"}
-              style={{ border: "1px solid var(--border)", borderRadius: 12, padding: 10 }}
+              style={{ border: "1px solid var(--border)", borderRadius: 12, padding: 10, background: rowBg }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
-                <div className="theme-username">{m.username}</div>
-                <div style={{ fontSize: 11, opacity: 0.6 }}>{new Date(m.createdAt).toLocaleTimeString()}</div>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "baseline" }}>
+                <Link href={`/u/${encodeURIComponent(m.username.toLowerCase())}`} className="theme-username" style={{ fontWeight: 800 }}>{m.username}</Link>
+                <div style={{ fontSize: 11, opacity: 0.6 }}>{new Date(m.createdAt).toLocaleString()}</div>
               </div>
 
               <div style={{ marginTop: 6, display: "flex", gap: 10, alignItems: "flex-start" }}>
                 <div style={{ flex: 1, whiteSpace: "pre-wrap", fontSize: 13, color: "var(--text-game)" }}>{m.body}</div>
 
-                {/* reactions on the right, horizontal ✅ ❌ */}
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <button
-                    disabled={!meUserId || m.myReaction !== null || busyReact}
-                    onClick={() => safeReact(m.id, "PLUS")}
-                    style={{
-                      padding: "4px 8px",
-                      borderRadius: 10,
-                      border: "1px solid var(--border)",
-                      background: busyReact ? "var(--bg-btn-disabled)" : "var(--bg-card)",
-                      cursor: busyReact ? "not-allowed" : "pointer",
-                      fontWeight: 900,
-                      minWidth: 44,
-                      opacity: !meUserId ? 0.6 : 1,
-                    }}
-                    title="Plus"
-                  >
-                    ✅
-                  </button>
-
-                  <button
-                    disabled={!meUserId || m.myReaction !== null || busyReact}
-                    onClick={() => safeReact(m.id, "MINUS")}
-                    style={{
-                      padding: "4px 8px",
-                      borderRadius: 10,
-                      border: "1px solid var(--border)",
-                      background: busyReact ? "var(--bg-btn-disabled)" : "var(--bg-card)",
-                      cursor: busyReact ? "not-allowed" : "pointer",
-                      fontWeight: 900,
-                      minWidth: 44,
-                      opacity: !meUserId ? 0.6 : 1,
-                    }}
-                    title="Minus"
-                  >
-                    ❌
-                  </button>
-
-                  <div style={{ fontSize: 12, opacity: 0.7 }}>{m.plus - m.minus}</div>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+                  <div style={{ fontSize: 12, fontWeight: 1000 }}>{net >= 0 ? `+${net}` : `${net}`} points</div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button
+                      disabled={disableReact}
+                      onClick={() => safeReact(m.id, "PLUS")}
+                      title="Plus"
+                      style={{
+                        padding: "4px 8px",
+                        borderRadius: 6,
+                        border: "1px solid var(--border)",
+                        background: "var(--bg-card)",
+                        cursor: disableReact ? "not-allowed" : "pointer",
+                        opacity: disableReact ? 0.6 : 1,
+                      }}
+                    >
+                      ✅
+                    </button>
+                    <button
+                      disabled={disableReact}
+                      onClick={() => safeReact(m.id, "MINUS")}
+                      title="Minus"
+                      style={{
+                        padding: "4px 8px",
+                        borderRadius: 6,
+                        border: "1px solid var(--border)",
+                        background: "var(--bg-card)",
+                        cursor: disableReact ? "not-allowed" : "pointer",
+                        opacity: disableReact ? 0.6 : 1,
+                      }}
+                    >
+                      ❌
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

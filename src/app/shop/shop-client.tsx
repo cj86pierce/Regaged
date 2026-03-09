@@ -161,9 +161,36 @@ export default function ShopClient({
     }
   }
 
+  const ShopCategory = ({ label, desc, tabKey, emoji }: { label: string; desc: string; tabKey: "colors" | "items" | "auctions"; emoji: string }) => (
+    <button
+      onClick={() => setTab(tabKey)}
+      style={{
+        display: "block",
+        width: "100%",
+        textAlign: "left",
+        padding: 16,
+        borderRadius: 12,
+        border: "1px solid var(--border)",
+        background: tab === tabKey ? "var(--accent-bg)" : "var(--bg-card)",
+        cursor: "pointer",
+      }}
+    >
+      <div style={{ fontWeight: 1000, fontSize: 18, color: "var(--brand)", marginBottom: 6 }}>{emoji} {label}</div>
+      <div style={{ fontSize: 12, opacity: 0.8, lineHeight: 1.4 }}>{desc}</div>
+    </button>
+  );
+
   return (
     <main style={{ padding: 12 }}>
-      <h1 style={{ marginTop: 0 }}>Shop</h1>
+      <h1 style={{ marginTop: 0, color: "var(--brand)" }}>Shops</h1>
+      <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 12 }}>Choose a section below.</div>
+
+      {/* Tengaged-style category cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 12, marginBottom: 16 }}>
+        <ShopCategory label="Color Levels Shop" desc="Obtain higher color levels for vote weight and game access." tabKey="colors" emoji="🎨" />
+        <ShopCategory label="Items" desc="Avatar items and cosmetics. (Coming soon)" tabKey="items" emoji="👕" />
+        <ShopCategory label="Auctions" desc="Bid on designs. Latest designs from the community." tabKey="auctions" emoji="🔨" />
+      </div>
 
       <div
         className="theme-sidebar-panel"
@@ -178,7 +205,6 @@ export default function ShopClient({
         }}
       >
         <div className="theme-username" style={{ fontWeight: 1000 }}>{me.username}</div>
-
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <div style={{ padding: "6px 10px", borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg-currency)", color: "var(--text-primary)" }}>
             Karma: <b>{me.karma}</b>
@@ -203,7 +229,7 @@ export default function ShopClient({
       </div>
 
       {tab === "colors" && (
-        <div style={{ display: "grid", gap: 10 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }} className="shopColorGrid">
           {levels
             .slice()
             .sort((a, b) => a.id - b.id)
@@ -226,59 +252,41 @@ export default function ShopClient({
                   key={lvl.id}
                   className="shopColorRow"
                   style={{
-                    border: "1px solid rgba(0,0,0,0.12)",
+                    border: "1px solid var(--border)",
                     borderRadius: 12,
-                    padding: 12,
+                    padding: 14,
                     background: "var(--bg-card)",
-                    display: "grid",
-                    gridTemplateColumns: "1fr 160px",
-                    gap: 12,
+                    display: "flex",
+                    flexDirection: "column",
                     alignItems: "center",
                     opacity: isLockedByOrder ? 0.65 : 1,
                   }}
                 >
-                  <div>
-                    <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-                      {/* ✅ animated swatch */}
-                      <div
-                        className={`lvlSwatch ${tv ? "tvstar" : ""} ${lvl.isAnimated || tv ? "animated" : "static"}`}
-                        style={{ ["--lvl" as any]: sw }}
-                        title={lvl.name}
-                      />
-                      <div style={{ fontWeight: 1000, fontSize: 16 }}>
-                        {lvl.name} {(lvl.isAnimated || tv) ? "✨" : ""}
-                      </div>
+                  <div style={{ fontWeight: 1000, fontSize: 14, marginBottom: 8 }}>Level {lvl.name}</div>
+                  <div
+                    className={`lvlSwatch ${tv ? "tvstar" : ""} ${lvl.isAnimated || tv ? "animated" : "static"}`}
+                    style={{ ["--lvl" as any]: sw, width: 48, height: 48, borderRadius: 10, marginBottom: 10 }}
+                    title={lvl.name}
+                  />
+                  <div style={{ fontSize: 12, opacity: 0.9, marginBottom: 4 }}>Power: <b>{lvl.strength}</b></div>
+                  <div style={{ fontSize: 12, opacity: 0.9, marginBottom: 8 }}>Karma: <b>{lvl.karmaNeeded}</b></div>
+                  <div style={{ fontSize: 14, fontWeight: 1000, color: "var(--brand)", marginBottom: 10 }}>{lvl.priceT} R$</div>
+                  {lvl.id === 0 && <div style={{ fontSize: 11, color: "#198754", fontWeight: 800 }}>Default</div>}
+                  {has && lvl.id !== 0 && <div style={{ fontSize: 11, color: "#198754", fontWeight: 800 }}>Owned</div>}
+                  {!has && isLockedByOrder && <div style={{ fontSize: 11, color: "#b02a37", fontWeight: 800 }}>Locked</div>}
+                  {!has && isNext && (!canKarma || !canMoney) && (
+                    <div style={{ fontSize: 11, color: "#b02a37", fontWeight: 800, marginBottom: 4 }}>
+                      {canKarma ? "" : "Need karma. "}{canMoney ? "" : "Need R$."}
                     </div>
-
-                    <div style={{ marginTop: 6, fontSize: 12, opacity: 0.85 }}>
-                      Requires <b>{lvl.karmaNeeded}</b> karma · Costs <b>{lvl.priceT}</b> R$ · Strength <b>{lvl.strength}</b>
-                    </div>
-
-                    {lvl.id === 0 && <div style={{ marginTop: 6, fontSize: 12, fontWeight: 1000, color: "#198754" }}>Default</div>}
-                    {has && lvl.id !== 0 && <div style={{ marginTop: 6, fontSize: 12, fontWeight: 1000, color: "#198754" }}>Owned</div>}
-
-                    {!has && isLockedByOrder && (
-                      <div style={{ marginTop: 6, fontSize: 12, fontWeight: 900, color: "#b02a37" }}>
-                        Locked — buy levels in order.
-                      </div>
-                    )}
-
-                    {!has && isNext && (!canKarma || !canMoney) && (
-                      <div style={{ marginTop: 6, fontSize: 12, fontWeight: 900, color: "#b02a37" }}>
-                        {canKarma ? "" : "Not enough karma. "}
-                        {canMoney ? "" : "Not enough R$."}
-                      </div>
-                    )}
-                  </div>
-
+                  )}
                   <button
                     disabled={!canBuy}
                     onClick={() => buyColor(lvl.id)}
                     style={{
-                      width: 160,
-                      padding: "10px 12px",
+                      width: "100%",
+                      padding: "8px 12px",
                       borderRadius: 10,
-                      border: "1px solid rgba(0,0,0,0.15)",
+                      border: "1px solid var(--border)",
                       background: canBuy ? "var(--btn-primary-bg)" : "var(--bg-btn-disabled)",
                       fontWeight: 1000,
                       cursor: canBuy ? "pointer" : "not-allowed",

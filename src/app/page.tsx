@@ -92,6 +92,22 @@ export default async function HomePage() {
             </div>
           </div>
 
+          {/* Tengaged-style shop panels */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10, marginTop: 12 }}>
+            <Link href="/shop?tab=colors" style={{ padding: 12, borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg-card)", textDecoration: "none", color: "inherit", textAlign: "center" }}>
+              <div style={{ fontWeight: 1000, fontSize: 12 }}>Color Shop</div>
+              <div style={{ marginTop: 4, fontSize: 11, opacity: 0.8 }}>Level up</div>
+            </Link>
+            <Link href="/shop?tab=auctions" style={{ padding: 12, borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg-card)", textDecoration: "none", color: "inherit", textAlign: "center" }}>
+              <div style={{ fontWeight: 1000, fontSize: 12 }}>Auctions</div>
+              <div style={{ marginTop: 4, fontSize: 11, opacity: 0.8 }}>Bid on designs</div>
+            </Link>
+            <Link href="/enroll" style={{ padding: 12, borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg-card)", textDecoration: "none", color: "inherit", textAlign: "center" }}>
+              <div style={{ fontWeight: 1000, fontSize: 12 }}>Enroll</div>
+              <div style={{ marginTop: 4, fontSize: 11, opacity: 0.8 }}>Join a game</div>
+            </Link>
+          </div>
+
           {/* Simple banner - dark in both themes, red tint in dark mode */}
           <div
             className="home-banner"

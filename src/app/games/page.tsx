@@ -13,9 +13,11 @@ export default async function GamesPage() {
 
   return (
     <main style={{ padding: 12 }} className="gamesPage">
-      <h1 style={{ marginTop: 0 }}>Games</h1>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: 16, alignItems: "start" }} className="gamesPageLayout">
+      <div>
+      <h1 style={{ marginTop: 0, color: "var(--brand)" }}>Latest Regaged Games</h1>
 
-      <div style={{ marginBottom: 10, fontSize: 12, opacity: 0.75 }}>
+      <div style={{ marginBottom: 12, fontSize: 12, opacity: 0.75 }}>
         Anyone can spectate. Only players in a game can act.
       </div>
 
@@ -51,6 +53,17 @@ export default async function GamesPage() {
             No active games right now.
           </div>
         )}
+      </div>
+      </div>
+
+      {/* Tengaged-style right sidebar */}
+      <div className="theme-sidebar-panel" style={{ padding: 12, borderRadius: 12, border: "1px solid var(--border)" }}>
+        <div style={{ fontWeight: 1000, marginBottom: 10, color: "var(--brand)" }}>Enroll in a game</div>
+        <p style={{ fontSize: 12, opacity: 0.85, marginBottom: 12 }}>Join a Fastings or Castings game and compete.</p>
+        <a href="/enroll" className="theme-btn-primary" style={{ display: "block", textAlign: "center", textDecoration: "none", padding: 12, borderRadius: 10 }}>
+          Enroll →
+        </a>
+      </div>
       </div>
     </main>
   );

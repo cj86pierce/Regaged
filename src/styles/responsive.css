@@ -76,13 +76,15 @@
   }
 }
 
-/* Shop: color level and auction rows stack on mobile */
+/* Shop: color level grid and auction rows stack on mobile */
 @media (max-width: 640px) {
-  .shopColorRow {
+  .shopColorGrid {
     grid-template-columns: 1fr !important;
   }
-  .shopColorRow button {
-    width: 100% !important;
+  .shopColorRow {
+    max-width: 280px;
+    margin: 0 auto;
+    width: 100%;
   }
   .shopAuctionRow {
     grid-template-columns: 1fr !important;
@@ -99,6 +101,9 @@
 @media (max-width: 640px) {
   .gamesPage {
     padding: 10px !important;
+  }
+  .gamesPageLayout {
+    grid-template-columns: 1fr !important;
   }
   .gamesListItem {
     grid-template-columns: 1fr !important;
@@ -188,6 +193,9 @@
 /* Game page: stack chat + sidebar on tablet/mobile so Competition button is visible */
 @media (max-width: 900px) {
   .gamePageGrid {
+    grid-template-columns: 1fr !important;
+  }
+  .blogsLayout {
     grid-template-columns: 1fr !important;
   }
 }

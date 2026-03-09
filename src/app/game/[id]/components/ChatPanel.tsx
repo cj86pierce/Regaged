@@ -131,7 +131,7 @@ export default function ChatPanel(props: {
 
       {/* Feed */}
       <div className="theme-chat-feed">
-        {messages.map((m) => {
+        {messages.map((m, idx) => {
           const sys = m.isSystem;
 
           if (sys) {
@@ -153,7 +153,7 @@ export default function ChatPanel(props: {
           const disableReact = isMine || alreadyReacted;
 
           const net = m.plus - m.minus;
-          const msgBg = isFlashing(m.id) ? "var(--bg-msg-system)" : "var(--bg-msg)";
+          const msgBg = isFlashing(m.id) ? "var(--bg-msg-system)" : (idx % 2 === 0 ? "var(--bg-msg)" : "var(--bg-btn-disabled)");
 
           return (
             <div
@@ -180,16 +180,39 @@ export default function ChatPanel(props: {
 
               <div style={{ fontSize: 14, color: "var(--text-game)" }}>{m.body}</div>
 
-              <div style={{ textAlign: "right" }}>
+              <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
                 <div style={{ fontSize: 12, fontWeight: 1000, opacity: 0.85 }}>
-                  {net >= 0 ? `+${net}` : `${net}`}
+                  {net >= 0 ? `+${net}` : `${net}`} points
                 </div>
-
-                <div style={{ marginTop: 6, display: "flex", justifyContent: "flex-end", gap: 6 }}>
-                  <button disabled={disableReact} onClick={() => onReact(m.id, "PLUS")} title={disableReact ? "Locked" : "✅ +1"}>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button
+                    disabled={disableReact}
+                    onClick={() => onReact(m.id, "PLUS")}
+                    title={disableReact ? "Locked" : "✅ +1"}
+                    style={{
+                      padding: "4px 8px",
+                      borderRadius: 6,
+                      border: "1px solid var(--border)",
+                      background: "var(--bg-card)",
+                      cursor: disableReact ? "not-allowed" : "pointer",
+                      opacity: disableReact ? 0.6 : 1,
+                    }}
+                  >
                     ✅
                   </button>
-                  <button disabled={disableReact} onClick={() => onReact(m.id, "MINUS")} title={disableReact ? "Locked" : "❌ -1"}>
+                  <button
+                    disabled={disableReact}
+                    onClick={() => onReact(m.id, "MINUS")}
+                    title={disableReact ? "Locked" : "❌ -1"}
+                    style={{
+                      padding: "4px 8px",
+                      borderRadius: 6,
+                      border: "1px solid var(--border)",
+                      background: "var(--bg-card)",
+                      cursor: disableReact ? "not-allowed" : "pointer",
+                      opacity: disableReact ? 0.6 : 1,
+                    }}
+                  >
                     ❌
                   </button>
                 </div>
