@@ -93,7 +93,7 @@ function parseLegacySystemRows(body: string): { kind: "NOM" | "EVICT"; rows: Leg
 
 /** Parse drop event ID from body (legacy [CASTDROP:...]) */
 export function parseDropId(body: string): string | null {
-  const m = /^\[CASTDROP:([a-z0-9]+)\]$/i.exec((body ?? "").trim());
+  const m = /\[CASTDROP:([a-z0-9_-]+)\]/i.exec((body ?? "").trim());
   return m ? m[1] : null;
 }
 
@@ -131,7 +131,8 @@ export default function SystemMessageRenderer(props: Props) {
 
   // 2. Legacy drop ([CASTDROP:...])
   const dropId = parseDropId(body);
-  if (dropId && dropEvent) {
+  if (dropId) {
+    if (dropEvent) {
     const claimed = !!dropEvent.claimedAt;
     const busy = claiming[dropId] === true;
     return (
@@ -163,6 +164,13 @@ export default function SystemMessageRenderer(props: Props) {
         {!meUserId && !claimed && (
           <div style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}>Login to claim.</div>
         )}
+      </SysMsgCard>
+    );
+    }
+    // dropId present but no dropEvent - show drop card, avoid raw text
+    return (
+      <SysMsgCard title="Drop" createdAt={createdAt}>
+        <div style={{ fontSize: 12, opacity: 0.75 }}>Refresh the page to load this drop.</div>
       </SysMsgCard>
     );
   }

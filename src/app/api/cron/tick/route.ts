@@ -170,6 +170,11 @@ async function runTick() {
     } catch (e) {
       console.error("CASTING periodic decay failed", { err: String(e) });
     }
+    try {
+      await applyCastingsPeriodicDecay({ gameType: "CASTING_BOT" });
+    } catch (e) {
+      console.error("CASTING_BOT periodic decay failed", { err: String(e) });
+    }
 
     // Day-end decay is inside runCastingsDayChangeIfDue.
     // applyCastingHealthDecay only runs for legacy/stuck games if needed.

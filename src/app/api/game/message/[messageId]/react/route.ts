@@ -3,6 +3,7 @@ import { getCurrentUserId } from "@/lib/getCurrentUserId";
 import { prisma } from "@/lib/prisma";
 import { isSystemUser } from "@/lib/systemUser";
 import { touchUser } from "@/lib/touchUser";
+import { trySpawnCarePackage } from "@/lib/castingsDrops";
 
 function bad(msg: string, status = 400) {
   return NextResponse.json({ error: msg }, { status });
@@ -70,6 +71,19 @@ export async function POST(req: Request, { params }: { params: { messageId: stri
   });
 
   await touchUser(userId);
+
+  // Care package: message author (msg.userId) earns checks. Check if they crossed 3000.
+  if (result) {
+    const receiver = await prisma.gamePlayer.findUnique({
+      where: { gameId_userId: { gameId: msg.gameId, userId: msg.userId } },
+      select: { plusCount: true, minusCount: true },
+    });
+    if (receiver) {
+      try {
+        await trySpawnCarePackage(msg.gameId, msg.userId, receiver.plusCount, receiver.minusCount);
+      } catch {}
+    }
+  }
 
   return NextResponse.json({ ok: true, ...result });
 }

@@ -101,10 +101,40 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     { eventId: string; claimedAt: string | null; options: { slotIndex: number; kind: "APPLE" | "KEY" | "POISON" }[] }
   > = {};
 
-  if (game.gameType === "CASTING") {
+  let carePackages: Array<{
+    eventId: string;
+    claimedAt: string | null;
+    options: { slotIndex: number; kind: "APPLE" | "KEY" | "POISON" }[];
+  }> = [];
+
+  if ((game.gameType === "CASTING" || game.gameType === "CASTING_BOT") && meUserId) {
+    const cp = await prisma.castingDropEvent.findMany({
+      where: {
+        gameId,
+        dropType: "CARE_PACKAGE",
+        recipientUserId: meUserId,
+        claimedAt: null,
+      },
+      select: {
+        id: true,
+        claimedAt: true,
+        options: { select: { slotIndex: true, kind: true } },
+      },
+      orderBy: { createdAt: "asc" },
+    });
+    carePackages = cp.map((ev) => ({
+      eventId: ev.id,
+      claimedAt: ev.claimedAt ? ev.claimedAt.toISOString() : null,
+      options: ev.options
+        .map((o) => ({ slotIndex: o.slotIndex, kind: o.kind as "APPLE" | "KEY" | "POISON" }))
+        .sort((a, b) => a.slotIndex - b.slotIndex),
+    }));
+  }
+
+  if (game.gameType === "CASTING" || game.gameType === "CASTING_BOT") {
     const dropIds = messagesRaw
       .map((m) => {
-        const mm = /^\[CASTDROP:([a-z0-9]+)\]$/i.exec(m.body.trim());
+        const mm = /\[CASTDROP:([a-z0-9_-]+)\]/i.exec(m.body.trim());
         return mm ? mm[1] : null;
       })
       .filter((x): x is string => !!x);
@@ -120,10 +150,13 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       });
 
       for (const ev of events) {
+        const opts = ev.options
+          .map((o) => ({ slotIndex: o.slotIndex, kind: o.kind as "APPLE" | "KEY" | "POISON" }))
+          .sort((a, b) => a.slotIndex - b.slotIndex);
         dropEvents[ev.id] = {
           eventId: ev.id,
           claimedAt: ev.claimedAt ? ev.claimedAt.toISOString() : null,
-          options: ev.options.map((o) => ({ slotIndex: o.slotIndex, kind: o.kind as any })),
+          options: opts,
         };
       }
     }
@@ -197,6 +230,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
     // CASTING helpers
     dropEvents,
+    carePackages,
     casting: {
       nominees: castingNominees,
       myVoted: castingMyVoted,

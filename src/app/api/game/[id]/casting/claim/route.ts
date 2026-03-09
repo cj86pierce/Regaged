@@ -40,6 +40,10 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     if (!ev || ev.gameId !== gameId) return bad("Drop not found", 404);
     if (ev.claimedAt) return bad("Already claimed", 409);
 
+    if (ev.dropType === "CARE_PACKAGE") {
+      if (ev.recipientUserId !== userId) return bad("This care package is not for you", 403);
+    }
+
     const opt = ev.options.find((o) => o.slotIndex === slotIndex);
     if (!opt) return bad("Invalid choice");
 
@@ -79,7 +83,6 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         });
       }
 
-      // ✅ delete the chat message so the claim is secret if nobody saw it
       if (ev.messageId) {
         await tx.gameMessage.delete({ where: { id: ev.messageId } }).catch(() => {});
       }

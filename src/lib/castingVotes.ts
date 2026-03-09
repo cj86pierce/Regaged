@@ -110,6 +110,12 @@ export async function resolveCastingEviction(gameId: string) {
     evicted = rankedByPoints.slice(0, ev).map((x) => x.id);
   }
 
+  const evictedUsers = await prisma.user.findMany({
+    where: { id: { in: evicted } },
+    select: { id: true, username: true },
+  });
+  const evictedNames = evicted.map((id) => evictedUsers.find((u) => u.id === id)?.username ?? id);
+
   await prisma.$transaction(async (tx) => {
     for (const u of evicted) {
       await tx.gamePlayer.update({
@@ -126,8 +132,11 @@ export async function resolveCastingEviction(gameId: string) {
       where: { gameId_dayNumber: { gameId, dayNumber: dayNum } },
       data: { evictedUserIds: evicted },
     });
+    const deathLine = evictedNames.length === 1
+      ? `${evictedNames[0]} has been voted out.`
+      : `${evictedNames.join(", ")} have been voted out.`;
     await tx.gameMessage.create({
-      data: { gameId, userId: sysId, channel: "PUBLIC", body: `[SYSTEM] Day ${dayNum} resolved.` },
+      data: { gameId, userId: sysId, channel: "PUBLIC", body: `[SYSTEM] ${deathLine}\nDay ${dayNum} resolved.` },
     });
   });
 

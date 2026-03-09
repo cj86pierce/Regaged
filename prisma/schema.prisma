@@ -43,6 +43,11 @@ enum CastingDropKind {
   KEY
 }
 
+enum CastingDropType {
+  NORMAL
+  CARE_PACKAGE
+}
+
 enum CastingDropOptionKind {
   APPLE
   KEY
@@ -56,7 +61,9 @@ model CastingDropEvent {
   kind      CastingDropKind
   createdAt DateTime        @default(now())
 
-  messageId String @unique
+  dropType         CastingDropType @default(NORMAL)
+  recipientUserId  String?         // CARE_PACKAGE: only this user can see/claim
+  messageId        String?         @unique // NORMAL: chat message; CARE_PACKAGE: null
 
   claimedByUserId String?
   claimedAt       DateTime?
@@ -66,6 +73,7 @@ model CastingDropEvent {
 
   @@index([gameId, dayNumber, createdAt])
   @@index([gameId, claimedAt])
+  @@index([gameId, recipientUserId, claimedAt])
 }
 
 model CastingDropOption {
@@ -438,6 +446,8 @@ model GamePlayer {
   keys   Int @default(0)
 
   castingDayMiniGameScore Int @default(0)
+
+  lastCarePackageAtChecks Int @default(0)
 
   castingLastDecayAt       DateTime?
   castingHealthGainedToday Int       @default(0)

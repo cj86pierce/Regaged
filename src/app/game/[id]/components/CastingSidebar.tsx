@@ -1,6 +1,7 @@
 "use client";
 
 import CastingVoteBox from "./CastingVoteBox";
+import CarePackagePanel from "./CarePackagePanel";
 
 type Message = {
   id: string;
@@ -15,11 +16,13 @@ export default function CastingSidebar(props: {
   state: string;
   dayNumber: number;
 
-  // vote
   nominees: { userId: string; username: string }[];
   onSavedVotes: () => Promise<void>;
 
   messages: Message[];
+  carePackages?: Array<{ eventId: string; claimedAt: string | null; options: { slotIndex: number; kind: "APPLE" | "KEY" | "POISON" }[] }>;
+  onReload?: () => Promise<void>;
+  meUserId?: string | null;
 }) {
   const showVote = props.state === "ROUND_VOTE" && props.nominees.length >= 3;
 
@@ -33,6 +36,16 @@ export default function CastingSidebar(props: {
         minHeight: 0,
       }}
     >
+      {/* CARE PACKAGES */}
+      {props.carePackages && props.carePackages.length > 0 && props.onReload && (
+        <CarePackagePanel
+          gameId={props.gameId}
+          carePackages={props.carePackages}
+          onClaimed={props.onReload}
+          meUserId={props.meUserId ?? null}
+        />
+      )}
+
       {/* VOTE */}
       {showVote && (
         <div style={{ flexShrink: 0 }}>
@@ -53,8 +66,8 @@ export default function CastingSidebar(props: {
         <div style={{ fontSize: 12, opacity: 0.8, lineHeight: 1.35 }}>
           <b>Castings</b> runs in 12-hour days.<br />
           Play the mini game—lower score = more likely to be nominated.<br />
-          Drops (🍎 / 🔑 / 🧪) appear in chat and are first-come first-serve.<br />
-          Nominees are the 3 lowest mini-game scores, then everyone votes.<br />
+          Public drops appear in chat (center slot = reward).<br />
+          Every 3000 checks = private care package (see above).<br />
           Final 4 is decided by <b>health → keys → checks</b>.
         </div>
       </div>

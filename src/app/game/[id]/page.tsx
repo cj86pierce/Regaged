@@ -51,6 +51,11 @@ type GameState = {
   messages: Message[];
   pagination: { page: number; pageSize: number; totalPages: number; totalCount: number };
   dropEvents?: DropEventsMap;
+  carePackages?: Array<{
+    eventId: string;
+    claimedAt: string | null;
+    options: { slotIndex: number; kind: "APPLE" | "KEY" | "POISON" }[];
+  }>;
   casting?: { nominees: string[]; myVoted: boolean };
 };
 
@@ -345,6 +350,9 @@ export default function GamePage({ params }: { params: { id: string } }) {
     })}
     onSavedVotes={load}
     messages={data.messages}
+    carePackages={data.carePackages ?? []}
+    onReload={load}
+    meUserId={data.meUserId}
   />
   </div>
 ) : (
