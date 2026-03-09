@@ -259,23 +259,22 @@ export default function GamePage({ params }: { params: { id: string } }) {
               {timeLeft !== null && <> · Ends in <b>{fmtHMS(timeLeft)}</b></>}
             </>
           )}
-          {isCasting &&
-            (data.game.state === "ROUND_VOTE" || data.game.state === "ROUND_NOMINATE") && (
-              <a
-                href={`/game/${gameId}/challenge`}
-                style={{
-                  padding: "6px 12px",
-                  borderRadius: 8,
-                  background: "var(--accent-bg)",
-                  fontWeight: 1000,
-                  textDecoration: "none",
-                  color: "inherit",
-                  border: "1px solid var(--border)",
-                }}
-              >
-                Competition
-              </a>
-            )}
+          {isCasting && data.game.state !== "COMPLETED" && (
+            <a
+              href={`/game/${gameId}/challenge`}
+              style={{
+                padding: "6px 12px",
+                borderRadius: 8,
+                background: "var(--accent-bg)",
+                fontWeight: 1000,
+                textDecoration: "none",
+                color: "inherit",
+                border: "1px solid var(--border)",
+              }}
+            >
+              Competition
+            </a>
+          )}
         </div>
       </div>
 
@@ -300,7 +299,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
         />
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 14, marginTop: 10 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 14, marginTop: 10, alignItems: "stretch", minHeight: 400 }}>
         <div>
           <Tabs tab={tab} setTab={setTab} publicCount={data.pagination.totalCount} />
 
@@ -350,6 +349,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
         </div>
 
         {isCasting ? (
+  <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
   <CastingSidebar
     gameId={gameId}
     state={data.game.state}
@@ -364,6 +364,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
     onSavedVotes={load}
     messages={data.messages}
   />
+  </div>
 ) : (
   <Sidebar
     gameState={data.game.state}

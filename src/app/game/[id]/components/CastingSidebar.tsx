@@ -32,46 +32,60 @@ export default function CastingSidebar(props: {
     props.state === "ROUND_VOTE" || props.state === "ROUND_NOMINATE";
 
   return (
-    <div style={{ display: "grid", gap: 12 }}>
-      {/* COMPETITION LINK + MINI GAME */}
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 12,
+        height: "100%",
+        minHeight: 0,
+      }}
+    >
+      {/* COMPETITION - always visible */}
+      <Link
+        href={`/game/${props.gameId}/challenge`}
+        style={{
+          display: "block",
+          padding: "10px 14px",
+          borderRadius: 10,
+          border: "1px solid var(--border)",
+          background: "var(--accent-bg)",
+          fontWeight: 1000,
+          textAlign: "center",
+          textDecoration: "none",
+          color: "inherit",
+          flexShrink: 0,
+        }}
+      >
+        Competition →
+      </Link>
+
+      {/* MINI GAME - when playable */}
       {showMiniGame && (
-        <>
-          <Link
-            href={`/game/${props.gameId}/challenge`}
-            style={{
-              display: "block",
-              padding: "10px 14px",
-              borderRadius: 10,
-              border: "1px solid var(--border)",
-              background: "var(--accent-bg)",
-              fontWeight: 1000,
-              textAlign: "center",
-              textDecoration: "none",
-              color: "inherit",
-            }}
-          >
-            Competition →
-          </Link>
-          <CastingMiniGame
+        <CastingMiniGame
           gameId={props.gameId}
           meUserId={props.meUserId}
           myScore={props.myMiniGameScore}
           onSubmitScore={props.onRefresh}
         />
-        </>
       )}
 
       {/* VOTE */}
       {showVote && (
+        <div style={{ flexShrink: 0 }}>
         <CastingVoteBox
           gameId={props.gameId}
           nominees={props.nominees}
           onSaved={props.onSavedVotes}
         />
+        </div>
       )}
 
       {/* READ THIS */}
-      <div className="theme-sidebar-panel" style={{ borderRadius: 12, padding: 12 }}>
+      <div
+        className="theme-sidebar-panel"
+        style={{ borderRadius: 12, padding: 12, flexShrink: 0 }}
+      >
         <div style={{ fontWeight: 1000, marginBottom: 8 }}>Read this</div>
         <div style={{ fontSize: 12, opacity: 0.8, lineHeight: 1.35 }}>
           <b>Castings</b> runs in 12-hour days.<br />
@@ -82,9 +96,19 @@ export default function CastingSidebar(props: {
         </div>
       </div>
 
-      {/* STORY */}
-      <div className="theme-sidebar-panel" style={{ padding: 12, maxHeight: 260, overflowY: "auto" }}>
-        <div style={{ fontWeight: 1000, marginBottom: 8 }}>Story</div>
+      {/* STORY - stretches to fill */}
+      <div
+        className="theme-sidebar-panel"
+        style={{
+          padding: 12,
+          flex: 1,
+          minHeight: 120,
+          overflowY: "auto",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <div style={{ fontWeight: 1000, marginBottom: 8, flexShrink: 0 }}>Story</div>
 
         {/* show recent system lines as “story” */}
         <div style={{ display: "grid", gap: 8 }}>
