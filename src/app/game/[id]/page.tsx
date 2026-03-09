@@ -339,9 +339,6 @@ export default function GamePage({ params }: { params: { id: string } }) {
     gameId={gameId}
     state={data.game.state}
     dayNumber={data.game.roundNumber}
-    meUserId={data.meUserId}
-    myMiniGameScore={meStats?.castingDayMiniGameScore ?? 0}
-    onRefresh={load}
     nominees={(data.casting?.nominees ?? []).map((id) => {
       const p = data.players.find((x) => x.userId === id);
       return { userId: id, username: p?.username ?? id };

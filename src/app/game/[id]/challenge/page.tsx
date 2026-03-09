@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import CastingMiniGame from "../components/CastingMiniGame";
+import { pickMinigameForDay } from "@/lib/minigamePicker";
+import EmojiMatchingGame from "../components/minigames/EmojiMatchingGame";
+import EmojiMatch3Game from "../components/minigames/EmojiMatch3Game";
 
 export default function ChallengePage() {
   const params = useParams();
@@ -14,6 +16,7 @@ export default function ChallengePage() {
     myScore: number;
     gameType: string;
     state: string;
+    roundNumber: number;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,6 +34,7 @@ export default function ChallengePage() {
       myScore: me?.castingDayMiniGameScore ?? 0,
       gameType: json.game?.gameType ?? "",
       state: json.game?.state ?? "",
+      roundNumber: json.game?.roundNumber ?? 1,
     });
   }
 
@@ -42,6 +46,7 @@ export default function ChallengePage() {
     data?.gameType === "CASTING" || data?.gameType === "CASTING_BOT";
   const canPlay =
     data?.state === "ROUND_VOTE" || data?.state === "ROUND_NOMINATE";
+  const minigame = data ? pickMinigameForDay(gameId, data.roundNumber) : null;
 
   if (error)
     return (
@@ -74,13 +79,28 @@ export default function ChallengePage() {
         </div>
       )}
 
-      {isCasting && canPlay && data && (
-        <CastingMiniGame
-          gameId={gameId}
-          meUserId={data.meUserId}
-          myScore={data.myScore}
-          onSubmitScore={load}
-        />
+      {isCasting && canPlay && data && minigame && (
+        <>
+          <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 8 }}>
+            Day {data.roundNumber} challenge: {minigame === "matching" ? "Match the emojis" : "Match 3"}
+          </div>
+          {minigame === "matching" && (
+            <EmojiMatchingGame
+              gameId={gameId}
+              meUserId={data.meUserId}
+              myScore={data.myScore}
+              onSubmitScore={load}
+            />
+          )}
+          {minigame === "match3" && (
+            <EmojiMatch3Game
+              gameId={gameId}
+              meUserId={data.meUserId}
+              myScore={data.myScore}
+              onSubmitScore={load}
+            />
+          )}
+        </>
       )}
 
       {!data && <p>Loading…</p>}

@@ -1,7 +1,6 @@
 "use client";
 
 import CastingVoteBox from "./CastingVoteBox";
-import CastingMiniGame from "./CastingMiniGame";
 
 type Message = {
   id: string;
@@ -16,10 +15,6 @@ export default function CastingSidebar(props: {
   state: string;
   dayNumber: number;
 
-  meUserId: string | null;
-  myMiniGameScore: number;
-  onRefresh: () => Promise<void>;
-
   // vote
   nominees: { userId: string; username: string }[];
   onSavedVotes: () => Promise<void>;
@@ -27,8 +22,6 @@ export default function CastingSidebar(props: {
   messages: Message[];
 }) {
   const showVote = props.state === "ROUND_VOTE" && props.nominees.length >= 3;
-  const showMiniGame =
-    props.state === "ROUND_VOTE" || props.state === "ROUND_NOMINATE";
 
   return (
     <div
@@ -40,16 +33,6 @@ export default function CastingSidebar(props: {
         minHeight: 0,
       }}
     >
-      {/* MINI GAME - when playable */}
-      {showMiniGame && (
-        <CastingMiniGame
-          gameId={props.gameId}
-          meUserId={props.meUserId}
-          myScore={props.myMiniGameScore}
-          onSubmitScore={props.onRefresh}
-        />
-      )}
-
       {/* VOTE */}
       {showVote && (
         <div style={{ flexShrink: 0 }}>
