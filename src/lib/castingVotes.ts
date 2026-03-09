@@ -31,44 +31,15 @@ export async function resolveCastingEviction(gameId: string) {
   const now = new Date();
   const sysId = await getSystemUserId();
 
-  // Day 1: no nominees, evict 1 by algo
+  // Day 1: no algorithm eviction. Eliminations come from votes or health decay only.
   if (dayNum === 1) {
-    const rows = await prisma.gamePlayer.findMany({
-      where: { gameId, status: "ACTIVE" },
-      select: { userId: true, keys: true, plusCount: true, minusCount: true, health: true },
+    await prisma.castingDayResult.upsert({
+      where: { gameId_dayNumber: { gameId, dayNumber: 1 } },
+      update: { evictedUserIds: [] },
+      create: { gameId, dayNumber: 1, nomineeUserIds: [], evictedUserIds: [] },
     });
-    const ranked = rows
-      .map((p) => ({
-        userId: p.userId,
-        keys: p.keys ?? 0,
-        checks: netChecks(p.plusCount, p.minusCount),
-        health: p.health ?? 70,
-      }))
-      .sort((a, b) => {
-        if (a.keys !== b.keys) return a.keys - b.keys;
-        if (a.checks !== b.checks) return a.checks - b.checks;
-        return a.health - b.health;
-      });
-
-    const evicted = ranked[0]?.userId;
-    if (!evicted) return { ok: true, skipped: true as const, reason: "no_players" as const };
-
-    const activeCount = rows.length;
-    const place = activeCount;
-
-    await prisma.$transaction(async (tx) => {
-      await tx.gamePlayer.update({
-        where: { gameId_userId: { gameId, userId: evicted } },
-        data: { status: "ELIMINATED", eliminatedAt: now, eliminatedPlace: place },
-      });
-      await tx.castingDayResult.upsert({
-        where: { gameId_dayNumber: { gameId, dayNumber: 1 } },
-        update: { evictedUserIds: [evicted] },
-        create: { gameId, dayNumber: 1, nomineeUserIds: [], evictedUserIds: [evicted] },
-      });
-      await tx.gameMessage.create({
-        data: { gameId, userId: sysId, channel: "PUBLIC", body: `[SYSTEM] Day 1 resolved. One contestant eliminated by algorithm.` },
-      });
+    await prisma.gameMessage.create({
+      data: { gameId, userId: sysId, channel: "PUBLIC", body: `[SYSTEM] Day 1 complete.` },
     });
 
     const activeAfter = await prisma.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });

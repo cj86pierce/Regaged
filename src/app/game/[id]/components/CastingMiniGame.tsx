@@ -75,9 +75,9 @@ export default function CastingMiniGame(props: {
 
   return (
     <div className="theme-sidebar-panel" style={{ borderRadius: 12, padding: 12 }}>
-      <div style={{ fontWeight: 1000, marginBottom: 8 }}>Mini game</div>
+      <div style={{ fontWeight: 1000, marginBottom: 8 }}>Challenge</div>
       <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 10 }}>
-        Lower score = worse. 3 lowest become nominees at day end.
+        Play to improve your score. Lower score = worse. 3 lowest become nominees at day end.
       </div>
 
       {phase === "idle" && (
@@ -96,7 +96,7 @@ export default function CastingMiniGame(props: {
               cursor: "pointer",
             }}
           >
-            Reaction test
+            Do challenge
           </button>
         </div>
       )}
@@ -153,7 +153,7 @@ export default function CastingMiniGame(props: {
                 cursor: busy ? "not-allowed" : "pointer",
               }}
             >
-              Play again
+              Do challenge again
             </button>
           </div>
         </div>
