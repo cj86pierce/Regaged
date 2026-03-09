@@ -1,7 +1,7 @@
 /**
- * Resolve ROUND_VOTE for Casting.
- * Day 1: no nominees, evict 1 by algorithm (keys, checks, health).
- * Day 2+: evict by 3/2/1 vote totals; advance to ROUND_NOMINATE next day.
+ * Resolve ROUND_VOTE for Casting (CASTING_BOT).
+ * Day 1: no elimination (challenge runs; nominees from challenge start Day 2).
+ * Day 2+: evict by vote; nominees from mini-game score.
  */
 import { prisma } from "@/lib/prisma";
 import { getSystemUserId } from "@/lib/systemUser";

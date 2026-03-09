@@ -1,6 +1,6 @@
 /**
  * Resolve ROUND_NOMINATE for Casting day 2+.
- * Pick nominees by algo (keys, checks, health), create CastingDayResult, move to ROUND_VOTE.
+ * Pick nominees by mini-game score (3 lowest); ties: checks, then random.
  */
 import { prisma } from "@/lib/prisma";
 import { getSystemUserId } from "@/lib/systemUser";
@@ -17,19 +17,28 @@ function evictCount(activeCount: number) {
 }
 
 function nomineeCountForEvict(ev: number) {
-  return ev >= 1 ? 3 : 0; // always 3 nominees when we evict
+  return ev >= 1 ? 3 : 0;
 }
 
 function pickNominees(
-  rows: { userId: string; keys: number; plusCount: number | null; minusCount: number | null; health: number | null }[],
+  rows: {
+    userId: string;
+    castingDayMiniGameScore: number;
+    plusCount: number | null;
+    minusCount: number | null;
+  }[],
   count: number
-) {
-  const sorted = [...rows].sort((a, b) => {
-    if (a.keys !== b.keys) return a.keys - b.keys;
-    const ac = netChecks(a.plusCount, a.minusCount);
-    const bc = netChecks(b.plusCount, b.minusCount);
-    if (ac !== bc) return ac - bc;
-    return (a.health ?? 70) - (b.health ?? 70);
+): string[] {
+  const withChecks = rows.map((r) => ({
+    ...r,
+    checks: netChecks(r.plusCount, r.minusCount),
+    rnd: Math.random(),
+  }));
+  const sorted = [...withChecks].sort((a, b) => {
+    if (a.castingDayMiniGameScore !== b.castingDayMiniGameScore)
+      return a.castingDayMiniGameScore - b.castingDayMiniGameScore;
+    if (a.checks !== b.checks) return a.checks - b.checks;
+    return a.rnd - b.rnd;
   });
   return sorted.slice(0, count).map((x) => x.userId);
 }
@@ -52,10 +61,13 @@ export async function resolveCastingNominations(gameId: string) {
 
   const rows = await prisma.gamePlayer.findMany({
     where: { gameId, status: "ACTIVE" },
-    select: { userId: true, keys: true, plusCount: true, minusCount: true, health: true },
+    select: { userId: true, castingDayMiniGameScore: true, plusCount: true, minusCount: true },
   });
   const nominees = pickNominees(
-    rows.map((r) => ({ ...r, keys: r.keys ?? 0 })),
+    rows.map((r) => ({
+      ...r,
+      castingDayMiniGameScore: r.castingDayMiniGameScore ?? 0,
+    })),
     nomCount
   );
 

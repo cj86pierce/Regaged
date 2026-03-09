@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import CastingVoteBox from "./CastingVoteBox";
 import CastingMiniGame from "./CastingMiniGame";
 
@@ -32,14 +33,32 @@ export default function CastingSidebar(props: {
 
   return (
     <div style={{ display: "grid", gap: 12 }}>
-      {/* MINI GAME */}
+      {/* COMPETITION LINK + MINI GAME */}
       {showMiniGame && (
-        <CastingMiniGame
+        <>
+          <Link
+            href={`/game/${props.gameId}/challenge`}
+            style={{
+              display: "block",
+              padding: "10px 14px",
+              borderRadius: 10,
+              border: "1px solid var(--border)",
+              background: "var(--accent-bg)",
+              fontWeight: 1000,
+              textAlign: "center",
+              textDecoration: "none",
+              color: "inherit",
+            }}
+          >
+            Competition →
+          </Link>
+          <CastingMiniGame
           gameId={props.gameId}
           meUserId={props.meUserId}
           myScore={props.myMiniGameScore}
           onSubmitScore={props.onRefresh}
         />
+        </>
       )}
 
       {/* VOTE */}

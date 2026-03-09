@@ -246,21 +246,36 @@ export default function GamePage({ params }: { params: { id: string } }) {
           {data.game.gameType} <span style={{ opacity: 0.6, fontWeight: 900 }}>· Game #{data.game.number}</span>
         </div>
 
-        <div style={{ fontSize: 12, opacity: 0.75 }}>
+        <div style={{ fontSize: 12, opacity: 0.75, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           {data.game.state === "ENROLLING" && data.lobby ? (
             <>
               Filling: <b>{data.lobby.current}/{maxPlayers}</b> ({data.lobby.needed} needed)
             </>
           ) : data.game.state === "COMPLETED" ? (
-            <>
-              Game ended · Final placements below
-            </>
+            <>Game ended · Final placements below</>
           ) : (
             <>
               Day/Round <b>{data.game.roundNumber}</b> · State <b>{data.game.state}</b>
               {timeLeft !== null && <> · Ends in <b>{fmtHMS(timeLeft)}</b></>}
             </>
           )}
+          {isCasting &&
+            (data.game.state === "ROUND_VOTE" || data.game.state === "ROUND_NOMINATE") && (
+              <a
+                href={`/game/${gameId}/challenge`}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: 8,
+                  background: "var(--accent-bg)",
+                  fontWeight: 1000,
+                  textDecoration: "none",
+                  color: "inherit",
+                  border: "1px solid var(--border)",
+                }}
+              >
+                Competition
+              </a>
+            )}
         </div>
       </div>
 
