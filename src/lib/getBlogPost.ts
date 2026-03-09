@@ -16,26 +16,29 @@ export async function getBlogPost(id: string, userId: string | null) {
     },
   });
   if (!post) return null;
+  if (!post.author) return null;
 
   const plus = post.votes.filter((v) => v.type === "PLUS").reduce((s, v) => s + v.points, 0);
   const minus = post.votes.filter((v) => v.type === "MINUS").reduce((s, v) => s + v.points, 0);
   const myPostVote = userId ? post.votes.find((v) => v.userId === userId)?.type ?? null : null;
 
-  const comments = post.comments.map((c) => {
-    const cPlus = c.votes.filter((v) => v.type === "PLUS").reduce((s, v) => s + v.points, 0);
-    const cMinus = c.votes.filter((v) => v.type === "MINUS").reduce((s, v) => s + v.points, 0);
-    const myCommentVote = userId ? c.votes.find((v) => v.userId === userId)?.type ?? null : null;
-    return {
-      id: c.id,
-      content: c.content,
-      createdAt: c.createdAt.toISOString(),
-      author: c.author,
-      plus: cPlus,
-      minus: cMinus,
-      score: cPlus - cMinus,
-      myVote: myCommentVote,
-    };
-  });
+  const comments = post.comments
+    .filter((c) => c.author != null)
+    .map((c) => {
+      const cPlus = c.votes.filter((v) => v.type === "PLUS").reduce((s, v) => s + v.points, 0);
+      const cMinus = c.votes.filter((v) => v.type === "MINUS").reduce((s, v) => s + v.points, 0);
+      const myCommentVote = userId ? c.votes.find((v) => v.userId === userId)?.type ?? null : null;
+      return {
+        id: c.id,
+        content: c.content,
+        createdAt: c.createdAt.toISOString(),
+        author: c.author!,
+        plus: cPlus,
+        minus: cMinus,
+        score: cPlus - cMinus,
+        myVote: myCommentVote,
+      };
+    });
 
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - 3);

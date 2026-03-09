@@ -14,7 +14,7 @@ export async function GET(req: Request) {
   cutoff.setDate(cutoff.getDate() - BLOG_FEED_DAYS);
   cutoff.setHours(0, 0, 0, 0);
 
-  const [posts, total] = await Promise.all([
+  const [postsRaw, total] = await Promise.all([
     prisma.blogPost.findMany({
       where: { createdAt: { gte: cutoff } },
       orderBy: { createdAt: "desc" },
@@ -26,6 +26,8 @@ export async function GET(req: Request) {
     }),
     prisma.blogPost.count({ where: { createdAt: { gte: cutoff } } }),
   ]);
+
+  const posts = postsRaw.filter((p) => p.author != null);
 
   // Compute scores and sort by score desc for placement; then paginate
   const scored = posts.map((p) => {

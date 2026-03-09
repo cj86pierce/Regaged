@@ -100,9 +100,13 @@ export default function BlogPostClient({ initialPost }: { initialPost: Post }) {
         <h1 style={{ margin: "0 0 8px 0", fontSize: 24, fontWeight: 1000 }}>{post.title}</h1>
         <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 12 }}>
           by{" "}
-          <Link href={`/u/${post.author.username.toLowerCase()}`} className="theme-username" style={{ fontWeight: 800 }}>
-            {post.author.username}
-          </Link>
+          {post.author?.username ? (
+            <Link href={`/u/${post.author.username.toLowerCase()}`} className="theme-username" style={{ fontWeight: 800 }}>
+              {post.author.username}
+            </Link>
+          ) : (
+            <span className="theme-username" style={{ fontWeight: 800 }}>[deleted user]</span>
+          )}
           {" · "}
           {new Date(post.createdAt).toLocaleString()}
         </div>
@@ -185,13 +189,17 @@ export default function BlogPostClient({ initialPost }: { initialPost: Post }) {
           <div key={c.id} className="theme-chat-msg" style={{ borderRadius: 10, padding: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
               <div>
-                <Link
-                  href={`/u/${c.author.username.toLowerCase()}`}
-                  className="theme-username"
-                  style={{ fontWeight: 800, fontSize: 13 }}
-                >
-                  {c.author.username}
-                </Link>
+                {c.author?.username ? (
+                  <Link
+                    href={`/u/${c.author.username.toLowerCase()}`}
+                    className="theme-username"
+                    style={{ fontWeight: 800, fontSize: 13 }}
+                  >
+                    {c.author.username}
+                  </Link>
+                ) : (
+                  <span className="theme-username" style={{ fontWeight: 800, fontSize: 13 }}>[deleted]</span>
+                )}
                 <span style={{ fontSize: 12, color: "var(--text-muted)", marginLeft: 8 }}>
                   {new Date(c.createdAt).toLocaleString()}
                 </span>

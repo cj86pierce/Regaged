@@ -46,13 +46,18 @@ export async function POST(req: Request) {
 
   const passwordHash = await bcrypt.hash(password, 10);
 
-  await prisma.user.create({
-    data: {
-      username: usernameRaw,
-      usernameLower,
-      passwordHash,
-    },
-  });
-
-  return okJson({ ok: true });
+  try {
+    const user = await prisma.user.create({
+      data: {
+        username: usernameRaw,
+        usernameLower,
+        passwordHash,
+      },
+      select: { id: true, createdAt: true },
+    });
+    return okJson({ ok: true, userId: user.id, createdAt: user.createdAt.toISOString() });
+  } catch (e) {
+    console.error("Register: user.create failed", e);
+    return errJson("Database error saving account. Try again or contact support.", 500);
+  }
 }

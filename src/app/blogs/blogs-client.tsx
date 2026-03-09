@@ -168,7 +168,7 @@ export default function BlogsClient({ userId }: { userId: string | null }) {
                 </div>
               )}
               <div style={{ display: "flex", gap: 14, fontSize: 12, color: "var(--text-muted)" }}>
-                <span>by <span className="theme-username">{p.author.username}</span></span>
+                <span>by <span className="theme-username">{p.author?.username ?? "[deleted]"}</span></span>
                 <span>✅ {p.plus} ❌ {p.minus} · Score {p.score}</span>
                 <span>{p.commentCount} comments</span>
                 <span>{new Date(p.createdAt).toLocaleDateString()}</span>

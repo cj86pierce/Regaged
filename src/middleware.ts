@@ -6,12 +6,8 @@ export function middleware(req: NextRequest) {
   if (process.env.NODE_ENV === "production") {
     const path = req.nextUrl.pathname;
 
-    // Block all dev/debug endpoints
-    if (
-      path.startsWith("/api/dev") ||
-      path.startsWith("/api/envcheck") ||
-      path.startsWith("/api/health")
-    ) {
+    // Block dev/debug endpoints (envcheck allowed for DB diagnostic)
+    if (path.startsWith("/api/dev") || path.startsWith("/api/health")) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
   }
@@ -21,5 +17,5 @@ export function middleware(req: NextRequest) {
 
 // Apply only to these routes (keeps middleware lightweight)
 export const config = {
-  matcher: ["/api/dev/:path*", "/api/envcheck", "/api/health"],
+  matcher: ["/api/dev/:path*", "/api/health"],
 };
