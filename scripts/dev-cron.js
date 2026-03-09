@@ -1,11 +1,21 @@
 #!/usr/bin/env node
 /**
- * Dev cron runner - hits all cron endpoints every 60s.
- * Run alongside `npm run dev` so games advance even when no one is watching:
+ * Tick cron - hits /api/cron/tick every 60s so games advance.
+ * Run alongside the app (dev or VPS):
  *   node scripts/dev-cron.js
  *
- * Set BASE_URL if your app runs on a different port/host.
+ * On VPS: use PM2 - ecosystem.config.cjs includes regaged-cron.
+ * Set BASE_URL if your app runs on a different port. Uses CRON_SECRET from .env.
  */
+const path = require("path");
+const fs = require("fs");
+const envPath = path.join(__dirname, "..", ".env");
+if (fs.existsSync(envPath)) {
+  for (const line of fs.readFileSync(envPath, "utf8").split("\n")) {
+    const m = line.match(/^([^#=]+)=(.*)$/);
+    if (m && !process.env[m[1].trim()]) process.env[m[1].trim()] = m[2].trim().replace(/^["']|["']$/g, "");
+  }
+}
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 const INTERVAL_MS = 60_000;
 

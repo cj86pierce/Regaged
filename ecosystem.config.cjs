@@ -21,5 +21,16 @@ module.exports = {
         NODE_ENV: "production",
       },
     },
+    {
+      name: "regaged-cron",
+      script: "scripts/dev-cron.js",
+      cwd: __dirname,
+      autorestart: true,
+      watch: false,
+      env: {
+        BASE_URL: "http://localhost:3000",
+      },
+      env_file: ".env",
+    },
   ],
 };

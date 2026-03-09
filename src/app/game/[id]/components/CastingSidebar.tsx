@@ -1,6 +1,7 @@
 "use client";
 
 import CastingVoteBox from "./CastingVoteBox";
+import CastingMiniGame from "./CastingMiniGame";
 
 type Message = {
   id: string;
@@ -15,17 +16,32 @@ export default function CastingSidebar(props: {
   state: string;
   dayNumber: number;
 
+  meUserId: string | null;
+  myMiniGameScore: number;
+  onRefresh: () => Promise<void>;
+
   // vote
   nominees: { userId: string; username: string }[];
   onSavedVotes: () => Promise<void>;
 
-  // optional story feed (you can keep using messages for this)
   messages: Message[];
 }) {
   const showVote = props.state === "ROUND_VOTE" && props.nominees.length >= 3;
+  const showMiniGame =
+    props.state === "ROUND_VOTE" || props.state === "ROUND_NOMINATE";
 
   return (
     <div style={{ display: "grid", gap: 12 }}>
+      {/* MINI GAME */}
+      {showMiniGame && (
+        <CastingMiniGame
+          gameId={props.gameId}
+          meUserId={props.meUserId}
+          myScore={props.myMiniGameScore}
+          onSubmitScore={props.onRefresh}
+        />
+      )}
+
       {/* VOTE */}
       {showVote && (
         <CastingVoteBox
@@ -40,8 +56,9 @@ export default function CastingSidebar(props: {
         <div style={{ fontWeight: 1000, marginBottom: 8 }}>Read this</div>
         <div style={{ fontSize: 12, opacity: 0.8, lineHeight: 1.35 }}>
           <b>Castings</b> runs in 12-hour days.<br />
+          Play the mini game—lower score = more likely to be nominated.<br />
           Drops (🍎 / 🔑 / 🧪) appear in chat and are first-come first-serve.<br />
-          Nominees are automatically selected each day, then everyone votes using points.<br />
+          Nominees are the 3 lowest mini-game scores, then everyone votes.<br />
           Final 4 is decided by <b>health → keys → checks</b>.
         </div>
       </div>

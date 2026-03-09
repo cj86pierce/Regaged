@@ -34,7 +34,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const created = await prisma.$transaction(async (tx) => {
     const msg = await tx.gameMessage.create({
       data: { gameId, userId, channel: "PUBLIC", body: text },
-      select: { id: true, body: true, createdAt: true, userId: true },
+      select: { id: true, body: true, createdAt: true, userId: true, user: { select: { username: true } } },
     });
 
     await tx.gamePlayer.update({
@@ -42,15 +42,10 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       data: { chatCount: { increment: 1 }, lastActiveAt: now },
     });
 
-    const u = await tx.user.findUnique({
-      where: { id: userId },
-      select: { username: true },
-    });
-
     return {
       id: msg.id,
       userId: msg.userId,
-      username: u?.username ?? "you",
+      username: msg.user?.username ?? "?",
       body: msg.body,
       createdAt: msg.createdAt.toISOString(),
       plus: 0,

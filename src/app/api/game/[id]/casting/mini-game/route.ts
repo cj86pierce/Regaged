@@ -25,7 +25,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   });
   if (!g || (g.gameType !== "CASTING" && g.gameType !== "CASTING_BOT"))
     return bad("Not a casting game", 400);
-  if (g.state !== "ROUND_VOTE") return bad("Not in voting phase", 400);
+  if (g.state !== "ROUND_VOTE" && g.state !== "ROUND_NOMINATE")
+    return bad("Play during voting or nomination phase", 400);
 
   const gp = await prisma.gamePlayer.findUnique({
     where: { gameId_userId: { gameId, userId } },
