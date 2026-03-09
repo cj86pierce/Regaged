@@ -15,24 +15,31 @@ const SYS_MSG_STYLE: React.CSSProperties = {
   padding: 12,
 };
 const SYS_ROW_STYLE: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "1fr 62px 52px",
+  display: "flex",
   alignItems: "center",
   gap: 8,
-  padding: "8px 10px",
-  borderRadius: 10,
-  background: "var(--bg-msg-system-row)",
-  marginBottom: 6,
+  padding: "6px 0",
+  flexWrap: "wrap",
 };
-const OUT_TAG_STYLE: React.CSSProperties = {
+const POINTS_BOX_STYLE: React.CSSProperties = {
   display: "inline-block",
-  padding: "3px 10px",
-  borderRadius: 6,
+  padding: "2px 8px",
+  borderRadius: 4,
+  background: "#111",
+  color: "#fff",
+  fontWeight: 800,
+  fontSize: 12,
+  border: "1px solid #e6b800",
+};
+const TAG_BOX_STYLE: React.CSSProperties = {
+  display: "inline-block",
+  padding: "2px 8px",
+  borderRadius: 4,
   background: "#111",
   color: "#ffeb3b",
   fontWeight: 1000,
   fontSize: 11,
-  border: "none",
+  border: "1px solid #e6b800",
 };
 
 function SysMsgCard({
@@ -166,16 +173,13 @@ export default function SystemMessageRenderer(props: Props) {
     const title = legacy.kind === "NOM" ? "Nomination votes" : "Eviction votes";
     return (
       <SysMsgCard key={messageId} title={title} createdAt={createdAt}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
           {legacy.rows.map((r, idx) => (
-            <div key={idx} style={{ ...SYS_ROW_STYLE, marginBottom: 6 }}>
-              <div className="theme-username" style={{ fontWeight: 800 }}>{r.name}</div>
-              <div style={{ fontSize: 12 }}>
-                <span style={{ fontWeight: 900 }}>{r.points}</span> pts
-              </div>
-              <div style={{ justifySelf: "end" }}>
-                {r.tag ? <span style={OUT_TAG_STYLE}>{r.tag}</span> : null}
-              </div>
+            <div key={idx} style={SYS_ROW_STYLE}>
+              <Link href={`/u/${encodeURIComponent(r.name.toLowerCase())}`} className="theme-username" style={{ fontWeight: 800, color: "var(--link-color)" }}>{r.name}</Link>
+              <span style={POINTS_BOX_STYLE}>{r.points}</span>
+              <span style={{ fontSize: 12 }}>points</span>
+              {r.tag ? <span style={TAG_BOX_STYLE}>{r.tag}</span> : null}
             </div>
           ))}
         </div>
@@ -211,13 +215,14 @@ function StructuredRender({
       );
     case "NOMINATION":
       return (
-        <SysMsgCard title="Nominees" createdAt={createdAt}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+        <SysMsgCard title="Nomination votes" createdAt={createdAt}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
             {payload.nominees.map((n, i) => (
-              <div key={i} style={{ ...SYS_ROW_STYLE }}>
-                <span className="theme-username" style={{ fontWeight: 800 }}>{n.username ?? n.playerId}</span>
-                <span style={{ fontSize: 12 }}>{n.votes != null ? `${n.votes} pts` : "—"}</span>
-                <span />
+              <div key={i} style={SYS_ROW_STYLE}>
+                <Link href={`/u/${encodeURIComponent((n.username ?? n.playerId).toLowerCase())}`} className="theme-username" style={{ fontWeight: 800, color: "var(--link-color)" }}>{n.username ?? n.playerId}</Link>
+                <span style={POINTS_BOX_STYLE}>{n.votes ?? 0}</span>
+                <span style={{ fontSize: 12 }}>points</span>
+                <span style={TAG_BOX_STYLE}>NOM</span>
               </div>
             ))}
           </div>
@@ -226,14 +231,13 @@ function StructuredRender({
     case "VOTE_RESULT":
       return (
         <SysMsgCard title="Eviction votes" createdAt={createdAt}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
             {payload.results.map((r, i) => (
-              <div key={i} style={{ ...SYS_ROW_STYLE }}>
-                <span className="theme-username" style={{ fontWeight: 800 }}>{r.username ?? r.playerId}</span>
-                <span style={{ fontSize: 12 }}><b>{r.votes}</b> pts</span>
-                <div style={{ justifySelf: "end" }}>
-                  {r.tag ? <span style={OUT_TAG_STYLE}>{r.tag}</span> : null}
-                </div>
+              <div key={i} style={SYS_ROW_STYLE}>
+                <Link href={`/u/${encodeURIComponent((r.username ?? r.playerId).toLowerCase())}`} className="theme-username" style={{ fontWeight: 800, color: "var(--link-color)" }}>{r.username ?? r.playerId}</Link>
+                <span style={POINTS_BOX_STYLE}>{r.votes}</span>
+                <span style={{ fontSize: 12 }}>points</span>
+                {r.tag ? <span style={TAG_BOX_STYLE}>{r.tag}</span> : null}
               </div>
             ))}
           </div>
@@ -256,13 +260,12 @@ function StructuredRender({
       );
     case "GAME_FINISHED":
       return (
-        <SysMsgCard title="Game finished!" createdAt={createdAt}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <SysMsgCard title="Winners" createdAt={createdAt}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
             {payload.placements.map((p) => (
-              <div key={p.playerId} style={{ ...SYS_ROW_STYLE }}>
-                <span className="theme-username" style={{ fontWeight: 800 }}>{p.place}. {p.username ?? p.playerId}</span>
-                <span />
-                <span />
+              <div key={p.playerId} style={SYS_ROW_STYLE}>
+                <span style={{ fontWeight: 800 }}>{p.place}.</span>
+                <Link href={`/u/${encodeURIComponent((p.username ?? p.playerId).toLowerCase())}`} className="theme-username" style={{ fontWeight: 800, color: "var(--link-color)" }}>{p.username ?? p.playerId}</Link>
               </div>
             ))}
           </div>

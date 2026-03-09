@@ -93,7 +93,7 @@ export default function CastingSidebar(props: {
                   <span className="theme-username" style={{ fontWeight: 800 }}>{m.username}</span>
                   <span style={{ fontSize: 11, opacity: 0.75 }}>{new Date(m.createdAt).toLocaleString()}</span>
                 </div>
-                <div style={{ fontSize: 12, whiteSpace: "pre-wrap", background: "var(--bg-msg-system-row)", borderRadius: 8, padding: 8 }}>
+                <div style={{ fontSize: 12, whiteSpace: "pre-wrap", background: "var(--bg-msg)", borderRadius: 8, padding: 8 }}>
                   {m.body
                   .replace(/^\[SYSTEM\]\s*/i, "")
                   .replace(/^\[SYSTEM:[^\]]+\]\n?/i, "")
