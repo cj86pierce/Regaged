@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { maybeSpawnCastingsDrops } from "@/lib/castingsDrops";
-import { applyCastingHealthDecay } from "@/lib/castingHealth";
-import { advanceCastingIfDue } from "@/lib/castingAdvance";
+import { runCastingsDayChangeIfDue } from "@/lib/castingsDayChange";
 
 function requireCronAuth(req: Request) {
   const secret = process.env.CRON_SECRET;
@@ -31,11 +30,8 @@ async function runCastingTick() {
     const games = await prisma.game.findMany({
       where: {
         gameType: "CASTING",
-        state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] },
-        OR: [
-          { stateEndsAt: { not: null, lte: now } },
-          { stateEndsAt: null },
-        ],
+        state: "ROUND_VOTE",
+        stateEndsAt: { not: null, lte: now },
       },
       select: { id: true },
       take: 50,
@@ -44,8 +40,8 @@ async function runCastingTick() {
     let advanced = 0;
     for (const g of games) {
       try {
-        const r = await advanceCastingIfDue(g.id);
-        if ((r as any)?.advanced || (r as any)?.fixed) advanced++;
+        const r = await runCastingsDayChangeIfDue(g.id);
+        if (r.ok && ((r as any).advanced || (r as any).finished)) advanced++;
       } catch (e) {
         console.error("CASTING catchUp failed", { gameId: g.id, err: String(e) });
       }
@@ -59,11 +55,7 @@ async function runCastingTick() {
       }
     }
 
-    try {
-      await applyCastingHealthDecay();
-    } catch (e) {
-      console.error("CASTING decay failed", { err: String(e) });
-    }
+    // Health decay is inside runCastingsDayChangeIfDue (at day end)
 
     return { due: games.length, advanced };
   } finally {

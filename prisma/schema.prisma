@@ -396,10 +396,12 @@ model Game {
   roundResults  RoundResult[]
   pmMessages    GamePmMessage[]
 
-  // CASTINGS drop scheduling
+  // CASTINGS day system (dayEndsAt = stateEndsAt during ROUND_VOTE)
   castingDayStartedAt     DateTime?
+  castingDayProcessedAt   DateTime? // prevent double day change
   castingLastAppleHourKey String?
   castingLastKeyHourKey   String?
+  castingLastDecayHourKey String? // CASTING: decay runs every hour
   castingDropEvents       CastingDropEvent[]
   castingDays             CastingDayResult[]
   castingVotes            CastingVote[]
@@ -434,6 +436,8 @@ model GamePlayer {
   // CASTINGS
   health Int @default(70)
   keys   Int @default(0)
+
+  castingDayMiniGameScore Int @default(0)
 
   castingLastDecayAt       DateTime?
   castingHealthGainedToday Int       @default(0)

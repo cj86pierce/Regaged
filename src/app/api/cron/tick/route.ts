@@ -4,10 +4,11 @@ import { prisma } from "@/lib/prisma";
 import { advanceFastingIfDue } from "@/lib/fastingAdvance";
 import { advanceFastingBotIfDue } from "@/lib/fastingBotAdvance";
 import { advanceCastingIfDue } from "@/lib/castingAdvance";
+import { runCastingsDayChangeIfDue } from "@/lib/castingsDayChange";
 import { advanceCastingBotIfDue } from "@/lib/castingBotAdvance";
 import { tryStartFastingBotGame, tryStartCastingBotGame } from "@/lib/gameEngineBot";
 import { maybeSpawnCastingsDrops } from "@/lib/castingsDrops";
-import { applyCastingHealthDecay } from "@/lib/castingHealth";
+import { applyCastingsPeriodicDecay } from "@/lib/castingsPeriodicDecay";
 import { createAuctionsFromDesigns } from "@/lib/createAuctionsFromDesigns";
 
 async function requireCronAuth(req: Request) {
@@ -132,16 +133,13 @@ async function runTick() {
     }
 
     // -----------------------
-    // CASTING (Fasting-style day rolling)
+    // CASTING (12h day system: nominees from mini game, vote, health decay)
     // -----------------------
     const castingDue = await prisma.game.findMany({
       where: {
         gameType: "CASTING",
-        state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] },
-        OR: [
-          { stateEndsAt: { not: null, lte: now } },
-          { stateEndsAt: null },
-        ],
+        state: "ROUND_VOTE",
+        stateEndsAt: { not: null, lte: now },
       },
       select: { id: true },
       take: 25,
@@ -150,10 +148,10 @@ async function runTick() {
     let castingAdvanced = 0;
     for (const g of castingDue) {
       try {
-        const r = await advanceCastingIfDue(g.id);
-        if ((r as any)?.advanced || (r as any)?.fixed) castingAdvanced++;
+        const r = await runCastingsDayChangeIfDue(g.id);
+        if (r.ok && ((r as any).advanced || (r as any).finished)) castingAdvanced++;
       } catch (e) {
-        console.error("CASTING advance failed", { gameId: g.id, err: String(e) });
+        console.error("CASTING day change failed", { gameId: g.id, err: String(e) });
       }
     }
     for (const g of castingDue) {
@@ -162,9 +160,14 @@ async function runTick() {
       }
     }
 
-    try { await applyCastingHealthDecay(); } catch (e) {
-      console.error("CASTING decay failed", { err: String(e) });
+    try {
+      await applyCastingsPeriodicDecay({ gameType: "CASTING" });
+    } catch (e) {
+      console.error("CASTING periodic decay failed", { err: String(e) });
     }
+
+    // Day-end decay is inside runCastingsDayChangeIfDue.
+    // applyCastingHealthDecay only runs for legacy/stuck games if needed.
 
     const result: Record<string, unknown> = {
       fasting: { due: fastingDue.length, advanced: fastingAdvanced },

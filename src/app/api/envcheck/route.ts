@@ -23,5 +23,10 @@ export async function GET() {
     NEXTAUTH_URL: process.env.NEXTAUTH_URL ?? null,
     nodeEnv: process.env.NODE_ENV ?? null,
     db: dbCheck,
+    // Email verification (SendGrid)
+    has_SENDGRID_API_KEY: !!process.env.SENDGRID_API_KEY,
+    has_EMAIL_FROM: !!process.env.EMAIL_FROM,
+    EMAIL_FROM: process.env.EMAIL_FROM ?? null,
+    EMAIL_VERIFY_DISABLED: process.env.EMAIL_VERIFY_DISABLED === "1",
   });
 }

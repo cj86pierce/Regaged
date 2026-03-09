@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { advanceFastingBotIfDue } from "@/lib/fastingBotAdvance";
 import { advanceCastingBotIfDue } from "@/lib/castingBotAdvance";
 import { tryStartFastingBotGame, tryStartCastingBotGame } from "@/lib/gameEngineBot";
+import { applyCastingsPeriodicDecay } from "@/lib/castingsPeriodicDecay";
 
 function requireCronAuth(req: Request) {
   const secret = process.env.CRON_SECRET;
@@ -95,6 +96,12 @@ async function runBotTick() {
       } catch (e) {
         console.error("CASTING_BOT advance failed", { gameId: g.id, err: String(e) });
       }
+    }
+
+    try {
+      await applyCastingsPeriodicDecay({ gameType: "CASTING_BOT" });
+    } catch (e) {
+      console.error("CASTING_BOT periodic decay failed", { err: String(e) });
     }
 
     return {

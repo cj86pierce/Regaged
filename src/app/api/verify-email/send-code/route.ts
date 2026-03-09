@@ -89,10 +89,28 @@ export async function POST(req: Request) {
       `,
     });
   } catch (err: any) {
-    // Log full SendGrid error in Vercel logs
-    console.error("SendGrid send failed:", err?.response?.body ?? err);
+    const body = err?.response?.body;
+    const status = err?.response?.statusCode;
+    console.error("SendGrid send failed:", body ?? err);
 
-    return bad("Email send failed (SendGrid). Try again in a minute.", 502);
+    // Surface common SendGrid issues to help admins debug
+    let hint = "Email send failed. Try again in a minute.";
+    if (body?.errors?.[0]?.message) {
+      const msg = String(body.errors[0].message).toLowerCase();
+      if (msg.includes("verified") || msg.includes("sender identity")) {
+        hint = "Sender not verified. In SendGrid, verify EMAIL_FROM as Single Sender or Domain.";
+      } else if (msg.includes("api key") || msg.includes("unauthorized") || status === 401) {
+        hint = "Invalid SendGrid API key. Check SENDGRID_API_KEY.";
+      } else if (msg.includes("from") || msg.includes("sender")) {
+        hint = "Check EMAIL_FROM matches a verified sender in SendGrid.";
+      }
+    } else if (status === 401) {
+      hint = "Invalid SendGrid API key. Check SENDGRID_API_KEY.";
+    } else if (status === 403) {
+      hint = "SendGrid rejected. Verify EMAIL_FROM in SendGrid dashboard.";
+    }
+
+    return bad(hint, 502);
   }
 
   return NextResponse.json({ ok: true });

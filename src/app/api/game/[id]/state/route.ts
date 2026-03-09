@@ -130,10 +130,11 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   }
 
   // -----------------------
-  // CASTING nominees + myVoted
+  // CASTING nominees + myVoted + myVoteTarget
   // -----------------------
   let castingNominees: string[] = [];
   let castingMyVoted = false;
+  let castingMyVoteTargetUserId: string | null = null;
 
   if ((game.gameType === "CASTING" || game.gameType === "CASTING_BOT") && game.state === "ROUND_VOTE") {
     const day = await prisma.castingDayResult.findUnique({
@@ -144,10 +145,12 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     castingNominees = day?.nomineeUserIds ?? [];
 
     if (meUserId) {
-      const cnt = await prisma.castingVote.count({
+      const myVote = await prisma.castingVote.findFirst({
         where: { gameId, dayNumber: game.roundNumber, voterUserId: meUserId },
+        select: { targetUserId: true },
       });
-      castingMyVoted = cnt > 0;
+      castingMyVoted = !!myVote;
+      castingMyVoteTargetUserId = myVote?.targetUserId ?? null;
     }
   }
 
@@ -194,7 +197,11 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
     // CASTING helpers
     dropEvents,
-    casting: { nominees: castingNominees, myVoted: castingMyVoted },
+    casting: {
+      nominees: castingNominees,
+      myVoted: castingMyVoted,
+      myVoteTargetUserId: castingMyVoteTargetUserId,
+    },
 
     game: {
       id: game.id,
@@ -232,6 +239,9 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         checks: (p.plusCount ?? 0) - (p.minusCount ?? 0),
         health: p.health ?? 100,
         keys: p.keys ?? 0,
+        castingDayMiniGameScore: (game.gameType === "CASTING" || game.gameType === "CASTING_BOT")
+          ? (p.castingDayMiniGameScore ?? 0)
+          : undefined,
 
         isNominee: isCastingNominee || isFastingNominee,
 
