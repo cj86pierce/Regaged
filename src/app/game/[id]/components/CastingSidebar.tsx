@@ -74,7 +74,7 @@ export default function CastingSidebar(props: {
         <div style={{ fontWeight: 1000, marginBottom: 8, flexShrink: 0 }}>Story</div>
 
         {/* show recent system lines as “story” */}
-        <div style={{ display: "grid", gap: 8 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {props.messages
             .filter((m) => m.isSystem)
             .slice(0, 12)
@@ -82,10 +82,23 @@ export default function CastingSidebar(props: {
               <div
                 key={m.id}
                 className="theme-chat-msg-sys"
-                style={{ fontSize: 12, opacity: 0.8, border: "1px solid var(--border)", borderRadius: 10, padding: 8 }}
+                style={{
+                  background: "var(--bg-msg-system)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 12,
+                  padding: 10,
+                }}
               >
-                <div className="theme-username" style={{ marginBottom: 4 }}>{m.username}</div>
-                <div style={{ whiteSpace: "pre-wrap" }}>{m.body}</div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+                  <span className="theme-username" style={{ fontWeight: 800 }}>{m.username}</span>
+                  <span style={{ fontSize: 11, opacity: 0.75 }}>{new Date(m.createdAt).toLocaleString()}</span>
+                </div>
+                <div style={{ fontSize: 12, whiteSpace: "pre-wrap", background: "var(--bg-msg-system-row)", borderRadius: 8, padding: 8 }}>
+                  {m.body
+                  .replace(/^\[SYSTEM\]\s*/i, "")
+                  .replace(/^\[SYSTEM:[^\]]+\]\n?/i, "")
+                  .replace(/^\[SYSMSG:[^\]]+\]\s*/i, "") || "System update"}
+                </div>
               </div>
             ))}
         </div>

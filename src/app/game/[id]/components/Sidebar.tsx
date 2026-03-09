@@ -138,11 +138,28 @@ export default function Sidebar(props: {
         {systemStory.length === 0 ? (
           <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>No story yet.</div>
         ) : (
-          <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
             {systemStory.map((m) => (
-              <div key={m.id} className="theme-chat-msg-sys" style={{ fontSize: 12, border: "1px solid var(--border)", borderRadius: 10, padding: 8 }}>
-                <div style={{ fontWeight: 900, opacity: 0.8 }}>{new Date(m.createdAt).toLocaleString()}</div>
-                <div style={{ marginTop: 4 }}>{m.body}</div>
+              <div
+                key={m.id}
+                className="theme-chat-msg-sys"
+                style={{
+                  background: "var(--bg-msg-system)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 12,
+                  padding: 10,
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+                  <span style={{ fontWeight: 800 }}>System</span>
+                  <span style={{ fontSize: 11, opacity: 0.75 }}>{new Date(m.createdAt).toLocaleString()}</span>
+                </div>
+                <div style={{ fontSize: 12, whiteSpace: "pre-wrap", background: "var(--bg-msg-system-row)", borderRadius: 8, padding: 8 }}>
+                  {m.body
+                  .replace(/^\[SYSTEM\]\s*/i, "")
+                  .replace(/^\[SYSTEM:[^\]]+\]\n?/i, "")
+                  .replace(/^\[SYSMSG:[^\]]+\]\s*/i, "") || "System update"}
+                </div>
               </div>
             ))}
           </div>

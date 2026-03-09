@@ -20,7 +20,8 @@
   --btn-primary-shadow: 0 8px 18px rgba(255, 183, 3, 0.25);
   --brand: #d11b1b;
   --bg-msg: #fff;
-  --bg-msg-system: #fff9b8;
+  --bg-msg-system: #fff9e6;
+  --bg-msg-system-row: rgba(255, 253, 231, 0.9);
   --bg-input: #fff;
   --bg-btn-disabled: #f3f6f9;
   --bg-btn-send: #111;
@@ -60,7 +61,8 @@
   --btn-primary-shadow: 0 8px 18px rgba(139, 26, 26, 0.4);
   --brand: #e04040;
   --bg-msg: #1a0808;
-  --bg-msg-system: #2a1515;
+  --bg-msg-system: #3a2020;
+  --bg-msg-system-row: rgba(60, 25, 25, 0.8);
   --bg-input: #1a0808;
   --bg-btn-disabled: #251010;
   --bg-btn-send: #8b1a1a;
