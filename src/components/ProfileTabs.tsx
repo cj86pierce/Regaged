@@ -658,6 +658,15 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
                   )}
                 </div>
               )}
+              {!data.isOwnProfile && data.profileUserId && (
+                <Link
+                  href={`/dms/${data.profileUserId}`}
+                  className="theme-btn-secondary"
+                  style={{ display: "block", textAlign: "center", marginBottom: 10 }}
+                >
+                  ✉️ Message
+                </Link>
+              )}
               {data.canAddFriend && data.profileUserId && (
                 <AddFriendButton
                   username={data.username}

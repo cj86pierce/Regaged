@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { useTheme } from "@/app/ThemeProvider";
@@ -11,7 +12,17 @@ export default function NavBar() {
   const { theme, setTheme } = useTheme();
   const { data: session, status } = useSession();
   const [steamMe, setSteamMe] = useState<SteamMe>(null);
+  const [dmUnread, setDmUnread] = useState(0);
   const loggedIn = !!session?.user || !!steamMe;
+
+  const pathname = usePathname();
+  useEffect(() => {
+    if (!loggedIn) return;
+    fetch("/api/dms/unread-count", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d != null && setDmUnread(d.unread ?? 0))
+      .catch(() => {});
+  }, [loggedIn, pathname]);
 
   // When not using NextAuth session (e.g. Steam client with cookie), check /api/me/session
   useEffect(() => {
@@ -70,6 +81,34 @@ export default function NavBar() {
           </button>
 
           <div className="navDivider" />
+
+          {loggedIn && (
+            <Link href="/dms" className="navLink" title="Messages" style={{ position: "relative", paddingLeft: 4, paddingRight: 4 }}>
+              ✉️
+              {dmUnread > 0 && (
+                <span
+                  style={{
+                    position: "absolute",
+                    top: -4,
+                    right: -2,
+                    minWidth: 16,
+                    height: 16,
+                    borderRadius: 8,
+                    background: "var(--brand)",
+                    color: "#fff",
+                    fontSize: 10,
+                    fontWeight: 900,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "0 4px",
+                  }}
+                >
+                  {dmUnread > 99 ? "99+" : dmUnread}
+                </span>
+              )}
+            </Link>
+          )}
 
           {status === "loading" && !steamMe ? (
             <span className="navLoading">Loading…</span>
