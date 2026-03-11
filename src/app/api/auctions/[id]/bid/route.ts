@@ -14,16 +14,26 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   const now = new Date();
 
-  const auction = await prisma.auction.findUnique({
-    where: { id: params.id },
-    select: { id: true, currentBid: true, endsAt: true },
-  });
+  const [auction, user] = await Promise.all([
+    prisma.auction.findUnique({
+      where: { id: params.id },
+      select: { id: true, currentBid: true, endsAt: true },
+    }),
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { tMoney: true },
+    }),
+  ]);
   if (!auction) return NextResponse.json({ error: "Auction not found" }, { status: 404 });
   if (auction.endsAt.getTime() <= now.getTime()) {
     return NextResponse.json({ error: "Auction has ended" }, { status: 400 });
   }
   if (amount <= auction.currentBid) {
     return NextResponse.json({ error: "Bid must be higher than current bid" }, { status: 400 });
+  }
+  const tMoney = user?.tMoney ?? 0;
+  if (amount > tMoney) {
+    return NextResponse.json({ error: "Not enough R$. You have " + tMoney + " R$" }, { status: 400 });
   }
 
   await prisma.$transaction(async (tx) => {

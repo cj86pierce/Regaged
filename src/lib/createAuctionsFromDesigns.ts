@@ -55,7 +55,7 @@ export async function createAuctionsFromDesigns(): Promise<{ created: number }> 
     endsAt.setDate(endsAt.getDate() + AUCTION_DURATION_DAYS);
 
     await prisma.auction.create({
-      data: { designId: top.id, startsAt, endsAt },
+      data: { designId: top.id, startsAt, endsAt, currentBid: 5 },
     });
     created++;
     alreadyAuctioned.add(top.id);

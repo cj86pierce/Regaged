@@ -56,7 +56,7 @@ export default async function GamesPage() {
       </div>
       </div>
 
-      {/* Tengaged-style right sidebar */}
+      {/* Right sidebar */}
       <div className="theme-sidebar-panel" style={{ padding: 12, borderRadius: 12, border: "1px solid var(--border)" }}>
         <div style={{ fontWeight: 1000, marginBottom: 10, color: "var(--brand)" }}>Enroll in a game</div>
         <p style={{ fontSize: 12, opacity: 0.85, marginBottom: 12 }}>Join a Fastings or Castings game and compete.</p>

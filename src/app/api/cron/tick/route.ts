@@ -10,6 +10,7 @@ import { tryStartFastingBotGame, tryStartCastingBotGame } from "@/lib/gameEngine
 import { maybeSpawnCastingsDrops } from "@/lib/castingsDrops";
 import { applyCastingsPeriodicDecay } from "@/lib/castingsPeriodicDecay";
 import { createAuctionsFromDesigns } from "@/lib/createAuctionsFromDesigns";
+import { resolveEndedAuctions } from "@/lib/resolveAuctions";
 
 async function requireCronAuth(req: Request) {
   const secret = process.env.CRON_SECRET;
@@ -191,6 +192,12 @@ async function runTick() {
       if (created > 0) result.auctionsCreated = created;
     } catch (e) {
       console.error("Auction creation failed", { err: String(e) });
+    }
+    try {
+      const { resolved } = await resolveEndedAuctions();
+      if (resolved > 0) result.auctionsResolved = resolved;
+    } catch (e) {
+      console.error("Auction resolution failed", { err: String(e) });
     }
 
     return result;

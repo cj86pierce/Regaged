@@ -15,6 +15,7 @@ type AuctionDto = {
 
 export default function AuctionsClient() {
   const [auctions, setAuctions] = useState<AuctionDto[]>([]);
+  const [soldAuctions, setSoldAuctions] = useState<AuctionDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,12 +28,15 @@ export default function AuctionsClient() {
       if (!res.ok) {
         setError(json?.error ?? "Failed to load");
         setAuctions([]);
+        setSoldAuctions([]);
       } else {
         setAuctions(json.auctions ?? []);
+        setSoldAuctions(json.soldAuctions ?? []);
       }
     } catch {
       setError("Failed to load auctions");
       setAuctions([]);
+      setSoldAuctions([]);
     } finally {
       setLoading(false);
     }
@@ -65,18 +69,17 @@ export default function AuctionsClient() {
       <h1 style={{ marginTop: 0, color: "var(--brand)" }}>Auctions</h1>
       <div className="shopAuctionsLayout" style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: 14, marginTop: 12 }}>
         <div className="theme-sidebar-panel" style={{ padding: 12, borderRadius: 12, height: "fit-content" }}>
-          <div style={{ fontWeight: 1000, marginBottom: 10, color: "var(--brand)" }}>Designer earnings</div>
+          <div style={{ fontWeight: 1000, marginBottom: 10, color: "var(--brand)" }}>Recent sales</div>
           <div style={{ fontSize: 12, opacity: 0.8 }}>
-            {auctions.length === 0 && !loading ? (
-              <div style={{ opacity: 0.7 }}>No designer earnings yet.</div>
+            {soldAuctions.length === 0 && !loading ? (
+              <div style={{ opacity: 0.7 }}>No sales yet.</div>
             ) : (
-              auctions.slice(0, 5).map((a) => (
+              soldAuctions.slice(0, 5).map((a) => (
                 <div key={a.id} style={{ marginBottom: 8 }}>
                   <Link href={`/u/${encodeURIComponent(a.designAuthorUsername)}`} className="theme-username" style={{ textDecoration: "underline", fontSize: 12 }}>
                     {a.designAuthorUsername}
                   </Link>
-                  <span style={{ opacity: 0.85 }}> won </span><b>{a.currentBid} T$</b>
-                  <span style={{ opacity: 0.85 }}> as designer in auction recently</span>
+                  <span style={{ opacity: 0.85 }}> sold for </span><b>{a.currentBid} R$</b>
                 </div>
               ))
             )}
@@ -120,7 +123,7 @@ export default function AuctionsClient() {
                   <div>
                     <div style={{ fontWeight: 1000, fontSize: 14 }}>{a.designTitle}</div>
                     <div style={{ fontSize: 11, opacity: 0.75 }}>by {a.designAuthorUsername}</div>
-                    <div style={{ fontSize: 11, opacity: 0.85, marginTop: 4 }}>Current bid · {a.currentBid} T$</div>
+                    <div style={{ fontSize: 11, opacity: 0.85, marginTop: 4 }}>Current bid · {a.currentBid} R$</div>
                   </div>
                   <div style={{ textAlign: "center", minWidth: 90 }}>
                     <span
@@ -136,7 +139,7 @@ export default function AuctionsClient() {
                     {!isClosed && <div style={{ fontSize: 10, marginTop: 4, opacity: 0.85 }}>{fmt(timeLeft)} left</div>}
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
-                    <div style={{ fontSize: 14, fontWeight: 1000, color: "var(--brand)" }}>{a.currentBid} T$</div>
+                    <div style={{ fontSize: 14, fontWeight: 1000, color: "var(--brand)" }}>{a.currentBid} R$</div>
                     <div style={{ display: "flex", gap: 6 }}>
                       <button
                         onClick={() => bid(a.id, 1)}

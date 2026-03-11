@@ -315,19 +315,21 @@ model DesignCommentVote {
 }
 
 model Auction {
-  id               String   @id @default(cuid())
+  id               String    @id @default(cuid())
   designId         String
   startsAt         DateTime
   endsAt           DateTime
-  currentBid       Int      @default(0)
+  currentBid       Int       @default(5)
   currentBidUserId String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  soldAt           DateTime? // when resolved; winner paid, seller got 50%
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   design Design @relation(fields: [designId], references: [id], onDelete: Cascade)
   bids   AuctionBid[]
 
   @@index([endsAt])
+  @@index([soldAt])
 }
 
 model AuctionBid {

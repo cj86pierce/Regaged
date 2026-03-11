@@ -92,7 +92,7 @@ export default async function HomePage() {
             </div>
           </div>
 
-          {/* Tengaged-style shop panels */}
+          {/* Regaged shop panels */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10, marginTop: 12 }}>
             <Link href="/shop/colors" style={{ padding: 12, borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg-card)", textDecoration: "none", color: "inherit", textAlign: "center" }}>
               <div style={{ fontWeight: 1000, fontSize: 12 }}>Color Shop</div>
