@@ -151,7 +151,7 @@ export default function DesignsClient({ userId }: { userId: string | null }) {
                   onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
                 />
                 <div style={{ fontSize: 11, opacity: 0.75 }}>
-                  PNG, max 512KB. Top-voted designs in the 2-day window may go to the Auction House.
+                  PNG, max 512KB. Top-voted designs may go to the Auction House after voting ends.
                 </div>
                 <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                   <button

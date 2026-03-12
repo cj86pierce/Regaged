@@ -4,16 +4,14 @@ import { prisma } from "@/lib/prisma";
 import { getUserColorStrength } from "@/lib/blogStrength";
 import { grantBlogR$ } from "@/lib/blogR$";
 
-const DESIGN_VOTING_DAYS = 2;
+const DESIGN_VOTING_MS = 60 * 1000; // 1 min for testing; 24*60*60*1000 for 1 day
 
 function bad(msg: string, status = 400) {
   return NextResponse.json({ error: msg }, { status });
 }
 
 function votingEndsAt(createdAt: Date): Date {
-  const d = new Date(createdAt);
-  d.setDate(d.getDate() + DESIGN_VOTING_DAYS);
-  return d;
+  return new Date(createdAt.getTime() + DESIGN_VOTING_MS);
 }
 
 export async function POST(
@@ -36,7 +34,7 @@ export async function POST(
   if (comment.authorId === userId) return bad("Cannot vote on own comment", 400);
 
   const endsAt = votingEndsAt(comment.design.createdAt);
-  if (new Date() >= endsAt) return bad("Voting closed (design 2-day window ended)", 400);
+  if (new Date() >= endsAt) return bad("Voting closed (design voting window ended)", 400);
 
   const points = await getUserColorStrength(userId);
 

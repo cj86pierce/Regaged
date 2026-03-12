@@ -193,7 +193,7 @@ export default function DesignDetailClient({ initialDesign }: { initialDesign: D
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
           {ended ? (
             <div style={{ fontSize: 13, color: "var(--text-muted)" }}>
-              Voting closed (2-day window ended) · ✅ {design.plus} ❌ {design.minus}
+              Voting closed · ✅ {design.plus} ❌ {design.minus}
             </div>
           ) : (
             <>

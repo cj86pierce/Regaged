@@ -2,16 +2,14 @@ import { NextResponse } from "next/server";
 import { getCurrentUserId } from "@/lib/getCurrentUserId";
 import { prisma } from "@/lib/prisma";
 
-const DESIGN_VOTING_DAYS = 2;
+const DESIGN_VOTING_MS = 60 * 1000; // 1 min for testing; 24*60*60*1000 for 1 day
 
 function bad(msg: string, status = 400) {
   return NextResponse.json({ error: msg }, { status });
 }
 
 function votingEndsAt(createdAt: Date): Date {
-  const d = new Date(createdAt);
-  d.setDate(d.getDate() + DESIGN_VOTING_DAYS);
-  return d;
+  return new Date(createdAt.getTime() + DESIGN_VOTING_MS);
 }
 
 export async function POST(

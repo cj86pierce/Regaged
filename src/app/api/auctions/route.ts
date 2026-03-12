@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { resolveEndedAuctions } from "@/lib/resolveAuctions";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const now = new Date();
 
@@ -40,9 +42,11 @@ export async function GET() {
     currentBid: a.currentBid,
   });
 
-  return NextResponse.json({
+  const res = NextResponse.json({
     auctions: auctions.map(mapAuction),
     soldAuctions: soldAuctions.map(mapAuction),
   });
+  res.headers.set("Cache-Control", "no-store");
+  return res;
 }
 

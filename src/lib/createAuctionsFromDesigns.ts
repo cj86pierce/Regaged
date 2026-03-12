@@ -6,15 +6,16 @@
  */
 import { prisma } from "@/lib/prisma";
 
-const DESIGN_VOTING_DAYS = 2;
-const AUCTION_DURATION_DAYS = 7;
+// Testing: 1 minute. For production set to 24*60*60*1000 (1 day) each.
+const DESIGN_VOTING_MS = 60 * 1000;
+const AUCTION_DURATION_MS = 60 * 1000;
 
 export async function createAuctionsFromDesigns(): Promise<{ created: number }> {
   const now = new Date();
 
   const designs = await prisma.design.findMany({
     where: {
-      createdAt: { lt: new Date(now.getTime() - DESIGN_VOTING_DAYS * 24 * 60 * 60 * 1000) },
+      createdAt: { lt: new Date(now.getTime() - DESIGN_VOTING_MS) },
     },
     include: { votes: true },
     orderBy: { createdAt: "asc" },
@@ -51,8 +52,7 @@ export async function createAuctionsFromDesigns(): Promise<{ created: number }> 
     if (!top) continue;
 
     const startsAt = new Date();
-    const endsAt = new Date();
-    endsAt.setDate(endsAt.getDate() + AUCTION_DURATION_DAYS);
+    const endsAt = new Date(now.getTime() + AUCTION_DURATION_MS);
 
     await prisma.auction.create({
       data: { designId: top.id, startsAt, endsAt, currentBid: 5 },
