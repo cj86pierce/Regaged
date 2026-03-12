@@ -52,7 +52,7 @@ export default function CarePackagePanel(props: {
   return (
     <div className="theme-sidebar-panel" style={{ borderRadius: 12, padding: 12, flexShrink: 0 }}>
       <div style={{ fontWeight: 1000, marginBottom: 8 }}>Care Packages</div>
-      {err && <div style={{ fontSize: 12, color: "crimson", marginBottom: 8 }}>{err}</div>}
+      {err && <div style={{ fontSize: 12, color: "var(--text-error)", marginBottom: 8 }}>{err}</div>}
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {unclaimed.map((cp) => {
           const busy = claiming[cp.eventId] === true;

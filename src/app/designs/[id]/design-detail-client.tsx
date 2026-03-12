@@ -421,7 +421,7 @@ export default function DesignDetailClient({ initialDesign }: { initialDesign: D
                     <span style={{ fontSize: 12, fontWeight: 800 }}>{c.score}</span>
                   </>
                 ) : (
-                  <span style={{ fontSize: 12, color: "#888" }}>
+                  <span style={{ fontSize: 12, color: "var(--muted-gray-3)" }}>
                     ✅ {c.plus} ❌ {c.minus} · {c.score}
                   </span>
                 )}

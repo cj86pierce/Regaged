@@ -20,10 +20,10 @@ export default function Sidebar({
   return (
     <div
       style={{
-        border: "1px solid #ddd",
+        border: "1px solid var(--border)",
         borderRadius: 10,
         padding: 12,
-        background: "#fff",
+        background: "var(--bg-card)",
       }}
     >
       {/* IMPORTANT: id used for scroll */}
@@ -63,7 +63,7 @@ export default function Sidebar({
         </div>
       )}
 
-      <div style={{ marginTop: 12, fontSize: 13, color: "#666" }}>
+      <div style={{ marginTop: 12, fontSize: 13, color: "var(--muted-gray)" }}>
         <strong>How Fastings works:</strong>
         <ul style={{ paddingLeft: 18 }}>
           <li>POV is awarded first</li>
@@ -80,16 +80,17 @@ const buttonStyle: React.CSSProperties = {
   width: "100%",
   padding: "10px 12px",
   borderRadius: 8,
-  border: "none",
+  border: "1px solid var(--border)",
   fontWeight: 700,
-  background: "#111",
-  color: "#fff",
+  background: "var(--bg-btn-send)",
+  color: "var(--text-btn-send)",
   cursor: "pointer",
 };
 
 const infoStyle: React.CSSProperties = {
   padding: 10,
   borderRadius: 8,
-  background: "#f1f1f1",
+  background: "var(--bg-btn-disabled)",
   fontSize: 14,
+  color: "var(--text-primary)",
 };

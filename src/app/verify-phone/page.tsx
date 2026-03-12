@@ -52,7 +52,7 @@ export default function VerifyPhonePage() {
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             placeholder="Phone (E.164) e.g. +14195551234"
-            style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(0,0,0,0.2)" }}
+            style={{ padding: 10, borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text-primary)" }}
           />
           <button
             disabled={busy}
@@ -71,7 +71,7 @@ export default function VerifyPhonePage() {
             value={code}
             onChange={(e) => setCode(e.target.value)}
             placeholder="Enter code"
-            style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(0,0,0,0.2)" }}
+            style={{ padding: 10, borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text-primary)" }}
           />
           <button
             disabled={busy}
@@ -84,7 +84,7 @@ export default function VerifyPhonePage() {
           <button
             disabled={busy}
             onClick={() => setStep("phone")}
-            style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid rgba(0,0,0,0.12)", background: "#f3f6f9", fontWeight: 900 }}
+            style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg-btn-disabled)", color: "var(--text-primary)", fontWeight: 900 }}
           >
             Change phone
           </button>

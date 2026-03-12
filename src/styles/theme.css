@@ -35,8 +35,36 @@
   --vote-minus-border: #c62828;
   --bg-currency: var(--bg-btn-disabled);
   --text-username: var(--text-primary);
-  /* Currency/username red styling is dark-mode only; see [data-theme="dark"] below */
   --text-game: #111;
+  --success: #198754;
+  --error-inline: #b02a37;
+  --open-badge-bg: #e8f5e9;
+  --open-badge-text: #2e7d32;
+  --bid-btn-bg: linear-gradient(#ffd85a, #ffb703);
+  --bid-btn-text: #3a2b00;
+  --loading-bg: #f3f6f9;
+  --add-friend-loading: linear-gradient(#e8f5e9, #c8e6c9);
+  --add-friend-loading-text: #1b5e20;
+  --remove-friend-loading: #ffebee;
+  --remove-friend-loading-text: #c62828;
+  --reorder-bg: #fff;
+  --reorder-alt: #eee;
+  --friend-mutual-bg: linear-gradient(#e8f5e9, #c8e6c9);
+  --friend-mutual-border: #81c784;
+  --save-btn-bg: #2e7d32;
+  --edit-panel-bg: #fff;
+  --link-blue: #0b5ed7;
+  --muted-gray: #666;
+  --muted-gray-2: #777;
+  --muted-gray-3: #888;
+  --presence-online: #198754;
+  --presence-away: #b58900;
+  --presence-offline: #6c757d;
+  --chat-msg-system: #fff3cd;
+  --chat-msg-new: #fffbe6;
+  --chat-msg-default: #f9f9f9;
+  --chat-username-system: #8a6d3b;
+  --chat-username: #222;
 }
 
 /* Dark: dark red & black */
@@ -76,6 +104,38 @@
   --bg-currency: #8b2828;
   --text-username: #ff6060;
   --text-game: #fff;
+  --presence-online: #4ade80;
+  --presence-away: #fbbf24;
+  --presence-offline: #94a3b8;
+  --success: #4ade80;
+  --error-inline: #f87171;
+  --open-badge-bg: #1a2a1a;
+  --open-badge-text: #4ade80;
+  --bid-btn-bg: linear-gradient(#8b1a1a, #6b1414);
+  --bid-btn-text: #ffe0e0;
+  --loading-bg: #251010;
+  --add-friend-loading: linear-gradient(#1a2a1a, #0d1a0d);
+  --add-friend-loading-text: #4ade80;
+  --remove-friend-loading: #2a1a1a;
+  --remove-friend-loading-text: #f87171;
+  --reorder-bg: #1a0808;
+  --reorder-alt: #251010;
+  --friend-mutual-bg: linear-gradient(#1a2a1a, #0d1a0d);
+  --friend-mutual-border: #3d8b3d;
+  --save-btn-bg: #2d6a2d;
+  --edit-panel-bg: #1a0808;
+  --link-blue: #e05050;
+  --muted-gray: #c0a0a0;
+  --muted-gray-2: #a08080;
+  --muted-gray-3: #806060;
+  --presence-online: #4ade80;
+  --presence-away: #fbbf24;
+  --presence-offline: #94a3b8;
+  --chat-msg-system: #2a2515;
+  --chat-msg-new: #2a2a15;
+  --chat-msg-default: #1a0808;
+  --chat-username-system: #d4b896;
+  --chat-username: #e8e0e0;
 }
 
 .theme-body {
@@ -289,6 +349,21 @@ html:not([data-theme]) .theme-username {
 .theme-pager-btn { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-primary); }
 
 .theme-chat-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.8;
+}
+
+/* Dark mode: ensure inputs, textareas, selects have visible text */
+[data-theme="dark"] input,
+[data-theme="dark"] textarea,
+[data-theme="dark"] select {
+  background: var(--bg-input) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border) !important;
+}
+
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
   color: var(--text-muted);
   opacity: 0.8;
 }

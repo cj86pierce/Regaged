@@ -82,9 +82,9 @@ function AddFriendButton({
           width: "100%",
           padding: "8px 12px",
           borderRadius: 8,
-          border: "1px solid rgba(0,0,0,0.12)",
-          background: loading ? "#f3f6f9" : "linear-gradient(#e8f5e9, #c8e6c9)",
-          color: "#1b5e20",
+          border: "1px solid var(--border)",
+          background: loading ? "var(--loading-bg)" : "var(--add-friend-loading)",
+          color: "var(--add-friend-loading-text)",
           fontWeight: 800,
           fontSize: 13,
           cursor: loading ? "not-allowed" : "pointer",
@@ -92,7 +92,7 @@ function AddFriendButton({
       >
         {loading ? "Adding..." : "Add friend"}
       </button>
-      {error && <div style={{ fontSize: 12, color: "#c00", marginTop: 4 }}>{error}</div>}
+      {error && <div style={{ fontSize: 12, color: "var(--text-error)", marginTop: 4 }}>{error}</div>}
     </div>
   );
 }
@@ -169,8 +169,8 @@ function ReorderFriendsButton({
               gap: 6,
               padding: "4px 8px",
               borderRadius: 6,
-              background: "#fff",
-              border: "1px solid rgba(0,0,0,0.08)",
+              background: "var(--reorder-bg)",
+              border: "1px solid var(--border)",
             }}
           >
             <button
@@ -179,8 +179,8 @@ function ReorderFriendsButton({
               style={{
                 padding: "2px 6px",
                 borderRadius: 4,
-                border: "1px solid rgba(0,0,0,0.1)",
-                background: i === 0 ? "#eee" : "#fff",
+                border: "1px solid var(--border)",
+                background: i === 0 ? "var(--reorder-alt)" : "var(--reorder-bg)",
                 cursor: i === 0 ? "not-allowed" : "pointer",
                 fontSize: 12,
               }}
@@ -193,8 +193,8 @@ function ReorderFriendsButton({
               style={{
                 padding: "2px 6px",
                 borderRadius: 4,
-                border: "1px solid rgba(0,0,0,0.1)",
-                background: i === order.length - 1 ? "#eee" : "#fff",
+                border: "1px solid var(--border)",
+                background: i === order.length - 1 ? "var(--reorder-alt)" : "var(--reorder-bg)",
                 cursor: i === order.length - 1 ? "not-allowed" : "pointer",
                 fontSize: 12,
               }}
@@ -213,8 +213,8 @@ function ReorderFriendsButton({
             padding: "6px 10px",
             borderRadius: 6,
             border: "none",
-            background: saving ? "#ccc" : "#2e7d32",
-            color: "#fff",
+            background: saving ? "var(--bg-btn-disabled)" : "var(--save-btn-bg)",
+            color: "var(--text-btn-send)",
             fontWeight: 800,
             fontSize: 12,
             cursor: saving ? "not-allowed" : "pointer",
@@ -227,8 +227,9 @@ function ReorderFriendsButton({
           style={{
             padding: "6px 10px",
             borderRadius: 6,
-            border: "1px solid rgba(0,0,0,0.15)",
-            background: "#fff",
+            border: "1px solid var(--border)",
+            background: "var(--reorder-bg)",
+            color: "var(--text-primary)",
             fontWeight: 800,
             fontSize: 12,
             cursor: "pointer",
@@ -261,9 +262,9 @@ function RemoveFriendButton({ friendId, onRemoved }: { friendId: string; onRemov
         width: "100%",
         padding: "8px 12px",
         borderRadius: 8,
-        border: "1px solid rgba(0,0,0,0.12)",
-        background: loading ? "#f3f6f9" : "#ffebee",
-        color: "#c62828",
+        border: "1px solid var(--border)",
+        background: loading ? "var(--loading-bg)" : "var(--remove-friend-loading)",
+        color: "var(--remove-friend-loading-text)",
         fontWeight: 800,
         fontSize: 13,
         cursor: loading ? "not-allowed" : "pointer",
@@ -435,7 +436,7 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
                     height: 10,
                     borderRadius: 999,
                         background: "var(--bg-btn-disabled)",
-                    border: "1px solid rgba(0,0,0,0.08)",
+                        border: "1px solid var(--border)",
                     zIndex: -1,
                   }}
                 />
@@ -450,11 +451,11 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
               )}
               <StatLine label="Played:" value={data.stats.gamesPlayed} suffixText="times" />
 
-              <div style={{ marginTop: 8, fontSize: 14, color: "#666" }}>
+              <div style={{ marginTop: 8, fontSize: 14, color: "var(--muted-gray)" }}>
                 Last Activity: <b>{last}</b>
               </div>
 
-              <div style={{ marginTop: 6, fontSize: 12, color: "#777" }}>Joined {joinedLabel}</div>
+              <div style={{ marginTop: 6, fontSize: 12, color: "var(--muted-gray-2)" }}>Joined {joinedLabel}</div>
             </div>
 
             {/* ✅ Swatch sits here; bar spans under it because the bar uses full width (left/right) */}
@@ -492,7 +493,7 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
                   value={bioDraft}
                   onChange={(e) => setBioDraft(e.target.value)}
                   rows={6}
-                  style={{ width: "100%", padding: 10, borderRadius: 10, border: "1px solid rgba(0,0,0,0.25)", resize: "vertical", fontFamily: "inherit" }}
+                  style={{ width: "100%", padding: 10, borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text-primary)", resize: "vertical", fontFamily: "inherit" }}
                   placeholder="Write your bio…"
                 />
                 <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
@@ -590,7 +591,7 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
                       style={{
                         fontSize: 14,
                         fontWeight: 700,
-                        color: "#0b5ed7",
+                        color: "var(--link-color)",
                         textDecoration: "none",
                       }}
                     >
@@ -644,8 +645,8 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
                           textAlign: "center",
                           padding: 6,
                           borderRadius: 10,
-                          background: f.isMutual ? "linear-gradient(#e8f5e9, #c8e6c9)" : "transparent",
-                          border: f.isMutual ? "1px solid #81c784" : "1px solid transparent",
+                          background: f.isMutual ? "var(--friend-mutual-bg)" : "transparent",
+                          border: f.isMutual ? "1px solid var(--friend-mutual-border)" : "1px solid transparent",
                         }}
                       >
                         <Avatar config={f.avatar} width={48} />
@@ -678,7 +679,7 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
                 <RemoveFriendButton friendId={data.profileUserId} onRemoved={() => window.location.reload()} />
               )}
               {data.friends.length === 0 && !data.canAddFriend && !data.isFriend && (
-                <div style={{ fontSize: 13, color: "#888" }}>No friends yet</div>
+                <div style={{ fontSize: 13, color: "var(--muted-gray-3)" }}>No friends yet</div>
               )}
             </Card>
 

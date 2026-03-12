@@ -97,11 +97,11 @@ export default function ColorLevelsClient({
               <div style={{ fontSize: 12, opacity: 0.9, marginBottom: 4 }}>Power: <b>{lvl.strength}</b></div>
               <div style={{ fontSize: 12, opacity: 0.9, marginBottom: 8 }}>Karma: <b>{lvl.karmaNeeded}</b></div>
               <div style={{ fontSize: 14, fontWeight: 1000, color: "var(--brand)", marginBottom: 10 }}>{lvl.priceT} R$</div>
-              {lvl.id === 0 && <div style={{ fontSize: 11, color: "#198754", fontWeight: 800 }}>Default</div>}
-              {has && lvl.id !== 0 && <div style={{ fontSize: 11, color: "#198754", fontWeight: 800 }}>Owned</div>}
-              {!has && isLockedByOrder && <div style={{ fontSize: 11, color: "#b02a37", fontWeight: 800 }}>Locked</div>}
+              {lvl.id === 0 && <div style={{ fontSize: 11, color: "var(--success)", fontWeight: 800 }}>Default</div>}
+              {has && lvl.id !== 0 && <div style={{ fontSize: 11, color: "var(--success)", fontWeight: 800 }}>Owned</div>}
+              {!has && isLockedByOrder && <div style={{ fontSize: 11, color: "var(--error-inline)", fontWeight: 800 }}>Locked</div>}
               {!has && isNext && (!canKarma || !canMoney) && (
-                <div style={{ fontSize: 11, color: "#b02a37", fontWeight: 800, marginBottom: 4 }}>
+                <div style={{ fontSize: 11, color: "var(--error-inline)", fontWeight: 800, marginBottom: 4 }}>
                   {canKarma ? "" : "Need karma. "}{canMoney ? "" : "Need R$."}
                 </div>
               )}

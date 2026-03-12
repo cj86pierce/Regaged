@@ -52,7 +52,7 @@ export default async function PublicProfilePage({
   if (!user) {
     return (
       <main style={{ padding: 8 }}>
-        <div style={{ border: "1px solid rgba(0,0,0,0.08)", borderRadius: 14, background: "#fff", padding: 14 }}>
+        <div style={{ border: "1px solid var(--border)", borderRadius: 14, background: "var(--bg-card)", padding: 14 }}>
           <h1 style={{ marginTop: 0 }}>Profile</h1>
           <p>User not found.</p>
           <Link href="/">Back to home</Link>

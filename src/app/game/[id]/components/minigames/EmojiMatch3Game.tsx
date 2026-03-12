@@ -254,7 +254,7 @@ export default function EmojiMatch3Game(props: {
           <div style={{ fontSize: 14, fontWeight: 800 }}>
             Final score: {score}
           </div>
-          {error && <div style={{ color: "crimson", fontSize: 12 }}>{error}</div>}
+          {error && <div style={{ color: "var(--text-error)", fontSize: 12 }}>{error}</div>}
           <button
             onClick={submitScore}
             disabled={busy}

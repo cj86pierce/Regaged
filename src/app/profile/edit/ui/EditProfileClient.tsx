@@ -76,7 +76,7 @@ export default function EditProfileClient(props: {
       <h1 style={{ marginTop: 0 }}>Edit Profile</h1>
 
       {/* BIO */}
-      <div style={{ border: "1px solid rgba(0,0,0,0.12)", borderRadius: 12, background: "#fff", padding: 12 }}>
+      <div style={{ border: "1px solid var(--border)", borderRadius: 12, background: "var(--edit-panel-bg)", padding: 12 }}>
         <div style={{ fontWeight: 1000, marginBottom: 8 }}>Bio</div>
 
         <textarea
@@ -88,7 +88,9 @@ export default function EditProfileClient(props: {
             width: "100%",
             padding: 10,
             borderRadius: 10,
-            border: "1px solid rgba(0,0,0,0.20)",
+            border: "1px solid var(--border)",
+            background: "var(--bg-input)",
+            color: "var(--text-primary)",
             resize: "vertical",
             fontFamily: "inherit",
           }}
@@ -102,9 +104,9 @@ export default function EditProfileClient(props: {
             style={{
               padding: "10px 12px",
               borderRadius: 10,
-              border: "1px solid rgba(0,0,0,0.15)",
-              background: saving ? "#f3f6f9" : "#111",
-              color: saving ? "#111" : "#fff",
+              border: "1px solid var(--border)",
+              background: saving ? "var(--bg-btn-disabled)" : "var(--bg-btn-send)",
+              color: saving ? "var(--text-muted)" : "var(--text-btn-send)",
               fontWeight: 1000,
               cursor: saving ? "not-allowed" : "pointer",
             }}
@@ -113,16 +115,16 @@ export default function EditProfileClient(props: {
           </button>
 
           <div style={{ fontSize: 12, opacity: 0.75 }}>{bio.length}/1000</div>
-          {msg && <div style={{ fontWeight: 1000 }}>{msg}</div>}
+          {msg && <div style={{ fontWeight: 1000, color: "var(--text-primary)" }}>{msg}</div>}
         </div>
       </div>
 
       {/* EMAIL VERIFICATION */}
-      <div style={{ marginTop: 12, border: "1px solid rgba(0,0,0,0.12)", borderRadius: 12, background: "#fff", padding: 12 }}>
+      <div style={{ marginTop: 12, border: "1px solid var(--border)", borderRadius: 12, background: "var(--edit-panel-bg)", padding: 12 }}>
         <div style={{ fontWeight: 1000, marginBottom: 8 }}>Email Verification</div>
 
         {verified ? (
-          <div style={{ fontWeight: 900, color: "#198754" }}>
+          <div style={{ fontWeight: 900, color: "var(--success)" }}>
             ✅ Verified — {new Date(props.emailVerifiedAt!).toLocaleString()}
           </div>
         ) : (
@@ -142,8 +144,8 @@ export default function EditProfileClient(props: {
                 padding: "10px 12px",
                 borderRadius: 10,
                 border: "1px solid rgba(0,0,0,0.15)",
-                background: "linear-gradient(#ffd85a,#ffb703)",
-                color: "#3a2b00",
+                background: "var(--bid-btn-bg)",
+                color: "var(--bid-btn-text)",
                 fontWeight: 1000,
                 cursor: emailBusy ? "not-allowed" : "pointer",
               }}
@@ -157,7 +159,7 @@ export default function EditProfileClient(props: {
                 onChange={(e) => setCode(e.target.value)}
                 placeholder="6-digit code"
                 inputMode="numeric"
-                style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(0,0,0,0.20)", width: 160 }}
+                style={{ padding: 10, borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text-primary)", width: 160 }}
               />
               <button
                 onClick={confirmCode}
@@ -165,9 +167,9 @@ export default function EditProfileClient(props: {
                 style={{
                   padding: "10px 12px",
                   borderRadius: 10,
-                  border: "1px solid rgba(0,0,0,0.15)",
-                  background: "#111",
-                  color: "#fff",
+                  border: "1px solid var(--border)",
+                  background: "var(--bg-btn-send)",
+                  color: "var(--text-btn-send)",
                   fontWeight: 1000,
                   cursor: emailBusy ? "not-allowed" : "pointer",
                 }}

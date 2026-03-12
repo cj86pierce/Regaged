@@ -47,7 +47,7 @@ export default function EnrollFastingBotPage() {
         {busy ? "Enrolling..." : "Enroll"}
       </button>
 
-      {err && <div style={{ marginTop: 10, fontWeight: 900, color: "crimson" }}>{err}</div>}
+      {err && <div style={{ marginTop: 10, fontWeight: 900, color: "var(--text-error)" }}>{err}</div>}
     </main>
   );
 }

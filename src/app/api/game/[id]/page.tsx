@@ -108,7 +108,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
         <button onClick={send} style={{ padding: "8px 14px" }}>Send</button>
       </div>
 
-      {err && <p style={{ color: "crimson", marginTop: 10 }}><b>{err}</b></p>}
+      {err && <p style={{ color: "var(--text-error)", marginTop: 10 }}><b>{err}</b></p>}
 
       <p style={{ marginTop: 10, opacity: 0.75 }}>
         Chat cooldown is 5 seconds. Reactions are one per user per message.

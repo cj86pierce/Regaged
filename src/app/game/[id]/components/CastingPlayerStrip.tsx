@@ -78,7 +78,7 @@ export default function CastingPlayerStrip(props: {
             // When completed: grey everyone except 1st place (place === 1). If place is null we still grey.
             const grayscale = isCompleted ? place !== 1 : out;
             const presenceColor =
-              presence.tone === "online" ? "#198754" : presence.tone === "away" ? "#b58900" : "#6c757d";
+              presence.tone === "online" ? "var(--presence-online)" : presence.tone === "away" ? "var(--presence-away)" : "var(--presence-offline)";
 
             const icon = isCompleted
               ? (place != null ? placeSuffix(place) : "—")

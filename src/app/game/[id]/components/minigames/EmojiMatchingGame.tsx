@@ -187,7 +187,7 @@ export default function EmojiMatchingGame(props: {
           <div style={{ fontSize: 14, fontWeight: 800 }}>
             Done in {Math.round((performance.now() - startAtRef.current) / 1000)}s, {moves} moves!
           </div>
-          {error && <div style={{ color: "crimson", fontSize: 12 }}>{error}</div>}
+          {error && <div style={{ color: "var(--text-error)", fontSize: 12 }}>{error}</div>}
           <button
             onClick={submitScore}
             disabled={busy}

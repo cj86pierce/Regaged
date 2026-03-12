@@ -60,7 +60,7 @@ export default function Sidebar(props: {
         {gameState === "ROUND_NOMINATE" && (
           <>
             {myNomLockedIn ? (
-              <div style={{ fontWeight: 1000, color: "#198754" }}>✅ Nominations locked in.</div>
+              <div style={{ fontWeight: 1000, color: "var(--success)" }}>✅ Nominations locked in.</div>
             ) : (
               <>
                 <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 8 }}>
@@ -90,7 +90,7 @@ export default function Sidebar(props: {
         {gameState === "ROUND_VOTE" && (
           <>
             {myVoteLockedIn ? (
-              <div style={{ fontWeight: 1000, color: "#198754" }}>✅ Vote locked in.</div>
+              <div style={{ fontWeight: 1000, color: "var(--success)" }}>✅ Vote locked in.</div>
             ) : (
               <>
                 <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 8 }}>
@@ -134,7 +134,7 @@ export default function Sidebar(props: {
       </div>
 
       <div style={box}>
-        <div style={{ fontWeight: 1000, color: "#b02a37" }}>Story</div>
+        <div style={{ fontWeight: 1000, color: "var(--brand)" }}>Story</div>
         {systemStory.length === 0 ? (
           <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>No story yet.</div>
         ) : (

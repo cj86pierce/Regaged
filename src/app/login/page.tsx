@@ -30,7 +30,7 @@ export default function LoginPage() {
         <input placeholder="username" value={username} onChange={(e) => setUsername(e.target.value)} />
         <input placeholder="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
         <button type="submit">Login</button>
-        {err && <p style={{ color: "crimson" }}>{err}</p>}
+        {err && <p style={{ color: "var(--text-error)" }}>{err}</p>}
       </form>
 
       <p style={{ marginTop: 12 }}>

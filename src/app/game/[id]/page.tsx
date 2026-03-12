@@ -332,7 +332,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
           )}
 
           {error && (
-            <div style={{ marginTop: 10, color: "crimson" }}>
+            <div style={{ marginTop: 10, color: "var(--text-error)" }}>
               <b>{error}</b>
             </div>
           )}

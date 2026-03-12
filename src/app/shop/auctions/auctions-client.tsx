@@ -90,7 +90,7 @@ export default function AuctionsClient() {
           <div style={{ fontWeight: 1000, fontSize: 16, marginBottom: 4 }}>Auctions for Avatar Outfits</div>
           <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 12 }}>Latest Auctions</div>
           {loading && <div style={{ fontSize: 12 }}>Loading…</div>}
-          {error && <div style={{ fontSize: 12, color: "#b02a37", fontWeight: 900 }}>{error}</div>}
+          {error && <div style={{ fontSize: 12, color: "var(--error-inline)", fontWeight: 900 }}>{error}</div>}
           {!loading && auctions.length === 0 && !error && (
             <div style={{ fontSize: 12, opacity: 0.8 }}>No active auctions right now.</div>
           )}
@@ -129,8 +129,8 @@ export default function AuctionsClient() {
                     <span
                       style={{
                         padding: "4px 8px", borderRadius: 6, fontSize: 11, fontWeight: 1000,
-                        background: isClosed ? "var(--bg-btn-disabled)" : "#e8f5e9",
-                        color: isClosed ? "var(--text-muted)" : "#2e7d32",
+                        background: isClosed ? "var(--bg-btn-disabled)" : "var(--open-badge-bg)",
+                        color: isClosed ? "var(--text-muted)" : "var(--open-badge-text)",
                         border: "1px solid var(--border)",
                       }}
                     >
@@ -145,8 +145,8 @@ export default function AuctionsClient() {
                         onClick={() => bid(a.id, 1)}
                         disabled={isClosed}
                         style={{
-                          padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(0,0,0,0.15)",
-                          background: "linear-gradient(#ffd85a,#ffb703)", fontSize: 11, fontWeight: 900,
+                          padding: "4px 8px", borderRadius: 6, border: "1px solid var(--border)",
+                          background: "var(--bid-btn-bg)", color: "var(--bid-btn-text)", fontSize: 11, fontWeight: 900,
                           cursor: isClosed ? "not-allowed" : "pointer", opacity: isClosed ? 0.6 : 1,
                         }}
                       >

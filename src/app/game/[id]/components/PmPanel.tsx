@@ -130,7 +130,7 @@ export default function PmPanel({
           />
         </div>
 
-        {err && <div style={{ marginTop: 10, color: "crimson", fontWeight: 900 }}>{err}</div>}
+        {err && <div style={{ marginTop: 10, color: "var(--text-error)", fontWeight: 900 }}>{err}</div>}
       </div>
 
       <div className="theme-sidebar-panel" style={{ borderRadius: 10, padding: 10 }}>

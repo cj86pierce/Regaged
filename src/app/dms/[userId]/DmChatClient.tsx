@@ -100,7 +100,7 @@ export default function DmChatClient({
               padding: "8px 12px",
               borderRadius: 10,
               background: m.recipientUserId === otherUserId ? "var(--brand)" : "var(--bg-card)",
-              color: m.recipientUserId === otherUserId ? "#fff" : "inherit",
+              color: m.recipientUserId === otherUserId ? "#fff" : "var(--text-primary)",
               border: "1px solid var(--border)",
             }}
           >

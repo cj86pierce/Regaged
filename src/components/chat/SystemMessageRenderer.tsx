@@ -25,21 +25,21 @@ const POINTS_BOX_STYLE: React.CSSProperties = {
   display: "inline-block",
   padding: "2px 8px",
   borderRadius: 4,
-  background: "#111",
-  color: "#fff",
+  background: "var(--bg-btn-send)",
+  color: "var(--text-btn-send)",
   fontWeight: 800,
   fontSize: 12,
-  border: "1px solid #e6b800",
+  border: "1px solid var(--border)",
 };
 const TAG_BOX_STYLE: React.CSSProperties = {
   display: "inline-block",
   padding: "2px 8px",
   borderRadius: 4,
-  background: "#111",
-  color: "#ffeb3b",
+  background: "var(--bg-btn-send)",
+  color: "var(--text-btn-send)",
   fontWeight: 1000,
   fontSize: 11,
-  border: "1px solid #e6b800",
+  border: "1px solid var(--border)",
 };
 
 function SysMsgCard({

@@ -51,7 +51,7 @@ export default function EnrollCastingPage() {
         (Drops + health ticking will be added next — this step is just to fill/start Castings games.)
       </div>
 
-      {err && <div style={{ marginTop: 10, fontWeight: 900, color: "crimson" }}>{err}</div>}
+      {err && <div style={{ marginTop: 10, fontWeight: 900, color: "var(--text-error)" }}>{err}</div>}
     </main>
   );
 }

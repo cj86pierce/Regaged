@@ -51,7 +51,7 @@ export default function ChallengePage() {
   if (error)
     return (
       <main style={{ padding: 16 }}>
-        <p style={{ color: "crimson" }}>{error}</p>
+        <p style={{ color: "var(--text-error)" }}>{error}</p>
         <Link href={`/game/${gameId}`}>← Back to game</Link>
       </main>
     );

@@ -32,7 +32,7 @@ export default function ChatPanel({
         padding: 10,
         height: 520,
         overflow: "hidden",
-        background: "#fff",
+        background: "var(--bg-card)",
       }}
     >
       {/* Anchor for scroll */}
@@ -57,14 +57,14 @@ export default function ChatPanel({
             <div
               key={m.id}
               style={{
-                border: "1px solid #bbb",
+                border: "1px solid var(--border)",
                 borderRadius: 8,
                 padding: "6px 8px",
                 background: isSystem
-                  ? "#fff3cd"
+                  ? "var(--chat-msg-system)"
                   : m.isNew
-                  ? "#fffbe6"
-                  : "#f9f9f9",
+                  ? "var(--chat-msg-new)"
+                  : "var(--chat-msg-default)",
                 transition: "background-color 0.4s ease",
               }}
             >
@@ -72,13 +72,13 @@ export default function ChatPanel({
                 style={{
                   fontWeight: 700,
                   fontSize: 13,
-                  color: isSystem ? "#8a6d3b" : "#222",
+                  color: isSystem ? "var(--chat-username-system)" : "var(--chat-username)",
                 }}
               >
                 {isSystem ? "System" : m.username}
               </div>
 
-              <div style={{ fontSize: 14 }}>{m.content}</div>
+              <div style={{ fontSize: 14, color: "var(--text-primary)" }}>{m.content}</div>
             </div>
           );
         })}

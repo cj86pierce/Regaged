@@ -231,7 +231,7 @@ export default function CastingChatPanel(props: {
         })}
       </div>
 
-      {claimErr && <div style={{ marginTop: 10, color: "crimson", fontWeight: 1000 }}>{claimErr}</div>}
+      {claimErr && <div style={{ marginTop: 10, color: "var(--text-error)", fontWeight: 1000 }}>{claimErr}</div>}
 
       {/* pager */}
       <div style={{ marginTop: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>

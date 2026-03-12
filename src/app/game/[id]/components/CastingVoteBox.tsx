@@ -127,8 +127,8 @@ export default function CastingVoteBox(props: {
         })}
       </div>
 
-      {err && <div style={{ marginTop: 10, color: "crimson", fontWeight: 1000 }}>{err}</div>}
-      {msg && <div style={{ marginTop: 10, color: "#198754", fontWeight: 1000 }}>{msg}</div>}
+      {err && <div style={{ marginTop: 10, color: "var(--text-error)", fontWeight: 1000 }}>{err}</div>}
+      {msg && <div style={{ marginTop: 10, color: "var(--success)", fontWeight: 1000 }}>{msg}</div>}
 
       <button
         disabled={saving || !complete}
@@ -139,7 +139,7 @@ export default function CastingVoteBox(props: {
           padding: "10px 12px",
           borderRadius: 12,
           border: "1px solid rgba(0,0,0,0.12)",
-          background: saving || !complete ? "#f3f6f9" : "#111",
+          background: saving || !complete ? "var(--bg-btn-disabled)" : "var(--bg-btn-send)",
           color: saving || !complete ? "var(--text-primary)" : "var(--text-btn-send)",
           fontWeight: 1000,
           cursor: saving || !complete ? "not-allowed" : "pointer",

@@ -82,7 +82,7 @@ function ColorWheel({
               width: 22,
               height: 22,
               borderRadius: 6,
-              border: c === value ? "2px solid #111" : "1px solid rgba(0,0,0,0.2)",
+              border: c === value ? "2px solid var(--brand)" : "1px solid var(--border)",
               background: c,
               cursor: "pointer",
             }}
@@ -175,8 +175,9 @@ export default function AvatarEditor({ initial }: { initial: AvatarEditorInitial
               width: "100%",
               padding: "10px 12px",
               borderRadius: 12,
-              border: "1px solid rgba(0,0,0,0.15)",
-              background: saving ? "#f3f6f9" : "linear-gradient(#ffd85a,#ffb703)",
+              border: "1px solid var(--border)",
+              background: saving ? "var(--bg-btn-disabled)" : "var(--bid-btn-bg)",
+              color: saving ? "var(--text-muted)" : "var(--bid-btn-text)",
               fontWeight: 1000,
               cursor: saving ? "not-allowed" : "pointer",
             }}
@@ -184,10 +185,10 @@ export default function AvatarEditor({ initial }: { initial: AvatarEditorInitial
             {saving ? "Saving..." : "Save Avatar"}
           </button>
 
-          {msg && <div style={{ marginTop: 10, fontWeight: 900 }}>{msg}</div>}
+          {msg && <div style={{ marginTop: 10, fontWeight: 900, color: "var(--text-primary)" }}>{msg}</div>}
         </div>
 
-        <div style={{ border: "1px solid rgba(0,0,0,0.10)", borderRadius: 14, padding: 12, background: "#fff" }}>
+        <div style={{ border: "1px solid var(--border)", borderRadius: 14, padding: 12, background: "var(--bg-card)" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
             <StylePicker
               label="Body"

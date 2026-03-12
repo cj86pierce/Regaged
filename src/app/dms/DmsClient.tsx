@@ -36,7 +36,7 @@ export default function DmsClient() {
   }, []);
 
   if (loading) return <div style={{ fontSize: 13 }}>Loading…</div>;
-  if (error) return <div style={{ color: "#b02a37", fontWeight: 900 }}>{error}</div>;
+  if (error) return <div style={{ color: "var(--text-error)", fontWeight: 900 }}>{error}</div>;
 
   if (conversations.length === 0) {
     return (
@@ -60,7 +60,7 @@ export default function DmsClient() {
             padding: 12,
             borderRadius: 10,
             border: "1px solid var(--border)",
-            background: c.unread ? "rgba(var(--brand-rgb, 229, 57, 53), 0.08)" : "var(--bg-card)",
+                  background: c.unread ? "var(--accent-bg)" : "var(--bg-card)",
             textDecoration: "none",
             color: "inherit",
           }}
