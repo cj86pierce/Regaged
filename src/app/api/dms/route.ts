@@ -16,8 +16,8 @@ async function requireEmailVerified(userId: string) {
 }
 
 /** GET: list conversations (users I've DMed with, with latest message) */
-export async function GET() {
-  const meUserId = await getCurrentUserId();
+export async function GET(req: Request) {
+  const meUserId = await getCurrentUserId(req);
   if (!meUserId) return bad("Unauthorized", 401);
 
   const okEmail = await requireEmailVerified(meUserId);
