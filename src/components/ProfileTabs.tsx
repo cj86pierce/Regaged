@@ -327,12 +327,20 @@ function StatLine({ label, value, suffixText, isCurrency }: { label: string; val
   );
 }
 
+function gameBubbleColor(gameType: string): string {
+  const t = gameType.toUpperCase();
+  if (t === "SURVIVOR") return "var(--game-bubble-survivor)";
+  if (t === "FROOKIES" || t === "ROOKIES") return "var(--game-bubble-frookies)";
+  return "var(--game-bubble-fasting)";
+}
+
 function Bubble({ g }: { g: ProfileGameBubble }) {
   const isActiveGame = g.state !== "COMPLETED" && g.yourStatus === "ACTIVE";
   const isFilling = g.state === "ENROLLING" && g.yourStatus === "ACTIVE";
 
-  const labelTop = g.gameType.toLowerCase();
-  const labelBottom = isActiveGame ? (isFilling ? "filling" : "enter") : g.eliminatedPlace ? suffix(g.eliminatedPlace) : "—";
+  const labelTop = g.gameType.toLowerCase().replace(/_/g, " ");
+  const labelBottom = isActiveGame ? (isFilling ? "Filling" : "Enter") : g.eliminatedPlace ? suffix(g.eliminatedPlace) : "—";
+  const bubbleBg = gameBubbleColor(g.gameType);
 
   return (
     <div className="profileGameBubble" style={{ textAlign: "center", width: 92, flexShrink: 0 }}>
@@ -342,8 +350,8 @@ function Bubble({ g }: { g: ProfileGameBubble }) {
             width: 72,
             height: 72,
             borderRadius: 999,
-            border: "2px solid rgba(0,0,0,0.25)",
-            background: isActiveGame ? "var(--accent-bg)" : "var(--bg-card)",
+            border: "2px solid var(--border)",
+            background: bubbleBg,
             margin: "0 auto",
             display: "grid",
             placeItems: "center",
@@ -362,7 +370,7 @@ function Bubble({ g }: { g: ProfileGameBubble }) {
               borderRadius: 999,
               fontSize: 11,
               fontWeight: 1000,
-              border: "1px solid rgba(0,0,0,0.20)",
+              border: "1px solid var(--border)",
               background: isActiveGame ? "var(--bg-btn-send)" : "var(--bg-card)",
               color: isActiveGame ? "var(--text-btn-send)" : "var(--text-primary)",
               minWidth: 56,
