@@ -6,6 +6,7 @@ import { touchUser } from "@/lib/touchUser";
 import ProfileTabs, { ProfileTabsData, ProfileGameBubble } from "@/components/ProfileTabs";
 import Link from "next/link";
 import type { AvatarConfig } from "@/components/Avatar";
+import { getSlotDesignsForUser, getSlotDesignsForUserIds } from "@/lib/avatarSlotDesigns";
 
 function oneOf(v: string, allowed: string[], fallback: string) {
   return allowed.includes(v) ? v : fallback;
@@ -59,6 +60,8 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
     },
   });
   if (!user) throw new Error("User not found");
+
+  const slotDesigns = await getSlotDesignsForUser(userId);
 
   const purchased = await prisma.userColor.findMany({
     where: { userId },
@@ -135,6 +138,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
     },
   });
   const friendIds = friendRows.map((r) => r.friend.id);
+  const friendSlotDesigns = await getSlotDesignsForUserIds(friendIds);
   const mutualSet = new Set(
     friendIds.length > 0
       ? (
@@ -149,6 +153,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
     id: f.friend.id,
     username: f.friend.username,
     isMutual: mutualSet.has(f.friend.id),
+    slotDesigns: friendSlotDesigns[f.friend.id] ?? {},
     avatar: {
       bodyStyle: oneOf(f.friend.bodyStyle, ["body_m", "body_f"], "body_m") as "body_m" | "body_f",
       hairStyle: oneOf(f.friend.hairStyle, ["hair_m_01","hair_m_02","hair_m_03","hair_f_01","hair_f_02","hair_f_03"], "hair_m_01"),
@@ -193,6 +198,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
     colorAnimated: highestColor?.isAnimated ?? false,
     lastSeenAt: user.lastSeenAt.toISOString(),
     avatar,
+    slotDesigns,
     stats: {
       gamesPlayed: gpAgg._count._all ?? 0,
       totalChats: gpAgg._sum.chatCount ?? 0,

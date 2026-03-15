@@ -164,6 +164,22 @@ model User {
   designCommentVotes DesignCommentVote[]
   auctionBids       AuctionBid[]
 
+  designOwnerships DesignOwner[]
+
+  equippedShirtDesignId     String?
+  equippedHairDesignId      String?
+  equippedBodyDesignId      String?
+  equippedEyesDesignId      String?
+  equippedMouthDesignId     String?
+  equippedAccessoryDesignId String?
+
+  equippedShirtDesign     Design? @relation("EquippedShirt", fields: [equippedShirtDesignId], references: [id], onDelete: SetNull)
+  equippedHairDesign      Design? @relation("EquippedHair", fields: [equippedHairDesignId], references: [id], onDelete: SetNull)
+  equippedBodyDesign      Design? @relation("EquippedBody", fields: [equippedBodyDesignId], references: [id], onDelete: SetNull)
+  equippedEyesDesign      Design? @relation("EquippedEyes", fields: [equippedEyesDesignId], references: [id], onDelete: SetNull)
+  equippedMouthDesign     Design? @relation("EquippedMouth", fields: [equippedMouthDesignId], references: [id], onDelete: SetNull)
+  equippedAccessoryDesign Design? @relation("EquippedAccessory", fields: [equippedAccessoryDesignId], references: [id], onDelete: SetNull)
+
   friendsAsUser   Friendship[] @relation("UserFriends")
   friendsAsFriend Friendship[] @relation("FriendOf")
 
@@ -268,9 +284,31 @@ model Design {
   votes    DesignVote[]
   comments DesignComment[]
   auctions Auction[]
+  owners   DesignOwner[]
+
+  equippedByShirt     User[] @relation("EquippedShirt")
+  equippedByHair      User[] @relation("EquippedHair")
+  equippedByBody      User[] @relation("EquippedBody")
+  equippedByEyes      User[] @relation("EquippedEyes")
+  equippedByMouth     User[] @relation("EquippedMouth")
+  equippedByAccessory User[] @relation("EquippedAccessory")
 
   @@index([createdAt])
   @@index([designType])
+}
+
+model DesignOwner {
+  id        String   @id @default(cuid())
+  userId    String
+  designId  String
+  acquiredAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  design Design @relation(fields: [designId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, designId])
+  @@index([userId])
+  @@index([designId])
 }
 
 model DesignVote {

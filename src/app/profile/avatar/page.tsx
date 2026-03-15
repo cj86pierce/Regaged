@@ -4,6 +4,7 @@ import { getCurrentUserIdFromHeaders } from "@/lib/getCurrentUserId";
 import { prisma } from "@/lib/prisma";
 import AvatarEditor from "./ui/AvatarEditor";
 import type { AvatarConfig } from "@/components/Avatar";
+import { getSlotDesignsForUser } from "@/lib/avatarSlotDesigns";
 
 type Initial = AvatarConfig & { username: string };
 
@@ -18,26 +19,27 @@ export default async function AvatarPage() {
     return <main style={{ padding: 12 }}>You must be logged in.</main>;
   }
 
-  const u = await prisma.user.findUnique({
-    where: { id: userId },
-    select: {
-      username: true,
-
-      bodyStyle: true,
-      hairStyle: true,
-      eyesStyle: true,
-      mouthStyle: true,
-      shirtStyle: true,
-      accessoryStyle: true,
-
-      bodyColor: true,
-      hairColor: true,
-      eyeColor: true,
-      mouthColor: true,
-      shirtColor: true,
-      accessoryColor: true,
-    },
-  });
+  const [u, slotDesigns] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        username: true,
+        bodyStyle: true,
+        hairStyle: true,
+        eyesStyle: true,
+        mouthStyle: true,
+        shirtStyle: true,
+        accessoryStyle: true,
+        bodyColor: true,
+        hairColor: true,
+        eyeColor: true,
+        mouthColor: true,
+        shirtColor: true,
+        accessoryColor: true,
+      },
+    }),
+    getSlotDesignsForUser(userId),
+  ]);
 
   if (!u) return <main style={{ padding: 12 }}>User not found.</main>;
 
@@ -64,5 +66,5 @@ export default async function AvatarPage() {
     accessoryColor: u.accessoryColor,
   };
 
-  return <AvatarEditor initial={initial} />;
+  return <AvatarEditor initial={initial} slotDesigns={slotDesigns} />;
 }

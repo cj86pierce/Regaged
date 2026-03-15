@@ -12,6 +12,7 @@ type Player = {
   eliminatedPlace: number | null;
   isNominee: boolean;
   avatar: AvatarConfig;
+  slotDesigns?: Partial<Record<import("@/components/Avatar").SlotDesignType, string>>;
 };
 
 function trunc(name: string, max = 10) {
@@ -157,7 +158,7 @@ export default function PlayerStrip(props: {
             <div key={p.userId} className="gamePlayerStripItem" style={{ minWidth: 0 }}>
               {/* ✅ avatar clickable */}
               <Link href={`/u/${encodeURIComponent(p.username)}`} style={{ display: "grid", placeItems: "center", textDecoration: "none" }}>
-                <Avatar config={p.avatar} width={64} grayscale={grayscale} />
+                <Avatar config={p.avatar} width={64} grayscale={grayscale} slotDesigns={p.slotDesigns} />
               </Link>
 
               {/* ✅ name is black */}

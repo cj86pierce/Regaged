@@ -4,6 +4,7 @@ export const dynamic = "force-dynamic";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/getCurrentUserId";
 import { touchUser } from "@/lib/touchUser";
+import { getSlotDesignsForUserIds } from "@/lib/avatarSlotDesigns";
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   const gameId = params.id;
@@ -255,10 +256,14 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
     pagination: { page, pageSize, totalPages, totalCount },
 
-    players: playersRaw.map((p) => {
-      const u = p.user;
+    players: await (async () => {
+      const playerIds = playersRaw.map((p) => p.userId);
+      const slotDesignsByUser = await getSlotDesignsForUserIds(playerIds).catch(() => ({}));
+      return playersRaw.map((p) => {
+        const u = p.user;
+        const slotDesigns = slotDesignsByUser[p.userId];
 
-      const isCastingNominee =
+        const isCastingNominee =
         (game.gameType === "CASTING" || game.gameType === "CASTING_BOT") &&
         castingNominees.includes(p.userId);
       const isFastingNominee = !!(nomineeA && nomineeB && (p.userId === nomineeA || p.userId === nomineeB));
@@ -293,8 +298,10 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
           shirtColor: u.shirtColor,
           accessoryColor: u.accessoryColor,
         },
+        slotDesigns: slotDesigns && Object.keys(slotDesigns).length ? slotDesigns : undefined,
       };
-    }),
+    });
+    })(),
 
     messages: messagesRaw.map((m) => {
       const plus = m.reactions.filter((r) => r.type === "PLUS").length;

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import Avatar, { AvatarConfig } from "@/components/Avatar";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Avatar, { AvatarConfig, type SlotDesignType } from "@/components/Avatar";
 
 const palette = [
   "#111111", "#2B1B0E", "#6D4C41", "#B71C1C",
@@ -19,6 +20,8 @@ const skinPresets = [
 ];
 
 export type AvatarEditorInitial = AvatarConfig & { username: string };
+
+type OwnedDesign = { id: string; title: string; designType: string };
 
 function StylePicker({
   label,
@@ -125,7 +128,17 @@ function SkinPicker({
   );
 }
 
-export default function AvatarEditor({ initial }: { initial: AvatarEditorInitial }) {
+export default function AvatarEditor({
+  initial,
+  slotDesigns: initialSlotDesigns = {},
+}: {
+  initial: AvatarEditorInitial;
+  slotDesigns?: Partial<Record<SlotDesignType, string>>;
+}) {
+  const router = useRouter();
+  const [slotDesigns, setSlotDesigns] = useState<Partial<Record<SlotDesignType, string>>>(initialSlotDesigns);
+  const [ownedDesigns, setOwnedDesigns] = useState<OwnedDesign[]>([]);
+  const [equipLoading, setEquipLoading] = useState<string | null>(null);
   const [cfg, setCfg] = useState<AvatarConfig>({
     bodyStyle: initial.bodyStyle,
     hairStyle: initial.hairStyle,
@@ -144,6 +157,47 @@ export default function AvatarEditor({ initial }: { initial: AvatarEditorInitial
 
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSlotDesigns(initialSlotDesigns);
+  }, [initialSlotDesigns]);
+
+  useEffect(() => {
+    fetch("/api/profile/avatar/owned-designs", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((data) => setOwnedDesigns(data.designs ?? []))
+      .catch(() => setOwnedDesigns([]));
+  }, []);
+
+  async function equip(slot: SlotDesignType, designId: string | null) {
+    const key = designId ? `${slot}-${designId}` : `${slot}-unequip`;
+    setEquipLoading(key);
+    try {
+      const res = await fetch("/api/profile/avatar/equip", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slot, designId }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        setMsg(j?.error ?? "Equip failed");
+        return;
+      }
+      setSlotDesigns((prev) => {
+        const next = { ...prev };
+        if (designId) next[slot] = `/api/designs/${designId}/image`;
+        else delete next[slot];
+        return next;
+      });
+      router.refresh();
+    } finally {
+      setEquipLoading(null);
+    }
+  }
+
+  function isEquipped(slot: SlotDesignType, designId: string) {
+    return slotDesigns[slot] === `/api/designs/${designId}/image`;
+  }
 
   async function save() {
     setSaving(true);
@@ -164,9 +218,9 @@ export default function AvatarEditor({ initial }: { initial: AvatarEditorInitial
       <h1 style={{ marginTop: 0 }}>Customize Avatar</h1>
 
       <div style={{ display: "grid", gridTemplateColumns: "360px 1fr", gap: 14 }}>
-        <div style={{ border: "1px solid rgba(0,0,0,0.10)", borderRadius: 14, padding: 12, background: "#fff" }}>
+        <div style={{ border: "1px solid rgba(0,0,0,0.10)", borderRadius: 14, padding: 12, background: "var(--bg-card)" }}>
           <div style={{ fontWeight: 900, marginBottom: 10 }}>Preview</div>
-          <Avatar config={cfg} width={240} />
+          <Avatar config={cfg} width={240} slotDesigns={slotDesigns} />
           <button
             onClick={save}
             disabled={saving}
@@ -216,6 +270,59 @@ export default function AvatarEditor({ initial }: { initial: AvatarEditorInitial
 
           <div style={{ marginTop: 12, fontSize: 12, opacity: 0.75 }}>
             Shirt highlight currently exists only for <b>shirt_01</b>.
+          </div>
+
+          <div style={{ marginTop: 24, paddingTop: 24, borderTop: "1px solid var(--border)" }}>
+            <div style={{ fontWeight: 900, marginBottom: 12 }}>Owned designs</div>
+            <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 12 }}>
+              Designs you won from auctions. Click Equip to use one on your avatar.
+            </p>
+            {ownedDesigns.length === 0 ? (
+              <div style={{ fontSize: 13, color: "var(--text-muted)" }}>You don&apos;t own any designs yet. Win an auction to get one!</div>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))", gap: 12 }}>
+                {ownedDesigns.map((d) => (
+                  <div
+                    key={d.id}
+                    style={{
+                      border: isEquipped(d.designType as SlotDesignType, d.id)
+                        ? "2px solid var(--brand)"
+                        : "1px solid var(--border)",
+                      borderRadius: 10,
+                      padding: 8,
+                      background: "var(--bg-input)",
+                      textAlign: "center",
+                    }}
+                  >
+                    <img
+                      src={`/api/designs/${d.id}/image`}
+                      alt={d.title}
+                      style={{ width: 64, height: 64, objectFit: "contain", display: "block", margin: "0 auto 8px" }}
+                    />
+                    <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 6 }} title={d.title}>
+                      {d.title.length > 12 ? d.title.slice(0, 10) + "…" : d.title}
+                    </div>
+                    <div style={{ fontSize: 10, color: "var(--text-muted)", marginBottom: 8 }}>{d.designType}</div>
+                    <button
+                      onClick={() => equip(d.designType as SlotDesignType, isEquipped(d.designType as SlotDesignType, d.id) ? null : d.id)}
+                      disabled={!!equipLoading}
+                      style={{
+                        padding: "4px 8px",
+                        fontSize: 11,
+                        borderRadius: 6,
+                        border: "1px solid var(--border)",
+                        background: isEquipped(d.designType as SlotDesignType, d.id) ? "var(--brand)" : "var(--bg-btn)",
+                        color: isEquipped(d.designType as SlotDesignType, d.id) ? "#fff" : "var(--text-primary)",
+                        cursor: equipLoading ? "not-allowed" : "pointer",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {equipLoading === `${d.designType}-${d.id}` || equipLoading === `${d.designType}-unequip` ? "..." : isEquipped(d.designType as SlotDesignType, d.id) ? "Unequip" : "Equip"}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

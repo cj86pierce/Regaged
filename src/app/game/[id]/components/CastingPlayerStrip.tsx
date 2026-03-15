@@ -17,6 +17,7 @@ type Player = {
   isNominee: boolean;
 
   avatar: AvatarConfig;
+  slotDesigns?: Partial<Record<import("@/components/Avatar").SlotDesignType, string>>;
 };
 
 function presenceLabel(lastActiveAtIso: string) {
@@ -100,7 +101,7 @@ export default function CastingPlayerStrip(props: {
                 }}
               >
                 <div style={{ display: "grid", placeItems: "center" }}>
-                  <Avatar config={p.avatar} width={64} grayscale={grayscale} />
+                  <Avatar config={p.avatar} width={64} grayscale={grayscale} slotDesigns={p.slotDesigns} />
                 </div>
 
                 <Link

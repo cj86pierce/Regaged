@@ -24,6 +24,7 @@ type Player = {
   keys: number;
   castingDayMiniGameScore?: number;
   avatar: AvatarConfig;
+  slotDesigns?: Partial<Record<import("@/components/Avatar").SlotDesignType, string>>;
 };
 
 type Message = {

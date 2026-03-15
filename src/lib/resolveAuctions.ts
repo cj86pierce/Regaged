@@ -40,6 +40,13 @@ export async function resolveEndedAuctions(): Promise<{ resolved: number }> {
           data: { soldAt: now },
         });
       });
+      try {
+        await prisma.designOwner.create({
+          data: { userId: winnerId, designId: a.designId },
+        });
+      } catch (e) {
+        console.warn("DesignOwner create skipped (table may not exist)", { auctionId: a.id });
+      }
       resolved++;
     } catch (e) {
       console.error("Auction resolution failed", { auctionId: a.id, err: String(e) });

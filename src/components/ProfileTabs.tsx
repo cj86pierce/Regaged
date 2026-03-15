@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import Avatar, { AvatarConfig } from "@/components/Avatar";
+import Avatar, { AvatarConfig, type SlotDesignType } from "@/components/Avatar";
 import { formatLastSeen } from "@/lib/lastSeenLabel";
 
 export type ProfileGameBubble = {
@@ -28,6 +28,7 @@ export type ProfileTabsData = {
   bio: string;
 
   avatar: AvatarConfig;
+  slotDesigns?: Partial<Record<SlotDesignType, string>>;
 
   stats: {
     gamesPlayed: number;
@@ -43,7 +44,7 @@ export type ProfileTabsData = {
 
   blogPosts: { id: string; title: string }[];
 
-  friends: { id: string; username: string; avatar: AvatarConfig; isMutual: boolean }[];
+  friends: { id: string; username: string; avatar: AvatarConfig; slotDesigns?: Partial<Record<SlotDesignType, string>>; isMutual: boolean }[];
   isFriend?: boolean;
   canAddFriend?: boolean;
   profileUserId?: string;
@@ -419,7 +420,7 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
         <Card title="Profile">
           <div className="profileCardInner" style={{ display: "grid", gridTemplateColumns: "220px 1fr 110px", gap: 14, alignItems: "start" }}>
             <div style={{ display: "grid", placeItems: "start" }}>
-              <Avatar config={data.avatar} width={190} />
+              <Avatar config={data.avatar} width={190} slotDesigns={data.slotDesigns} />
             </div>
 
             <div>
@@ -657,7 +658,7 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
                           border: f.isMutual ? "1px solid var(--friend-mutual-border)" : "1px solid transparent",
                         }}
                       >
-                        <Avatar config={f.avatar} width={48} />
+                        <Avatar config={f.avatar} width={48} slotDesigns={f.slotDesigns} />
                         <div className="theme-username" style={{ fontSize: 11, marginTop: 4, wordBreak: "break-word" }}>{f.username}</div>
                       </Link>
                     ))}
