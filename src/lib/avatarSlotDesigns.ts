@@ -18,10 +18,6 @@ export async function getSlotDesignsForUser(userId: string): Promise<SlotDesigns
         equippedEyesDesignId: true,
         equippedMouthDesignId: true,
         equippedAccessoryDesignId: true,
-        equippedBackgroundDesignId: true,
-        equippedScarDesignId: true,
-        equippedHairOrnamentDesignId: true,
-        equippedGlassesDesignId: true,
       },
     });
     if (!u) return {};
@@ -33,10 +29,6 @@ export async function getSlotDesignsForUser(userId: string): Promise<SlotDesigns
     if (u.equippedEyesDesignId) s.EYES = eq(u.equippedEyesDesignId)!;
     if (u.equippedMouthDesignId) s.MOUTH = eq(u.equippedMouthDesignId)!;
     if (u.equippedAccessoryDesignId) s.ACCESSORY = eq(u.equippedAccessoryDesignId)!;
-    if (u.equippedBackgroundDesignId) s.BACKGROUND = eq(u.equippedBackgroundDesignId)!;
-    if (u.equippedScarDesignId) s.SCAR = eq(u.equippedScarDesignId)!;
-    if (u.equippedHairOrnamentDesignId) s.HAIR_ORNAMENT = eq(u.equippedHairOrnamentDesignId)!;
-    if (u.equippedGlassesDesignId) s.GLASSES = eq(u.equippedGlassesDesignId)!;
     return s;
   } catch {
     return {};
@@ -62,10 +54,6 @@ export async function getSlotDesignsForUserIds(
         equippedEyesDesignId: true,
         equippedMouthDesignId: true,
         equippedAccessoryDesignId: true,
-        equippedBackgroundDesignId: true,
-        equippedScarDesignId: true,
-        equippedHairOrnamentDesignId: true,
-        equippedGlassesDesignId: true,
       },
     });
     const eq = (id: string | null) => (id ? `/api/designs/${id}/image` : undefined);
@@ -78,10 +66,6 @@ export async function getSlotDesignsForUserIds(
       if (u.equippedEyesDesignId) s.EYES = eq(u.equippedEyesDesignId)!;
       if (u.equippedMouthDesignId) s.MOUTH = eq(u.equippedMouthDesignId)!;
       if (u.equippedAccessoryDesignId) s.ACCESSORY = eq(u.equippedAccessoryDesignId)!;
-      if (u.equippedBackgroundDesignId) s.BACKGROUND = eq(u.equippedBackgroundDesignId)!;
-      if (u.equippedScarDesignId) s.SCAR = eq(u.equippedScarDesignId)!;
-      if (u.equippedHairOrnamentDesignId) s.HAIR_ORNAMENT = eq(u.equippedHairOrnamentDesignId)!;
-      if (u.equippedGlassesDesignId) s.GLASSES = eq(u.equippedGlassesDesignId)!;
       out[u.id] = s;
     }
     return out;

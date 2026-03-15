@@ -20,21 +20,13 @@ export async function POST(req: Request) {
       mouthStyle: s("mouthStyle", "mouth_01"),
       shirtStyle: s("shirtStyle", "shirt_01"),
       accessoryStyle: s("accessoryStyle", "none"),
-      glassesStyle: s("glassesStyle", "none"),
-      scarStyle: s("scarStyle", "none"),
-      hairOrnamentStyle: s("hairOrnamentStyle", "none"),
-
       bodyColor: s("bodyColor", "#F1C27D"),
       hairColor: s("hairColor", "#2B1B0E"),
       eyeColor: s("eyeColor", "#2E7DFF"),
       mouthColor: s("mouthColor", "#E0AC69"),
       shirtColor: s("shirtColor", "#E53935"),
       accessoryColor: s("accessoryColor", "#111111"),
-      backgroundColor: s("backgroundColor", "#E8E8E8"),
-      glassesColor: s("glassesColor", "#111111"),
-      scarColor: s("scarColor", "#8B4513"),
-      hairOrnamentColor: s("hairOrnamentColor", "#C0C0C0"),
-    },
+    } as Record<string, string>,
   });
 
   return NextResponse.json({ ok: true });
