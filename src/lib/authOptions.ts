@@ -29,6 +29,7 @@ export const authOptions: NextAuthOptions = {
               { username: { equals: usernameRaw, mode: "insensitive" } },
             ],
           },
+          select: { id: true, username: true, passwordHash: true },
         });
 
         if (!user) return null;
