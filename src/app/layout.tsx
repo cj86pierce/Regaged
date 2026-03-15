@@ -6,6 +6,8 @@ import RightRailClient from "@/components/RightRailClient";
 import CronPinger from "@/components/CronPinger";
 import OnlineCount from "@/components/OnlineCount";
 import { ThemeInitScript } from "@/app/theme-init";
+import { getCurrentUserIdFromHeaders } from "@/lib/getCurrentUserId";
+import { touchUser } from "@/lib/touchUser";
 import "@/styles/colorLevels.css";
 import "@/styles/theme.css";
 import "@/styles/layout.css";
@@ -16,7 +18,9 @@ export const metadata: Metadata = {
   description: "Reality social game",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const userId = await getCurrentUserIdFromHeaders();
+  if (userId) touchUser(userId).catch(() => {});
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="theme-body">
