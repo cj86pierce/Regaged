@@ -91,16 +91,20 @@ export async function resolveFrookiesNominations(gameId: string) {
       },
     });
 
+    const isBot = game.gameType === "FROOKIES_BOT";
     await tx.game.update({
       where: { id: gameId },
-      data: {
-        state: "ROUND_VOTE",
-        stateEndsAt: new Date(Date.now() + voteMs),
-        povSavedUserId: null,
-      },
+      data: isBot
+        ? { state: "ROUND_VOTE", stateEndsAt: new Date(Date.now() + voteMs), povSavedUserId: null }
+        : {
+            frookiesPhase: "POV_SAVE",
+            stateEndsAt: new Date(Date.now() + Math.min(90_000, voteMs)),
+          },
     });
 
-    const body = `${tag}\n[SYSTEM] Nominees: ${nameA} vs ${nameB}\n[SYSTEM] Vote to evict.`;
+    const body = isBot
+      ? `${tag}\n[SYSTEM] Nominees: ${nameA} vs ${nameB}\n[SYSTEM] Vote to evict.`
+      : `${tag}\n[SYSTEM] Nominees: ${nameA} vs ${nameB}. POV may save themselves or one other before vote.`;
     await tx.gameMessage.create({
       data: { gameId, userId: systemUserId, channel: "PUBLIC", body },
     });

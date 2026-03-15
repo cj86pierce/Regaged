@@ -31,6 +31,10 @@ export default function PlayerStrip(props: {
   players: Player[];
   povUserId: string | null;
   hohUserId?: string | null;
+  gameType?: string;
+  povSavedUserId?: string | null;
+  frookiesPhase?: string | null;
+  onPovSave?: (targetUserId: string | null) => void;
   gameState: string;
   meUserId: string | null;
 
@@ -47,6 +51,10 @@ export default function PlayerStrip(props: {
     players,
     povUserId,
     hohUserId,
+    gameType,
+    povSavedUserId,
+    frookiesPhase,
+    onPovSave,
     gameState,
     myNomLockedIn,
     myVoteLockedIn,
@@ -59,11 +67,16 @@ export default function PlayerStrip(props: {
   const isNominate = gameState === "ROUND_NOMINATE";
   const isVote = gameState === "ROUND_VOTE";
   const isCompleted = gameState === "COMPLETED";
+  const hasHoh = hohUserId != null;
+  const onlyHohCanNominate = hasHoh && (gameType === "FROOKIES" || gameType === "FROOKIES_BOT" || gameType === "ROOKIES" || gameType === "ROOKIES_BOT");
+  const iAmPov = meUserId != null && povUserId === meUserId;
+  const povSaveUsed = povSavedUserId != null;
 
+  const nomMax = frookiesPhase === "HOH_RENOM" ? 1 : 2;
   function toggleNomPick(userId: string) {
     const has = nomSelected.includes(userId);
     if (has) return setNomSelected(nomSelected.filter((x) => x !== userId));
-    if (nomSelected.length >= 2) return;
+    if (nomSelected.length >= nomMax) return;
     setNomSelected([...nomSelected, userId]);
   }
 
@@ -83,7 +96,12 @@ export default function PlayerStrip(props: {
           const grayscale = isCompleted ? place !== 1 : p.status === "ELIMINATED";
 
           const canNominateThisPlayer =
-            isNominate && !myNomLockedIn && p.status === "ACTIVE" && !isPov && !isHoh;
+            isNominate &&
+            !myNomLockedIn &&
+            p.status === "ACTIVE" &&
+            !isPov &&
+            !isHoh &&
+            (!onlyHohCanNominate || meUserId === hohUserId);
 
           const canEvictThisPlayer =
             isVote && !myVoteLockedIn && p.status === "ACTIVE" && p.isNominee;
@@ -94,6 +112,27 @@ export default function PlayerStrip(props: {
           let slot: React.ReactNode = null;
           if (place) {
             slot = <span style={{ fontWeight: 1000, fontSize: 11 }}>{suffix(place)}</span>;
+          } else if (iAmPov && onPovSave && isNominate && frookiesPhase === "POV_SAVE" && !povSaveUsed && p.status === "ACTIVE") {
+            const saveSelf = p.userId === meUserId;
+            slot = (
+              <button
+                type="button"
+                onClick={() => onPovSave(saveSelf ? null : p.userId)}
+                style={{
+                  height: 18,
+                  width: "100%",
+                  borderRadius: 6,
+                  border: "1px solid rgba(0,0,0,0.25)",
+                  background: "var(--bg-card)",
+                  color: "var(--text-primary)",
+                  fontWeight: 1000,
+                  fontSize: 10,
+                  cursor: "pointer",
+                }}
+              >
+                {saveSelf ? "Save myself" : "Save"}
+              </button>
+            );
           } else if (isPov) {
             slot = (
               <span

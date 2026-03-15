@@ -28,6 +28,7 @@ export default function Sidebar(props: {
   povUserId?: string | null;
   hohUserId?: string | null;
   povSavedUserId?: string | null;
+  frookiesPhase?: string | null;
   players?: { userId: string; username: string; status: string }[];
   onPovSave?: (targetUserId: string | null) => Promise<void>;
   onReload?: () => void;
@@ -50,6 +51,7 @@ export default function Sidebar(props: {
     povUserId,
     hohUserId,
     povSavedUserId,
+    frookiesPhase,
     players = [],
     onPovSave,
     onReload,
@@ -176,20 +178,31 @@ export default function Sidebar(props: {
 
       <div style={box}>
         <div style={{ fontWeight: 1000, marginBottom: 8 }}>
-          {gameState === "ROUND_NOMINATE" ? (isFrookies ? "HOH Nominations" : "Confirm Nominations") : gameState === "ROUND_VOTE" ? "Confirm Vote" : "Round"}
+          {gameState === "ROUND_NOMINATE"
+            ? frookiesPhase === "HOH_RENOM"
+              ? "Pick 1 replacement nominee"
+              : isFrookies
+                ? "HOH Nominations"
+                : "Confirm Nominations"
+            : gameState === "ROUND_VOTE"
+              ? "Confirm Vote"
+              : "Round"}
         </div>
 
         {gameState === "ROUND_NOMINATE" && (
           <>
-            {isFrookies && !iAmHoh && (
+            {isFrookies && !iAmHoh && frookiesPhase !== "HOH_RENOM" && (
               <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 8 }}>Only the HOH can nominate.</div>
+            )}
+            {frookiesPhase === "POV_SAVE" && (
+              <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 8 }}>POV may save themselves or one player. Then everyone votes.</div>
             )}
             {myNomLockedIn ? (
               <div style={{ fontWeight: 1000, color: "var(--success)" }}>✅ Nominations locked in.</div>
             ) : (
               <>
                 <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 8 }}>
-                  Selected: <b>{nomSelected.length}/2</b>
+                  Selected: <b>{nomSelected.length}/{frookiesPhase === "HOH_RENOM" ? 1 : 2}</b>
                 </div>
                 <button
                   disabled={!canConfirmNoms}

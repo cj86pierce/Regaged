@@ -28,6 +28,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       povUserId: true,
       hohUserId: true,
       povSavedUserId: true,
+      frookiesPhase: true,
     },
   });
   if (!game) return NextResponse.json({ error: "Game not found" }, { status: 404 });
@@ -266,6 +267,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       povUserId: game.povUserId,
       hohUserId: game.hohUserId ?? undefined,
       povSavedUserId: game.povSavedUserId ?? undefined,
+      frookiesPhase: game.frookiesPhase ?? undefined,
     },
 
     nomineeCUserId: nomineeC ?? undefined,

@@ -45,7 +45,7 @@ type GameState = {
   ok: boolean;
   meUserId: string | null;
   myNomLocked: boolean | null;
-  game: { id: string; number: number; gameType: string; state: string; roundNumber: number; povUserId: string | null; hohUserId?: string | null; povSavedUserId?: string | null; stateEndsAt: string | null };
+  game: { id: string; number: number; gameType: string; state: string; roundNumber: number; povUserId: string | null; hohUserId?: string | null; povSavedUserId?: string | null; frookiesPhase?: string | null; stateEndsAt: string | null };
   lobby: { current: number; needed: number } | null;
   voteInfo: { myVoteTargetUserId: string | null } | null;
   players: Player[];
@@ -295,6 +295,10 @@ export default function GamePage({ params }: { params: { id: string } }) {
           players={data.players}
           povUserId={data.game.povUserId}
           hohUserId={data.game.hohUserId}
+          gameType={data.game.gameType}
+          povSavedUserId={data.game.povSavedUserId}
+          frookiesPhase={data.game.frookiesPhase}
+          onPovSave={submitPovSave}
           gameState={data.game.state}
           meUserId={data.meUserId}
           myNomLockedIn={myNomLockedIn}
@@ -381,8 +385,9 @@ export default function GamePage({ params }: { params: { id: string } }) {
       !isCasting &&
       data.game.state === "ROUND_NOMINATE" &&
       !myNomLockedIn &&
-      nomSelected.length === 2 &&
-      ((data.game.gameType === "FROOKIES" || data.game.gameType === "FROOKIES_BOT") ? data.game.hohUserId === data.meUserId : true)
+      (((data.game.gameType === "FROOKIES" || data.game.gameType === "FROOKIES_BOT") && data.game.frookiesPhase === "HOH_RENOM")
+        ? nomSelected.length === 1 && data.game.hohUserId === data.meUserId
+        : nomSelected.length === 2 && ((data.game.gameType === "FROOKIES" || data.game.gameType === "FROOKIES_BOT") ? data.game.hohUserId === data.meUserId : true))
     }
     onConfirmNoms={confirmNoms}
     myNomLockedIn={myNomLockedIn}
@@ -397,6 +402,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
     povUserId={data.game.povUserId}
     hohUserId={data.game.hohUserId}
     povSavedUserId={data.game.povSavedUserId}
+    frookiesPhase={data.game.frookiesPhase}
     players={data.players.map((p) => ({ userId: p.userId, username: p.username, status: p.status }))}
     onPovSave={submitPovSave}
     onReload={() => load().catch((e) => setError(e.message))}

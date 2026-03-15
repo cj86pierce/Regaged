@@ -106,7 +106,7 @@ export async function resolveFastingEviction(gameId: string) {
         povUserId: null,
         roundStartedAt: now2,
         stateEndsAt: new Date(now2.getTime() + nomMs),
-        ...(isFrookies ? { hohUserId: null, povSavedUserId: null } : {}),
+        ...(isFrookies ? { hohUserId: null, povSavedUserId: null, frookiesPhase: null } : {}),
       },
     });
 

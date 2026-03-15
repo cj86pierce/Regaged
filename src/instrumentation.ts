@@ -4,7 +4,7 @@
  * The tick uses the same runTick() as /api/cron/tick (with DB advisory lock).
  */
 
-const TICK_INTERVAL_MS = Number(process.env.TICK_INTERVAL_MS) || 60_000;
+const TICK_INTERVAL_MS = Number(process.env.TICK_INTERVAL_MS) || 30_000;
 const TICK_FIRST_DELAY_MS = 10_000;
 
 export async function register() {

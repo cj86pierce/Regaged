@@ -13,7 +13,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   const game = await prisma.game.findUnique({
     where: { id: gameId },
-    select: { gameType: true, state: true, roundNumber: true, povUserId: true, hohUserId: true, povSavedUserId: true, stateEndsAt: true },
+    select: { gameType: true, state: true, roundNumber: true, povUserId: true, hohUserId: true, povSavedUserId: true, stateEndsAt: true, frookiesPhase: true },
   });
   if (!game) return NextResponse.json({ error: "Game not found" }, { status: 404 });
   if (game.state !== "ROUND_NOMINATE") return NextResponse.json({ error: "Not in nomination phase" }, { status: 400 });
@@ -30,6 +30,46 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   if (!Array.isArray(rawTargets)) return NextResponse.json({ error: "targets must be an array" }, { status: 400 });
 
   const uniq: string[] = Array.from(new Set(rawTargets.map((x) => String(x).trim()))).filter((s) => s.length > 0);
+
+  if (isFrookies && game.frookiesPhase === "POV_SAVE") {
+    return NextResponse.json({ error: "Waiting for POV to use save. No nomination changes now." }, { status: 400 });
+  }
+
+  const isHohRenom = isFrookies && game.frookiesPhase === "HOH_RENOM";
+  if (isHohRenom) {
+    if (uniq.length !== 1) return NextResponse.json({ error: "Pick exactly 1 replacement nominee." }, { status: 400 });
+    const replacement = uniq[0]!;
+    const rr = await prisma.roundResult.findUnique({
+      where: { gameId_roundNumber: { gameId, roundNumber: game.roundNumber } },
+      select: { nomineeAUserId: true },
+    });
+    if (!rr?.nomineeAUserId) return NextResponse.json({ error: "Round state invalid." }, { status: 400 });
+    const valid = await prisma.gamePlayer.findUnique({
+      where: { gameId_userId: { gameId, userId: replacement } },
+      select: { status: true },
+    });
+    if (!valid || valid.status !== "ACTIVE") return NextResponse.json({ error: "Invalid replacement nominee." }, { status: 400 });
+    if (replacement === rr.nomineeAUserId) return NextResponse.json({ error: "Replacement must be different from the other nominee." }, { status: 400 });
+
+    const VOTE_PHASE_MS = 2 * 60 * 1000;
+    await prisma.$transaction([
+      prisma.roundResult.update({
+        where: { gameId_roundNumber: { gameId, roundNumber: game.roundNumber } },
+        data: { nomineeBUserId: replacement },
+      }),
+      prisma.game.update({
+        where: { id: gameId },
+        data: {
+          state: "ROUND_VOTE",
+          stateEndsAt: new Date(Date.now() + VOTE_PHASE_MS),
+          frookiesPhase: null,
+        },
+      }),
+    ]);
+    await touchUser(userId);
+    return NextResponse.json({ ok: true, replacement: true });
+  }
+
   if (uniq.length !== 2) return NextResponse.json({ error: "Pick exactly 2 unique nominees." }, { status: 400 });
 
   if (game.povUserId && uniq.includes(game.povUserId)) return NextResponse.json({ error: "You cannot nominate the POV holder." }, { status: 400 });

@@ -26,7 +26,7 @@ export async function advanceFastingIfDue(gameId: string) {
 
     const game = await prisma.game.findUnique({
       where: { id: gameId },
-      select: { id: true, gameType: true, state: true, roundNumber: true, stateEndsAt: true, povUserId: true, hohUserId: true },
+      select: { id: true, gameType: true, state: true, roundNumber: true, stateEndsAt: true, povUserId: true, hohUserId: true, povSavedUserId: true, frookiesPhase: true },
     });
     if (!game || (game.gameType !== "FASTING" && game.gameType !== "FROOKIES" && game.gameType !== "ROOKIES")) return { ok: false, error: "not_fasting" as const };
 
@@ -50,6 +50,46 @@ export async function advanceFastingIfDue(gameId: string) {
     // -------------------------
     if (isFrookies) {
       if (game.state === "ROUND_NOMINATE") {
+        const phase = (game as { frookiesPhase?: string | null }).frookiesPhase;
+
+        if (phase === "POV_SAVE" && (due || stuck)) {
+          const saved = (game as { povSavedUserId?: string | null }).povSavedUserId;
+          const nomA = rr?.nomineeAUserId;
+          const nomB = rr?.nomineeBUserId;
+          if (saved && nomA && nomB) {
+            const savedIsNominee = saved === nomA || saved === nomB;
+            if (savedIsNominee) {
+              const other = saved === nomA ? nomB : nomA;
+              await prisma.$transaction([
+                prisma.roundResult.update({
+                  where: { gameId_roundNumber: { gameId, roundNumber: game.roundNumber } },
+                  data: { nomineeAUserId: other, nomineeBUserId: saved },
+                }),
+                prisma.game.update({
+                  where: { id: gameId },
+                  data: { frookiesPhase: "HOH_RENOM", povSavedUserId: null, stateEndsAt: new Date(Date.now() + 60_000) },
+                }),
+              ]);
+              return { ok: true, advanced: "frookies_pov_saved_nominee" as const };
+            }
+          }
+          await prisma.game.update({
+            where: { id: gameId },
+            data: {
+              state: "ROUND_VOTE",
+              stateEndsAt: new Date(Date.now() + VOTE_PHASE_MS),
+              frookiesPhase: null,
+              povSavedUserId: null,
+            },
+          });
+          return { ok: true, advanced: "frookies_to_vote" as const };
+        }
+        if (phase === "POV_SAVE") return { ok: true, skipped: true as const, reason: "waiting_pov_save" as const };
+
+        if (phase === "HOH_RENOM") {
+          return { ok: true, skipped: true as const, reason: "waiting_hoh_renom" as const };
+        }
+
         if (!game.hohUserId) {
           try { await assignFrookiesHoh(gameId, { random: false, skipLock: true }); } catch {}
         }
@@ -60,10 +100,10 @@ export async function advanceFastingIfDue(gameId: string) {
             try { await assignFastingPov(gameId, { skipLock: true }); } catch {}
           }
         }
-        if (rr?.nomineeAUserId && rr?.nomineeBUserId) {
+        if (rr?.nomineeAUserId && rr?.nomineeBUserId && !phase) {
           await prisma.game.update({
             where: { id: gameId },
-            data: { state: "ROUND_VOTE", stateEndsAt: new Date(Date.now() + VOTE_PHASE_MS) },
+            data: { state: "ROUND_VOTE", stateEndsAt: new Date(Date.now() + VOTE_PHASE_MS), frookiesPhase: null },
           });
           return { ok: true, fixed: "nominees_exist_moved_to_vote" as const };
         }
@@ -90,6 +130,7 @@ export async function advanceFastingIfDue(gameId: string) {
               povUserId: null,
               hohUserId: null,
               povSavedUserId: null,
+              frookiesPhase: null,
               stateEndsAt: new Date(now2.getTime() + NOM_PHASE_MS),
             },
           });
