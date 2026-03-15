@@ -44,11 +44,13 @@ export default function EnrollHub() {
     <main style={{ padding: 12 }}>
       <h1 style={{ marginTop: 0, color: "var(--brand)" }}>Enroll</h1>
       <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 16 }}>
-        Choose a game mode. Fastings + Castings available.
+        Choose a game mode. Fastings, Frookies, Rookies, and Castings available.
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 }}>
         <GameCard title="Fastings" desc="Fast mode. POV → nominate → evict. Short phases." href="/enroll/fasting" />
+        <GameCard title="Frookies" desc="Same as Fastings. For friends and newcomers." href="/enroll/frookies" />
+        <GameCard title="Rookies" desc="Same as Fastings. Rookie-friendly mode." href="/enroll/rookies" />
         <GameCard title="Castings" desc="Slow mode (12-hour days). Health decay + drops (apples/keys/poison)." href="/enroll/casting" />
         <GameCard title="Fastings (Bot)" desc="60s rounds. Bots fill slots. No payouts. Practice mode." href="/enroll/fasting-bot" />
         <GameCard title="Castings (Bot)" desc="60s days. Bots fill slots. No payouts. Practice mode." href="/enroll/casting-bot" />

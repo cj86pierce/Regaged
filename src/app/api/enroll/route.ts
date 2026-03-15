@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUserId } from "@/lib/getCurrentUserId";
 import { prisma } from "@/lib/prisma";
-import { tryStartFastingGame } from "@/lib/gameEngine";
+import { tryStartFastingGame, tryStartFastingStyleGame } from "@/lib/gameEngine";
 import { tryStartCastingsGame } from "@/lib/gameEngineCastings";
 import { tryStartFastingBotGame } from "@/lib/gameEngineBot";
 import { tryStartCastingBotGame } from "@/lib/gameEngineBot";
@@ -10,7 +10,7 @@ import { fillGameWithBots } from "@/lib/botUsers";
 const FASTING_MAX = 15;
 const CASTING_MAX = 20;
 
-type GameType = "FASTING" | "CASTING" | "FASTING_BOT" | "CASTING_BOT";
+type GameType = "FASTING" | "CASTING" | "FASTING_BOT" | "CASTING_BOT" | "FROOKIES" | "ROOKIES";
 
 export async function POST(req: Request) {
   const userId = await getCurrentUserId(req);
@@ -35,7 +35,7 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   const gameType = (body?.gameType ?? "FASTING") as GameType;
 
-  if (gameType !== "FASTING" && gameType !== "CASTING" && gameType !== "FASTING_BOT" && gameType !== "CASTING_BOT") {
+  if (gameType !== "FASTING" && gameType !== "CASTING" && gameType !== "FASTING_BOT" && gameType !== "CASTING_BOT" && gameType !== "FROOKIES" && gameType !== "ROOKIES") {
     return NextResponse.json({ error: "Invalid gameType" }, { status: 400 });
   }
 
@@ -103,6 +103,8 @@ export async function POST(req: Request) {
 
   if (gameType === "FASTING") {
     await tryStartFastingGame(lobby.id);
+  } else if (gameType === "FROOKIES" || gameType === "ROOKIES") {
+    await tryStartFastingStyleGame(lobby.id, gameType);
   } else if (gameType === "CASTING") {
     await tryStartCastingsGame(lobby.id);
   } else if (gameType === "FASTING_BOT") {

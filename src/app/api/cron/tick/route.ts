@@ -86,7 +86,7 @@ async function runTick() {
     // -----------------------
     const fastingDue = await prisma.game.findMany({
       where: {
-        gameType: "FASTING",
+        gameType: { in: ["FASTING", "FROOKIES", "ROOKIES"] },
         state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] },
         OR: [
           { stateEndsAt: { not: null, lte: now } },

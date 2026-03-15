@@ -35,7 +35,9 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     game.gameType === "CASTING" ||
     game.gameType === "FASTING" ||
     game.gameType === "FASTING_BOT" ||
-    game.gameType === "CASTING_BOT";
+    game.gameType === "CASTING_BOT" ||
+    game.gameType === "FROOKIES" ||
+    game.gameType === "ROOKIES";
   if (meUserId && isActiveGame) {
     void prisma.gamePlayer
       .updateMany({
@@ -196,7 +198,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   let myNomLocked: boolean | null = null;
   let voteInfo: null | { myVoteTargetUserId: string | null } = null;
 
-  if ((game.gameType === "FASTING" || game.gameType === "FASTING_BOT") && game.state !== "ENROLLING") {
+  if ((game.gameType === "FASTING" || game.gameType === "FASTING_BOT" || game.gameType === "FROOKIES" || game.gameType === "ROOKIES") && game.state !== "ENROLLING") {
     const rr = await prisma.roundResult.findUnique({
       where: { gameId_roundNumber: { gameId, roundNumber: game.roundNumber } },
       select: { nomineeAUserId: true, nomineeBUserId: true },

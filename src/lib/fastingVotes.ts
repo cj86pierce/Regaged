@@ -16,7 +16,7 @@ export async function resolveFastingEviction(gameId: string) {
       where: { id: gameId },
       select: { id: true, gameType: true, state: true, roundNumber: true },
     });
-    if (!game || (game.gameType !== "FASTING" && game.gameType !== "FASTING_BOT") || game.state !== "ROUND_VOTE") return { ok: true, skipped: true as const };
+    if (!game || (game.gameType !== "FASTING" && game.gameType !== "FASTING_BOT" && game.gameType !== "FROOKIES" && game.gameType !== "ROOKIES") || game.state !== "ROUND_VOTE") return { ok: true, skipped: true as const };
 
     const rr = await prisma.roundResult.findUnique({
       where: { gameId_roundNumber: { gameId, roundNumber: game.roundNumber } },

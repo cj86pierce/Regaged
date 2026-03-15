@@ -6,10 +6,10 @@ import { resolveFastingEviction } from "@/lib/fastingVotes";
 export async function tickDueFastings() {
   const now = new Date();
 
-  // Advance any due FASTING games
+  // Advance any due FASTING / FROOKIES / ROOKIES games
   const due = await prisma.game.findMany({
     where: {
-      gameType: "FASTING",
+      gameType: { in: ["FASTING", "FROOKIES", "ROOKIES"] },
       state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] },
       stateEndsAt: { not: null, lte: now },
     },
@@ -31,7 +31,7 @@ export async function tickDueFastings() {
 
   // Ensure POV exists for nominate games (even if not due)
   const needPov = await prisma.game.findMany({
-    where: { gameType: "FASTING", state: "ROUND_NOMINATE", povUserId: null },
+    where: { gameType: { in: ["FASTING", "FROOKIES", "ROOKIES"] }, state: "ROUND_NOMINATE", povUserId: null },
     select: { id: true },
   });
 

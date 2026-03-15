@@ -13,6 +13,8 @@ enum GameType {
   CASTING
   FASTING_BOT
   CASTING_BOT
+  FROOKIES
+  ROOKIES
 }
 
 enum GameState {

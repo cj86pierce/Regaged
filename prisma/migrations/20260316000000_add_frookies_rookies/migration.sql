@@ -1,0 +1,3 @@
+-- AlterEnum: add FROOKIES and ROOKIES game modes
+ALTER TYPE "GameType" ADD VALUE 'FROOKIES';
+ALTER TYPE "GameType" ADD VALUE 'ROOKIES';

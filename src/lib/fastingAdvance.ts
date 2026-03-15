@@ -20,7 +20,7 @@ export async function advanceFastingIfDue(gameId: string) {
       where: { id: gameId },
       select: { id: true, gameType: true, state: true, roundNumber: true, stateEndsAt: true, povUserId: true },
     });
-    if (!game || game.gameType !== "FASTING") return { ok: false, error: "not_fasting" as const };
+    if (!game || (game.gameType !== "FASTING" && game.gameType !== "FROOKIES" && game.gameType !== "ROOKIES")) return { ok: false, error: "not_fasting" as const };
 
     // Only advance if due, clearly stuck, or stateEndsAt missing (unstick)
     const due = !!game.stateEndsAt && game.stateEndsAt.getTime() <= now.getTime();
