@@ -31,7 +31,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
   }
 
   try {
-  await touchUser(userId);
+  await touchUser(userId).catch((e) => console.error("Profile touchUser failed:", e));
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -234,16 +234,17 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
     const msg = err instanceof Error ? err.message : String(err);
     const stack = err instanceof Error ? err.stack : undefined;
     console.error("Profile page error:", msg, stack);
-    const showDebug = typeof (searchParams as { page?: string; profile_debug?: string })?.profile_debug === "string";
+    const showStack = typeof (searchParams as { page?: string; profile_debug?: string })?.profile_debug === "string";
+    const safeMsg = String(msg).slice(0, 800);
     return (
       <main style={{ padding: 12 }}>
         <div className="theme-card" style={{ padding: 16 }}>
           <h2 style={{ marginTop: 0 }}>Something went wrong</h2>
           <p>We couldn’t load your profile. Try again or come back later.</p>
-          {showDebug && (
-            <pre style={{ fontSize: 12, overflow: "auto", background: "var(--bg-muted)", padding: 12, borderRadius: 8 }}>
-              {msg}
-              {stack ? "\n\n" + stack : ""}
+          {safeMsg && (
+            <pre style={{ fontSize: 12, overflow: "auto", background: "var(--bg-muted)", padding: 12, borderRadius: 8, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+              {safeMsg}
+              {showStack && stack ? "\n\n" + stack : ""}
             </pre>
           )}
           <Link href="/">Back to home</Link>
