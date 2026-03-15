@@ -55,6 +55,10 @@ export async function advanceFastingIfDue(gameId: string) {
         }
         if (!game.povUserId) {
           try { await assignFrookiesPov(gameId, { skipLock: true }); } catch {}
+          const after = await prisma.game.findUnique({ where: { id: gameId }, select: { povUserId: true } });
+          if (!after?.povUserId) {
+            try { await assignFastingPov(gameId, { skipLock: true }); } catch {}
+          }
         }
         if (rr?.nomineeAUserId && rr?.nomineeBUserId) {
           await prisma.game.update({

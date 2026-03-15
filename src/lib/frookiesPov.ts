@@ -15,7 +15,7 @@ export async function assignFrookiesPov(gameId: string, opts?: { skipLock?: bool
       where: { id: gameId },
       select: { id: true, gameType: true, state: true, roundNumber: true, povUserId: true },
     });
-    if (!game || game.gameType !== "FROOKIES") return { ok: true, skipped: true as const, reason: "not_frookies" as const };
+    if (!game || (game.gameType !== "FROOKIES" && game.gameType !== "FROOKIES_BOT")) return { ok: true, skipped: true as const, reason: "not_frookies" as const };
     if (game.state !== "ROUND_NOMINATE") return { ok: true, skipped: true as const, reason: "wrong_state" as const };
     if (game.povUserId) return { ok: true, skipped: true as const, reason: "already_set" as const };
 
@@ -46,7 +46,7 @@ export async function assignFrookiesPov(gameId: string, opts?: { skipLock?: bool
       const updated = await tx.game.updateMany({
         where: {
           id: gameId,
-          gameType: "FROOKIES",
+          gameType: { in: ["FROOKIES", "FROOKIES_BOT"] },
           state: "ROUND_NOMINATE",
           povUserId: null,
         },

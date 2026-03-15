@@ -22,7 +22,7 @@ export async function assignFrookiesHoh(
       where: { id: gameId },
       select: { id: true, gameType: true, state: true, roundNumber: true, hohUserId: true },
     });
-    if (!game || game.gameType !== "FROOKIES") return { ok: true, skipped: true as const, reason: "not_frookies" as const };
+    if (!game || (game.gameType !== "FROOKIES" && game.gameType !== "FROOKIES_BOT")) return { ok: true, skipped: true as const, reason: "not_frookies" as const };
     if (game.state !== "ROUND_NOMINATE") return { ok: true, skipped: true as const, reason: "wrong_state" as const };
     if (game.hohUserId) return { ok: true, skipped: true as const, reason: "already_set" as const };
 
