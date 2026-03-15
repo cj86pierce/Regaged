@@ -1,0 +1,10 @@
+---
+description: This project does not use Vercel for deployment
+alwaysApply: true
+---
+
+# Deployment / Hosting
+
+- **This project does NOT use Vercel.** Do not suggest Vercel, run `vercel` or `npm run deploy` (if it points to Vercel), or assume Vercel dashboard/CI.
+- When discussing deploy, push, or release, do not mention Vercel unless the user brings it up.
+- If package.json or config references Vercel (e.g. `vercel.json`, deploy script), treat it as legacy or optional; do not assume the user deploys via Vercel.
