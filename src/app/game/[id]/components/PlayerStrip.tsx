@@ -56,6 +56,7 @@ export default function PlayerStrip(props: {
     frookiesPhase,
     onPovSave,
     gameState,
+    meUserId,
     myNomLockedIn,
     myVoteLockedIn,
     nomSelected,
