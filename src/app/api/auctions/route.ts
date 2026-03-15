@@ -22,9 +22,18 @@ export async function GET() {
     }),
     prisma.auction.findMany({
       where: { soldAt: { not: null } },
-      include: {
+      select: {
+        id: true,
+        designId: true,
+        endsAt: true,
+        currentBid: true,
+        currentBidUserId: true,
         design: {
-          include: { user: { select: { username: true } } },
+          select: {
+            title: true,
+            description: true,
+            user: { select: { username: true } },
+          },
         },
       },
       orderBy: { soldAt: "desc" },
@@ -42,9 +51,16 @@ export async function GET() {
     currentBid: a.currentBid,
   });
 
+  const mapSoldAuction = (
+    a: { id: string; designId: string; design: { title: string; description: string; user: { username: string } }; endsAt: Date; currentBid: number; currentBidUserId: string | null }
+  ) => ({
+    ...mapAuction(a),
+    winnerUserId: a.currentBidUserId ?? null,
+  });
+
   const res = NextResponse.json({
     auctions: auctions.map(mapAuction),
-    soldAuctions: soldAuctions.map(mapAuction),
+    soldAuctions: soldAuctions.map(mapSoldAuction),
   });
   res.headers.set("Cache-Control", "no-store");
   return res;

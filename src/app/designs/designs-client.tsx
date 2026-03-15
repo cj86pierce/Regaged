@@ -10,6 +10,10 @@ const DESIGN_TYPES = [
   { value: "MOUTH", label: "Mouth" },
   { value: "SHIRT", label: "Shirt" },
   { value: "ACCESSORY", label: "Accessory" },
+  { value: "BACKGROUND", label: "Background" },
+  { value: "SCAR", label: "Scar" },
+  { value: "HAIR_ORNAMENT", label: "Hair ornament" },
+  { value: "GLASSES", label: "Glasses" },
 ] as const;
 
 type Design = {

@@ -19,7 +19,7 @@ export default async function AuctionsPage() {
   return (
     <main style={{ padding: 12 }}>
       <Link href="/shop" style={{ fontSize: 14, opacity: 0.8, marginBottom: 12, display: "inline-block" }}>← Back to Shops</Link>
-      <AuctionsClient />
+      <AuctionsClient meUserId={userId} />
     </main>
   );
 }

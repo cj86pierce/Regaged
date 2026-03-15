@@ -23,6 +23,10 @@ const DESIGN_TYPE_LABELS: Record<string, string> = {
   MOUTH: "Mouth",
   SHIRT: "Shirt",
   ACCESSORY: "Accessory",
+  BACKGROUND: "Background",
+  SCAR: "Scar",
+  HAIR_ORNAMENT: "Hair ornament",
+  GLASSES: "Glasses",
 };
 
 type Design = {

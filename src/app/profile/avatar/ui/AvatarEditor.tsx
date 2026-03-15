@@ -146,6 +146,9 @@ export default function AvatarEditor({
     mouthStyle: initial.mouthStyle,
     shirtStyle: initial.shirtStyle,
     accessoryStyle: initial.accessoryStyle ?? "none",
+    glassesStyle: initial.glassesStyle ?? "none",
+    scarStyle: initial.scarStyle ?? "none",
+    hairOrnamentStyle: initial.hairOrnamentStyle ?? "none",
 
     bodyColor: initial.bodyColor,
     hairColor: initial.hairColor,
@@ -153,6 +156,10 @@ export default function AvatarEditor({
     mouthColor: initial.mouthColor ?? "#E0AC69",
     shirtColor: initial.shirtColor,
     accessoryColor: initial.accessoryColor ?? "#111111",
+    backgroundColor: initial.backgroundColor ?? "#E8E8E8",
+    glassesColor: initial.glassesColor ?? "#111111",
+    scarColor: initial.scarColor ?? "#8B4513",
+    hairOrnamentColor: initial.hairOrnamentColor ?? "#C0C0C0",
   });
 
   const [saving, setSaving] = useState(false);
@@ -266,6 +273,10 @@ export default function AvatarEditor({
 
             <StylePicker label="Accessory" value={cfg.accessoryStyle} options={["none", "accessory_01"]} onChange={(v) => setCfg({ ...cfg, accessoryStyle: v })} />
             <ColorWheel label="Accessory color" value={cfg.accessoryColor} onChange={(v) => setCfg({ ...cfg, accessoryColor: v })} />
+
+            <div style={{ gridColumn: "1 / -1" }}>
+              <ColorWheel label="Background color" value={cfg.backgroundColor ?? "#E8E8E8"} onChange={(v) => setCfg({ ...cfg, backgroundColor: v })} />
+            </div>
           </div>
 
           <div style={{ marginTop: 12, fontSize: 12, opacity: 0.75 }}>

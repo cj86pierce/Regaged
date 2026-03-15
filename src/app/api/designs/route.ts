@@ -72,10 +72,10 @@ export async function POST(req: Request) {
 
   const title = (typeof titleRaw === "string" ? titleRaw : "").trim();
   const description = (typeof descriptionRaw === "string" ? descriptionRaw : "").trim();
-  const validTypes = ["BODY", "HAIR", "EYES", "MOUTH", "SHIRT", "ACCESSORY"] as const;
+  const validTypes = ["BODY", "HAIR", "EYES", "MOUTH", "SHIRT", "ACCESSORY", "BACKGROUND", "SCAR", "HAIR_ORNAMENT", "GLASSES"] as const;
   const designTypeRawStr = typeof designTypeRaw === "string" ? designTypeRaw.toUpperCase() : "";
   if (!validTypes.includes(designTypeRawStr as (typeof validTypes)[number])) {
-    return NextResponse.json({ error: "Design type is required (Body, Hair, Eyes, Mouth, Shirt, or Accessory)" }, { status: 400 });
+    return NextResponse.json({ error: "Design type is required (Body, Hair, Eyes, Mouth, Shirt, Accessory, Background, Scar, Hair ornament, or Glasses)" }, { status: 400 });
   }
   const designType = designTypeRawStr as DesignType;
 

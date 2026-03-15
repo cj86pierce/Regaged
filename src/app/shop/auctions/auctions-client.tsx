@@ -13,9 +13,11 @@ type AuctionDto = {
   currentBid: number;
 };
 
-export default function AuctionsClient() {
+type SoldAuctionDto = AuctionDto & { winnerUserId: string | null };
+
+export default function AuctionsClient({ meUserId }: { meUserId?: string | null }) {
   const [auctions, setAuctions] = useState<AuctionDto[]>([]);
-  const [soldAuctions, setSoldAuctions] = useState<AuctionDto[]>([]);
+  const [soldAuctions, setSoldAuctions] = useState<SoldAuctionDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -74,14 +76,29 @@ export default function AuctionsClient() {
             {soldAuctions.length === 0 && !loading ? (
               <div style={{ opacity: 0.7 }}>No sales yet.</div>
             ) : (
-              soldAuctions.slice(0, 5).map((a) => (
-                <div key={a.id} style={{ marginBottom: 8 }}>
-                  <Link href={`/u/${encodeURIComponent(a.designAuthorUsername)}`} className="theme-username" style={{ textDecoration: "underline", fontSize: 12 }}>
-                    {a.designAuthorUsername}
-                  </Link>
-                  <span style={{ opacity: 0.85 }}> sold for </span><b>{a.currentBid} R$</b>
-                </div>
-              ))
+              soldAuctions.slice(0, 5).map((a) => {
+                const youWon = meUserId && a.winnerUserId === meUserId;
+                return (
+                  <div key={a.id} style={{ marginBottom: 10 }}>
+                    {youWon ? (
+                      <>
+                        <span style={{ color: "var(--brand)", fontWeight: 800 }}>You won</span>
+                        <span style={{ opacity: 0.85 }}> for </span><b>{a.currentBid} R$</b>
+                        <div style={{ marginTop: 4 }}>
+                          <Link href="/profile/avatar" style={{ fontSize: 11, color: "var(--brand)", fontWeight: 700 }}>Equip in Customize Avatar →</Link>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <Link href={`/u/${encodeURIComponent(a.designAuthorUsername)}`} className="theme-username" style={{ textDecoration: "underline", fontSize: 12 }}>
+                          {a.designAuthorUsername}
+                        </Link>
+                        <span style={{ opacity: 0.85 }}> sold for </span><b>{a.currentBid} R$</b>
+                      </>
+                    )}
+                  </div>
+                );
+              })
             )}
           </div>
         </div>

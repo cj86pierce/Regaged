@@ -2,15 +2,19 @@ import { NextResponse } from "next/server";
 import { getCurrentUserId } from "@/lib/getCurrentUserId";
 import { prisma } from "@/lib/prisma";
 
-const SLOTS = ["BODY", "HAIR", "EYES", "MOUTH", "SHIRT", "ACCESSORY"] as const;
-const SLOT_FIELDS = {
+const SLOTS = ["BODY", "HAIR", "EYES", "MOUTH", "SHIRT", "ACCESSORY", "BACKGROUND", "SCAR", "HAIR_ORNAMENT", "GLASSES"] as const;
+const SLOT_FIELDS: Record<(typeof SLOTS)[number], string> = {
   BODY: "equippedBodyDesignId",
   HAIR: "equippedHairDesignId",
   EYES: "equippedEyesDesignId",
   MOUTH: "equippedMouthDesignId",
   SHIRT: "equippedShirtDesignId",
   ACCESSORY: "equippedAccessoryDesignId",
-} as const;
+  BACKGROUND: "equippedBackgroundDesignId",
+  SCAR: "equippedScarDesignId",
+  HAIR_ORNAMENT: "equippedHairOrnamentDesignId",
+  GLASSES: "equippedGlassesDesignId",
+};
 
 /** POST /api/profile/avatar/equip - equip or unequip a design. Body: { designId: string | null, slot: DesignType } */
 export async function POST(req: Request) {

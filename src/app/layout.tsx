@@ -4,6 +4,7 @@ import { Providers } from "@/app/providers";
 import NavBar from "@/components/NavBar";
 import RightRailClient from "@/components/RightRailClient";
 import CronPinger from "@/components/CronPinger";
+import OnlineCount from "@/components/OnlineCount";
 import { ThemeInitScript } from "@/app/theme-init";
 import "@/styles/colorLevels.css";
 import "@/styles/theme.css";
@@ -21,6 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="theme-body">
         <ThemeInitScript />
         <Providers>
+          <OnlineCount />
           <CronPinger />
           <NavBar />
 
