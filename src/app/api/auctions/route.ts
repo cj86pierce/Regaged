@@ -16,6 +16,12 @@ export async function GET() {
         design: {
           include: { user: { select: { username: true } } },
         },
+        currentBidUser: { select: { username: true } },
+        bids: {
+          orderBy: { createdAt: "desc" },
+          take: 30,
+          include: { user: { select: { username: true } } },
+        },
       },
       orderBy: { endsAt: "asc" },
       take: 50,
@@ -41,7 +47,17 @@ export async function GET() {
     }),
   ]);
 
-  const mapAuction = (a: { id: string; designId: string; design: { title: string; description: string; user: { username: string } }; endsAt: Date; currentBid: number }) => ({
+  type AuctionRow = {
+    id: string;
+    designId: string;
+    design: { title: string; description: string; user: { username: string } };
+    endsAt: Date;
+    currentBid: number;
+    currentBidUser: { username: string } | null;
+    bids: { amount: number; createdAt: Date; user: { username: string } }[];
+  };
+
+  const mapAuction = (a: AuctionRow) => ({
     id: a.id,
     designId: a.designId,
     designTitle: a.design.title,
@@ -49,12 +65,26 @@ export async function GET() {
     designAuthorUsername: a.design.user.username,
     endsAt: a.endsAt.toISOString(),
     currentBid: a.currentBid,
+    currentBidUsername: a.currentBidUser?.username ?? null,
+    bidHistory: a.bids.map((b) => ({
+      username: b.user.username,
+      amount: b.amount,
+      createdAt: b.createdAt.toISOString(),
+    })),
   });
 
   const mapSoldAuction = (
     a: { id: string; designId: string; design: { title: string; description: string; user: { username: string } }; endsAt: Date; currentBid: number; currentBidUserId: string | null }
   ) => ({
-    ...mapAuction(a),
+    id: a.id,
+    designId: a.designId,
+    designTitle: a.design.title,
+    designDescription: a.design.description,
+    designAuthorUsername: a.design.user.username,
+    endsAt: a.endsAt.toISOString(),
+    currentBid: a.currentBid,
+    currentBidUsername: null,
+    bidHistory: [],
     winnerUserId: a.currentBidUserId ?? null,
   });
 

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUserId } from "@/lib/getCurrentUserId";
 import { prisma } from "@/lib/prisma";
 
-const DESIGN_VOTING_MS = 60 * 1000; // 1 min for testing; 24*60*60*1000 for 1 day
+const DESIGN_VOTING_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 function bad(msg: string, status = 400) {
   return NextResponse.json({ error: msg }, { status });

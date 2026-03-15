@@ -6,9 +6,8 @@
  */
 import { prisma } from "@/lib/prisma";
 
-// Testing: 1 minute. For production set to 24*60*60*1000 (1 day) each.
-const DESIGN_VOTING_MS = 60 * 1000;
-const AUCTION_DURATION_MS = 60 * 1000;
+const DESIGN_VOTING_MS = 24 * 60 * 60 * 1000; // 24 hours
+const AUCTION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export async function createAuctionsFromDesigns(): Promise<{ created: number }> {
   const now = new Date();

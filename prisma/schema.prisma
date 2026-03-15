@@ -170,6 +170,7 @@ model User {
   designComments    DesignComment[]
   designCommentVotes DesignCommentVote[]
   auctionBids       AuctionBid[]
+  auctionsLeading   Auction[]    @relation("AuctionHighBidder")
 
   designOwnerships DesignOwner[]
 
@@ -389,8 +390,9 @@ model Auction {
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
-  design Design @relation(fields: [designId], references: [id], onDelete: Cascade)
-  bids   AuctionBid[]
+  design         Design @relation(fields: [designId], references: [id], onDelete: Cascade)
+  currentBidUser User?  @relation("AuctionHighBidder", fields: [currentBidUserId], references: [id], onDelete: SetNull)
+  bids           AuctionBid[]
 
   @@index([endsAt])
   @@index([soldAt])

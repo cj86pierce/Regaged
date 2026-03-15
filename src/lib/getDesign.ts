@@ -1,7 +1,6 @@
 import { prisma } from "@/lib/prisma";
 
-// Testing: 1 minute. For production set to 24*60*60*1000 (1 day).
-const DESIGN_VOTING_MS = 60 * 1000;
+const DESIGN_VOTING_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 function votingEndsAt(createdAt: Date): Date {
   return new Date(createdAt.getTime() + DESIGN_VOTING_MS);

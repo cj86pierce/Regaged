@@ -36,7 +36,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     return NextResponse.json({ error: "Not enough R$. You have " + tMoney + " R$" }, { status: 400 });
   }
 
-  await prisma.$transaction(async (tx) => {
+  const updated = await prisma.$transaction(async (tx) => {
     await tx.auction.update({
       where: { id: auction.id },
       data: {
@@ -52,8 +52,14 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         amount,
       },
     });
+
+    const u = await tx.user.findUnique({
+      where: { id: userId },
+      select: { username: true },
+    });
+    return { currentBidUsername: u?.username ?? null };
   });
 
-  return NextResponse.json({ ok: true, currentBid: amount });
+  return NextResponse.json({ ok: true, currentBid: amount, currentBidUsername: updated.currentBidUsername });
 }
 

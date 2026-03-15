@@ -3,7 +3,7 @@ import { DesignType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/getCurrentUserId";
 
-const DESIGN_VOTING_MS = 60 * 1000; // 1 min for testing; 24*60*60*1000 for 1 day
+const DESIGN_VOTING_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 function votingEndsAt(createdAt: Date): Date {
   return new Date(createdAt.getTime() + DESIGN_VOTING_MS);
