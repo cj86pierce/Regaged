@@ -44,6 +44,9 @@ export default function ChallengePage() {
 
   const isCasting =
     data?.gameType === "CASTING" || data?.gameType === "CASTING_BOT";
+  const isFrookies =
+    data?.gameType === "FROOKIES" || data?.gameType === "FROOKIES_BOT";
+  const hasMinigame = isCasting || isFrookies;
   const canPlay =
     data?.state === "ROUND_VOTE" || data?.state === "ROUND_NOMINATE";
   const minigame = data ? pickMinigameForDay(gameId, data.roundNumber) : null;
@@ -67,22 +70,23 @@ export default function ChallengePage() {
         </Link>
       </div>
 
-      {!isCasting && (
+      {!hasMinigame && (
         <div className="theme-sidebar-panel" style={{ padding: 16 }}>
           <p>This game type does not have daily challenges.</p>
         </div>
       )}
 
-      {isCasting && !canPlay && data && (
+      {hasMinigame && !canPlay && data && (
         <div className="theme-sidebar-panel" style={{ padding: 16 }}>
           <p>Challenges are available during voting or nomination phases.</p>
         </div>
       )}
 
-      {isCasting && canPlay && data && minigame && (
+      {hasMinigame && canPlay && data && minigame && (
         <>
           <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 8 }}>
-            Day {data.roundNumber} challenge: {minigame === "matching" ? "Match the emojis" : "Match 3"}
+            {isFrookies ? "Round" : "Day"} {data.roundNumber} competition: {minigame === "matching" ? "Match the emojis" : "Match 3"}
+            {isFrookies && " — highest score wins POV."}
           </div>
           {minigame === "matching" && (
             <EmojiMatchingGame

@@ -38,21 +38,36 @@ export async function botSendChat(gameId: string, userId: string): Promise<boole
   }
 }
 
-/** Bot nominates a random target (FASTING_BOT) */
+/** Bot nominates a random target (FASTING_BOT). For FROOKIES_BOT only HOH nominates 2; use botNominateFrookies. */
 export async function botNominate(gameId: string, voterUserId: string): Promise<boolean> {
   const game = await prisma.game.findUnique({
     where: { id: gameId },
-    select: { gameType: true, roundNumber: true, povUserId: true, state: true },
+    select: { gameType: true, roundNumber: true, povUserId: true, hohUserId: true, povSavedUserId: true, state: true },
   });
   if (!game || (game.gameType !== "FASTING_BOT" && game.gameType !== "FROOKIES_BOT" && game.gameType !== "ROOKIES_BOT") || game.state !== "ROUND_NOMINATE") return false;
+  if (game.gameType === "FROOKIES_BOT" && game.hohUserId !== voterUserId) return false;
 
-  const povId = game.povUserId ?? "";
+  const exclude = new Set<string>([game.povUserId, game.povSavedUserId].filter(Boolean) as string[]);
   const players = await prisma.gamePlayer.findMany({
-    where: { gameId, status: "ACTIVE", ...(povId ? { userId: { not: povId } } : {}) },
+    where: { gameId, status: "ACTIVE", ...(exclude.size ? { userId: { notIn: [...exclude] } } : {}) },
     select: { userId: true },
   });
   const targets = players.filter((p) => p.userId !== voterUserId);
   if (targets.length === 0) return false;
+
+  if (game.gameType === "FROOKIES_BOT") {
+    const two = pickRandom(targets, 2);
+    if (two.length < 2) return false;
+    try {
+      await prisma.nomination.deleteMany({ where: { gameId, roundNumber: game.roundNumber, voterUserId } });
+      await prisma.nomination.createMany({
+        data: two.map((t) => ({ gameId, roundNumber: game.roundNumber, voterUserId, targetUserId: t.userId })),
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
 
   const target = targets[Math.floor(Math.random() * targets.length)]!;
   try {

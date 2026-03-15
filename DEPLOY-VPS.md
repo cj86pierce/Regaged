@@ -34,22 +34,18 @@ chmod +x scripts/*.sh
 
 Edit `.env` and set at least: `DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `CRON_SECRET`.
 
-### 2. PM2 (app + tick cron)
+### 2. PM2 (app; cron optional)
 
 ```bash
 npm install -g pm2
-pm2 start ecosystem.config.cjs
+pm2 start ecosystem.config.cjs --only regaged
 pm2 save
 pm2 startup
 ```
 
-This starts both:
-- **regaged** – the Next.js app
-- **regaged-cron** – hits `/api/cron/tick` every 60s so games advance (Fasting rounds, Castings days, etc.) even when nobody has the tab open
+- **regaged** – the Next.js app. It runs an **internal tick** (see `src/instrumentation.ts`) every 60s so games advance (Fasting rounds, Castings days, etc.) without an external cron. No separate cron process needed.
 
-Add `CRON_SECRET` to `.env` (e.g. `openssl rand -hex 16`). The cron script uses it to authenticate with the tick endpoint.
-
-**If you already have only `regaged` running:** add the cron with:
+Optional: to run the external tick script as well (e.g. for redundancy), add `CRON_SECRET` to `.env` (e.g. `openssl rand -hex 16`) and start the cron app:
 ```bash
 pm2 start ecosystem.config.cjs --only regaged-cron
 pm2 save

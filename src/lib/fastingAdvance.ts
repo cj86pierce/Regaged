@@ -5,6 +5,9 @@ import { resolveFastingEviction } from "@/lib/fastingVotes";
 import { assignRookiesHoh } from "@/lib/rookiesHoh";
 import { resolveRookiesNominations } from "@/lib/rookiesNoms";
 import { resolveRookiesEviction } from "@/lib/rookiesVotes";
+import { assignFrookiesHoh } from "@/lib/frookiesHoh";
+import { assignFrookiesPov } from "@/lib/frookiesPov";
+import { resolveFrookiesNominations } from "@/lib/frookiesNoms";
 
 const NOM_PHASE_MS = 3 * 60 * 1000;
 const VOTE_PHASE_MS = 2 * 60 * 1000;
@@ -40,6 +43,63 @@ export async function advanceFastingIfDue(gameId: string) {
     });
 
     const isRookies = game.gameType === "ROOKIES";
+    const isFrookies = game.gameType === "FROOKIES";
+
+    // -------------------------
+    // FROOKIES: Casting-style competition (highest score = POV), POV save, then HOH nominates 2
+    // -------------------------
+    if (isFrookies) {
+      if (game.state === "ROUND_NOMINATE") {
+        if (!game.hohUserId) {
+          try { await assignFrookiesHoh(gameId, { random: false, skipLock: true }); } catch {}
+        }
+        if (!game.povUserId) {
+          try { await assignFrookiesPov(gameId, { skipLock: true }); } catch {}
+        }
+        if (rr?.nomineeAUserId && rr?.nomineeBUserId) {
+          await prisma.game.update({
+            where: { id: gameId },
+            data: { state: "ROUND_VOTE", stateEndsAt: new Date(Date.now() + VOTE_PHASE_MS) },
+          });
+          return { ok: true, fixed: "nominees_exist_moved_to_vote" as const };
+        }
+        await resolveFrookiesNominations(gameId);
+        return { ok: true, advanced: "frookies_noms" as const };
+      }
+      if (game.state === "ROUND_VOTE") {
+        if (rr?.evictedUserId) {
+          const activeCount = await prisma.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
+          if (activeCount <= 3) {
+            await prisma.game.update({
+              where: { id: gameId },
+              data: { state: "COMPLETED", stateEndsAt: null, povUserId: null, hohUserId: null, completedAt: new Date() },
+            });
+            return { ok: true, fixed: "evicted_exists_forced_complete" as const };
+          }
+          const nextRound = game.roundNumber + 1;
+          const now2 = new Date();
+          await prisma.game.update({
+            where: { id: gameId },
+            data: {
+              state: "ROUND_NOMINATE",
+              roundNumber: nextRound,
+              povUserId: null,
+              hohUserId: null,
+              povSavedUserId: null,
+              stateEndsAt: new Date(now2.getTime() + NOM_PHASE_MS),
+            },
+          });
+          await prisma.gamePlayer.updateMany({
+            where: { gameId, status: "ACTIVE" },
+            data: { castingDayMiniGameScore: 0 },
+          });
+          try { await assignFrookiesHoh(gameId, { random: false, skipLock: true }); } catch {}
+          return { ok: true, fixed: "evicted_exists_forced_next_round" as const };
+        }
+        await resolveFastingEviction(gameId);
+        return { ok: true, advanced: "frookies_vote" as const };
+      }
+    }
 
     // -------------------------
     // ROOKIES: 7 days, 24h, HOH + 3 nominees + ranking vote
@@ -114,7 +174,7 @@ export async function advanceFastingIfDue(gameId: string) {
     }
 
     // -------------------------
-    // FASTING / FROOKIES: state machine with recovery
+    // FASTING: state machine with recovery
     // -------------------------
 
     if (game.state === "ROUND_NOMINATE") {

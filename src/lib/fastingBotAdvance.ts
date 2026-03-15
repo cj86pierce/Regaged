@@ -7,8 +7,11 @@ import { assignFastingPov } from "@/lib/fastingPov";
 import { resolveFastingNominations } from "@/lib/fastingNoms";
 import { resolveFastingEviction } from "@/lib/fastingVotes";
 import { performBotActions } from "@/lib/botActions";
+import { assignFrookiesHoh } from "@/lib/frookiesHoh";
+import { assignFrookiesPov } from "@/lib/frookiesPov";
+import { resolveFrookiesNominations } from "@/lib/frookiesNoms";
 
-const BOT_ROUND_MS = 2 * 60 * 1000; // 2 min for testing
+const BOT_ROUND_MS = 2 * 60 * 1000;
 
 export async function advanceFastingBotIfDue(gameId: string) {
   const lockRows = await prisma.$queryRaw<{ locked: boolean }[]>`
@@ -21,7 +24,7 @@ export async function advanceFastingBotIfDue(gameId: string) {
 
     const game = await prisma.game.findUnique({
       where: { id: gameId },
-      select: { id: true, gameType: true, state: true, roundNumber: true, stateEndsAt: true, povUserId: true },
+      select: { id: true, gameType: true, state: true, roundNumber: true, stateEndsAt: true, povUserId: true, hohUserId: true },
     });
     if (!game || (game.gameType !== "FASTING_BOT" && game.gameType !== "FROOKIES_BOT" && game.gameType !== "ROOKIES_BOT")) return { ok: false, error: "not_fasting_bot" as const };
 
@@ -42,13 +45,40 @@ export async function advanceFastingBotIfDue(gameId: string) {
       select: { nomineeAUserId: true, nomineeBUserId: true, evictedUserId: true },
     });
 
+    const isFrookiesBot = game.gameType === "FROOKIES_BOT";
+
     if (game.state === "ROUND_NOMINATE") {
-      if (!game.povUserId) {
-        try {
-          await assignFastingPov(gameId, { skipLock: true });
-        } catch {}
+      if (isFrookiesBot) {
+        if (!game.hohUserId) {
+          try { await assignFrookiesHoh(gameId, { random: false, skipLock: true }); } catch {}
+        }
+        if (!game.povUserId) {
+          const actives = await prisma.gamePlayer.findMany({
+            where: { gameId, status: "ACTIVE" },
+            select: { userId: true },
+          });
+          for (const p of actives) {
+            await prisma.gamePlayer.update({
+              where: { gameId_userId: { gameId, userId: p.userId } },
+              data: { castingDayMiniGameScore: Math.floor(Math.random() * 101) },
+            });
+          }
+          try { await assignFrookiesPov(gameId, { skipLock: true }); } catch {}
+        }
+        if (rr?.nomineeAUserId && rr?.nomineeBUserId) {
+          await prisma.game.update({
+            where: { id: gameId },
+            data: { state: "ROUND_VOTE", stateEndsAt: new Date(Date.now() + BOT_ROUND_MS) },
+          });
+          return { ok: true, fixed: "nominees_exist_moved_to_vote" as const };
+        }
+        await resolveFrookiesNominations(gameId);
+        return { ok: true, advanced: "frookies_bot_noms" as const };
       }
 
+      if (!game.povUserId) {
+        try { await assignFastingPov(gameId, { skipLock: true }); } catch {}
+      }
       if (rr?.nomineeAUserId && rr?.nomineeBUserId) {
         await prisma.game.update({
           where: { id: gameId },
@@ -56,7 +86,6 @@ export async function advanceFastingBotIfDue(gameId: string) {
         });
         return { ok: true, fixed: "nominees_exist_moved_to_vote" as const };
       }
-
       await resolveFastingNominations(gameId);
       return { ok: true, advanced: "noms" as const };
     }
@@ -68,7 +97,7 @@ export async function advanceFastingBotIfDue(gameId: string) {
         if (activeCount <= 3) {
           await prisma.game.update({
             where: { id: gameId },
-            data: { state: "COMPLETED", stateEndsAt: null, povUserId: null, completedAt: new Date() },
+            data: { state: "COMPLETED", stateEndsAt: null, povUserId: null, hohUserId: null, completedAt: new Date() },
           });
           return { ok: true, fixed: "evicted_exists_forced_complete" as const };
         }
@@ -81,14 +110,20 @@ export async function advanceFastingBotIfDue(gameId: string) {
             state: "ROUND_NOMINATE",
             roundNumber: nextRound,
             povUserId: null,
+            ...(isFrookiesBot ? { hohUserId: null, povSavedUserId: null } : {}),
             stateEndsAt: new Date(now2.getTime() + BOT_ROUND_MS),
           },
         });
 
-        try {
-          await assignFastingPov(gameId, { skipLock: true });
-        } catch {}
-
+        if (isFrookiesBot) {
+          await prisma.gamePlayer.updateMany({
+            where: { gameId, status: "ACTIVE" },
+            data: { castingDayMiniGameScore: 0 },
+          });
+          try { await assignFrookiesHoh(gameId, { random: false, skipLock: true }); } catch {}
+        } else {
+          try { await assignFastingPov(gameId, { skipLock: true }); } catch {}
+        }
         return { ok: true, fixed: "evicted_exists_forced_next_round" as const };
       }
 

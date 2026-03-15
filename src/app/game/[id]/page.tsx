@@ -45,7 +45,7 @@ type GameState = {
   ok: boolean;
   meUserId: string | null;
   myNomLocked: boolean | null;
-  game: { id: string; number: number; gameType: string; state: string; roundNumber: number; povUserId: string | null; stateEndsAt: string | null };
+  game: { id: string; number: number; gameType: string; state: string; roundNumber: number; povUserId: string | null; hohUserId?: string | null; povSavedUserId?: string | null; stateEndsAt: string | null };
   lobby: { current: number; needed: number } | null;
   voteInfo: { myVoteTargetUserId: string | null } | null;
   players: Player[];
@@ -234,6 +234,21 @@ export default function GamePage({ params }: { params: { id: string } }) {
     load().catch((e) => setError(e.message));
   }
 
+  async function submitPovSave(targetUserId: string | null) {
+    setError(null);
+    const res = await fetch(`/api/game/${gameId}/pov-save`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ targetUserId }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(json?.error ?? "POV save failed");
+      return;
+    }
+    load().catch((e) => setError(e.message));
+  }
+
   if (!data) return <p style={{ padding: 16 }}>Loading game…</p>;
 
   const isCasting =
@@ -361,7 +376,13 @@ export default function GamePage({ params }: { params: { id: string } }) {
     gameState={data.game.state}
     roundNumber={data.game.roundNumber}
     nomSelected={nomSelected}
-    canConfirmNoms={!isCasting && data.game.state === "ROUND_NOMINATE" && !myNomLockedIn && nomSelected.length === 2}
+    canConfirmNoms={
+      !isCasting &&
+      data.game.state === "ROUND_NOMINATE" &&
+      !myNomLockedIn &&
+      nomSelected.length === 2 &&
+      ((data.game.gameType === "FROOKIES" || data.game.gameType === "FROOKIES_BOT") ? data.game.hohUserId === data.meUserId : true)
+    }
     onConfirmNoms={confirmNoms}
     myNomLockedIn={myNomLockedIn}
     evictSelected={evictSelected}
@@ -369,6 +390,15 @@ export default function GamePage({ params }: { params: { id: string } }) {
     onConfirmVote={confirmVote}
     myVoteLockedIn={myVoteLockedIn}
     messages={data.messages}
+    gameId={gameId}
+    gameType={data.game.gameType}
+    meUserId={data.meUserId}
+    povUserId={data.game.povUserId}
+    hohUserId={data.game.hohUserId}
+    povSavedUserId={data.game.povSavedUserId}
+    players={data.players.map((p) => ({ userId: p.userId, username: p.username, status: p.status }))}
+    onPovSave={submitPovSave}
+    onReload={() => load().catch((e) => setError(e.message))}
   />
 )}
       </div>

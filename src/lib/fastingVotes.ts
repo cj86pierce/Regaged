@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getSystemUserId } from "@/lib/systemUser";
 import { assignFastingPov } from "@/lib/fastingPov";
+import { assignFrookiesHoh } from "@/lib/frookiesHoh";
 
 const NOM_PHASE_MS = 3 * 60 * 1000;
 const BOT_ROUND_MS = 2 * 60 * 1000; // 2 min for testing
@@ -95,6 +96,7 @@ export async function resolveFastingEviction(gameId: string) {
     const nextRound = game.roundNumber + 1;
     const now2 = new Date();
     const nomMs = (game.gameType === "FASTING_BOT" || game.gameType === "FROOKIES_BOT" || game.gameType === "ROOKIES_BOT") ? BOT_ROUND_MS : NOM_PHASE_MS;
+    const isFrookies = game.gameType === "FROOKIES" || game.gameType === "FROOKIES_BOT";
 
     await prisma.game.update({
       where: { id: gameId },
@@ -104,12 +106,23 @@ export async function resolveFastingEviction(gameId: string) {
         povUserId: null,
         roundStartedAt: now2,
         stateEndsAt: new Date(now2.getTime() + nomMs),
+        ...(isFrookies ? { hohUserId: null, povSavedUserId: null } : {}),
       },
     });
 
-    try {
-      await assignFastingPov(gameId);
-    } catch {}
+    if (isFrookies) {
+      await prisma.gamePlayer.updateMany({
+        where: { gameId, status: "ACTIVE" },
+        data: { castingDayMiniGameScore: 0 },
+      });
+      try {
+        await assignFrookiesHoh(gameId);
+      } catch {}
+    } else {
+      try {
+        await assignFastingPov(gameId);
+      } catch {}
+    }
 
     return { ok: true, advancedToRound: nextRound };
   } finally {

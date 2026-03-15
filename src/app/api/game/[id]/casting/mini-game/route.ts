@@ -23,8 +23,14 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     where: { id: gameId },
     select: { gameType: true, state: true, roundNumber: true },
   });
-  if (!g || (g.gameType !== "CASTING" && g.gameType !== "CASTING_BOT"))
-    return bad("Not a casting game", 400);
+  if (
+    !g ||
+    (g.gameType !== "CASTING" &&
+      g.gameType !== "CASTING_BOT" &&
+      g.gameType !== "FROOKIES" &&
+      g.gameType !== "FROOKIES_BOT")
+  )
+    return bad("Not a casting or frookies game", 400);
   if (g.state !== "ROUND_VOTE" && g.state !== "ROUND_NOMINATE")
     return bad("Play during voting or nomination phase", 400);
 

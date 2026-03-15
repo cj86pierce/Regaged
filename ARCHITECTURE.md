@@ -17,13 +17,11 @@ Shared systems for consistency and future game modes.
 - **API:** `POST /api/game/[id]/chat` creates messages; `/api/game/[id]/state` returns paginated messages
 - **Client:** Append new messages optimistically; avoid refetching full history
 
-### 3. Cron Tick (`src/app/api/cron/tick/route.ts`)
+### 3. Cron Tick (`src/lib/runTick.ts`, `src/app/api/cron/tick/route.ts`)
 
-- Processes **active games only** (ROUND_NOMINATE, ROUND_VOTE)
-- Sequence: CASTING_BOT → FASTING → FASTING_BOT → CASTING
-- Casting: advance + drops + health decay
-- Auctions: creates auctions from designs whose voting ended (top-voted per designType)
-- Auth: `CRON_SECRET` or `x-vercel-cron: 1`
+- **Internal tick:** When the Node server starts, `src/instrumentation.ts` runs `runTick()` every 60s (configurable via `TICK_INTERVAL_MS`), so games advance without an external cron.
+- **HTTP endpoint:** `GET/POST /api/cron/tick` also runs the same tick (for CronPinger, external cron, or Vercel crons). Auth: `CRON_SECRET` or `x-vercel-cron: 1` or logged-in user.
+- Logic: processes **active games only** (ROUND_NOMINATE, ROUND_VOTE); sequence: CASTING_BOT → FASTING → FASTING_BOT → CASTING; Casting: advance + drops + health decay; Auctions: creates/resolves from designs.
 
 ### 4. Auction House
 

@@ -4,6 +4,7 @@
  */
 import { prisma } from "@/lib/prisma";
 import { assignFastingPov } from "@/lib/fastingPov";
+import { assignFrookiesHoh } from "@/lib/frookiesHoh";
 
 const BOT_ROUND_MS = 2 * 60 * 1000; // 2 min for testing
 const FASTING_BOT_MAX = 15;
@@ -32,6 +33,8 @@ export async function tryStartFastingStyleBotGame(
 
   const now = new Date();
 
+  const isFrookiesBot = gameType === "FROOKIES_BOT";
+
   await prisma.game.update({
     where: { id: gameId },
     data: {
@@ -41,12 +44,16 @@ export async function tryStartFastingStyleBotGame(
       roundStartedAt: now,
       stateEndsAt: new Date(now.getTime() + BOT_ROUND_MS),
       povUserId: null,
+      hohUserId: isFrookiesBot ? null : undefined,
+      povSavedUserId: isFrookiesBot ? null : undefined,
     },
   });
 
-  try {
-    await assignFastingPov(gameId);
-  } catch {}
+  if (isFrookiesBot) {
+    try { await assignFrookiesHoh(gameId, { random: true }); } catch {}
+  } else {
+    try { await assignFastingPov(gameId); } catch {}
+  }
 
   return { ok: true };
 }

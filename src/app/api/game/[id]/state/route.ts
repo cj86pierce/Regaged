@@ -27,6 +27,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       stateEndsAt: true,
       povUserId: true,
       hohUserId: true,
+      povSavedUserId: true,
     },
   });
   if (!game) return NextResponse.json({ error: "Game not found" }, { status: 404 });
@@ -264,6 +265,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       stateEndsAt: game.state === "COMPLETED" ? null : game.stateEndsAt,
       povUserId: game.povUserId,
       hohUserId: game.hohUserId ?? undefined,
+      povSavedUserId: game.povSavedUserId ?? undefined,
     },
 
     nomineeCUserId: nomineeC ?? undefined,
@@ -301,7 +303,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         checks: (p.plusCount ?? 0) - (p.minusCount ?? 0),
         health: p.health ?? 100,
         keys: p.keys ?? 0,
-        castingDayMiniGameScore: (game.gameType === "CASTING" || game.gameType === "CASTING_BOT")
+        castingDayMiniGameScore: (game.gameType === "CASTING" || game.gameType === "CASTING_BOT" || game.gameType === "FROOKIES" || game.gameType === "FROOKIES_BOT")
           ? (p.castingDayMiniGameScore ?? 0)
           : undefined,
 

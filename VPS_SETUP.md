@@ -78,9 +78,9 @@ curl http://localhost:3000
 
 ---
 
-## 6. Cron (required for games)
+## 6. Cron (optional)
 
-Add a cron job so game ticks run every 2 minutes:
+The app runs an **internal tick** when it starts (`src/instrumentation.ts`), so games advance every 60s without a system cron. If you want an external cron as well (e.g. redundancy), add:
 
 ```bash
 crontab -e

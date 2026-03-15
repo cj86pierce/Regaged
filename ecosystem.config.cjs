@@ -21,6 +21,7 @@ module.exports = {
         NODE_ENV: "production",
       },
     },
+    // Optional: external tick (app already runs internal tick via instrumentation.ts)
     {
       name: "regaged-cron",
       script: "scripts/dev-cron.js",

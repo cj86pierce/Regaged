@@ -13,7 +13,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   const game = await prisma.game.findUnique({
     where: { id: gameId },
-    select: { state: true, roundNumber: true, povUserId: true, stateEndsAt: true },
+    select: { gameType: true, state: true, roundNumber: true, povUserId: true, hohUserId: true, povSavedUserId: true, stateEndsAt: true },
   });
   if (!game) return NextResponse.json({ error: "Game not found" }, { status: 404 });
   if (game.state !== "ROUND_NOMINATE") return NextResponse.json({ error: "Not in nomination phase" }, { status: 400 });
@@ -22,6 +22,9 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const gp = await prisma.gamePlayer.findUnique({ where: { gameId_userId: { gameId, userId } } });
   if (!gp || gp.status !== "ACTIVE") return NextResponse.json({ error: "Not in game" }, { status: 403 });
 
+  const isFrookies = game.gameType === "FROOKIES" || game.gameType === "FROOKIES_BOT";
+  if (isFrookies && game.hohUserId !== userId) return NextResponse.json({ error: "Only the HOH can nominate." }, { status: 403 });
+
   const body: any = await req.json().catch(() => null);
   const rawTargets: unknown = body?.targets;
   if (!Array.isArray(rawTargets)) return NextResponse.json({ error: "targets must be an array" }, { status: 400 });
@@ -29,7 +32,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const uniq: string[] = Array.from(new Set(rawTargets.map((x) => String(x).trim()))).filter((s) => s.length > 0);
   if (uniq.length !== 2) return NextResponse.json({ error: "Pick exactly 2 unique nominees." }, { status: 400 });
 
-  if (game.povUserId && uniq.includes(game.povUserId)) return NextResponse.json({ error: "You cannot nominate the POV." }, { status: 400 });
+  if (game.povUserId && uniq.includes(game.povUserId)) return NextResponse.json({ error: "You cannot nominate the POV holder." }, { status: 400 });
+  if (game.povSavedUserId && uniq.includes(game.povSavedUserId)) return NextResponse.json({ error: "You cannot nominate the POV-saved player." }, { status: 400 });
 
   const validTargets = await prisma.gamePlayer.findMany({
     where: { gameId, status: "ACTIVE", userId: { in: uniq } },

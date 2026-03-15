@@ -465,9 +465,10 @@ model Game {
   stateEndsAt    DateTime?
   roundStartedAt DateTime?
 
-  povUserId   String?  // POV holder (veto); in FASTING = nominator
-  hohUserId   String?  // HOH (nominates 2) for FROOKIES / ROOKIES
-  createdAt   DateTime  @default(now())
+  povUserId       String?  // POV holder (veto); in FASTING = nominator
+  hohUserId       String?  // HOH (nominates 2) for FROOKIES / ROOKIES
+  povSavedUserId  String?  // FROOKIES: who POV saved this round (immune from noms); cleared when round result is written
+  createdAt       DateTime  @default(now())
   completedAt DateTime?
 
   players       GamePlayer[]

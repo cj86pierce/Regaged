@@ -1,6 +1,8 @@
 # Cron setup for game advancement
 
-Games advance rounds/days when the cron runs. **vercel.json** is set to `*/1 * * * *` (every minute) so Fasting and Casting auto-advance when the phase timer ends. On **Vercel Hobby**, crons are limited to once per day—use an external cron (Option 1) so casting and fasting don’t stay stuck.
+**On a long-running Node server (e.g. VPS with PM2):** The app runs an **internal tick** when the server starts (`src/instrumentation.ts`), so games advance every 60s without any external cron. You can skip external cron entirely.
+
+**On Vercel (or if you want external redundancy):** Games advance when something hits the tick endpoint. **vercel.json** is set to `*/1 * * * *` (every minute). On **Vercel Hobby**, crons are limited to once per day—use an external cron (Option 1) so casting and fasting don’t stay stuck.
 
 ## Option 1: External cron (recommended for Hobby)
 

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { assignFastingPov } from "@/lib/fastingPov";
 import { assignRookiesHoh } from "@/lib/rookiesHoh";
+import { assignFrookiesHoh } from "@/lib/frookiesHoh";
 
 const FASTING_MAX = 15;
 const FASTING_NOM_MS = 2 * 60 * 1000;
@@ -35,6 +36,7 @@ export async function tryStartFastingStyleGame(
 
   const now = new Date();
   const isRookies = gameType === "ROOKIES";
+  const isFrookies = gameType === "FROOKIES";
   const phaseMs = isRookies ? ROOKIES_DAY_MS : FASTING_NOM_MS;
 
   await prisma.game.update({
@@ -47,6 +49,7 @@ export async function tryStartFastingStyleGame(
       stateEndsAt: new Date(now.getTime() + phaseMs),
       povUserId: null,
       hohUserId: null,
+      povSavedUserId: null,
     },
   });
 
@@ -56,6 +59,13 @@ export async function tryStartFastingStyleGame(
     } catch {
       // cron/state route will retry later
     }
+  } else if (isFrookies) {
+    try {
+      await assignFrookiesHoh(gameId, { random: true });
+    } catch {
+      // cron/state route will retry later
+    }
+    // POV is assigned from competition (highest mini-game score) when phase ends
   } else {
     try {
       await assignFastingPov(gameId);
