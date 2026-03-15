@@ -30,6 +30,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
     );
   }
 
+  try {
   await touchUser(userId);
 
   const user = await prisma.user.findUnique({
@@ -204,14 +205,14 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
   const data: ProfileTabsData = {
     isOwnProfile: true,
     username: user.username,
-    joinedAt: user.createdAt.toISOString(),
+    joinedAt: (user.createdAt && typeof user.createdAt.toISOString === "function" ? user.createdAt.toISOString() : new Date().toISOString()),
     karma: user.karma,
     tMoney: user.tMoney,
     pMoney: user.pMoney,
     bio: user.bio ?? "", // ✅
     colorName: highestColor?.name ?? "White",
     colorAnimated: highestColor?.isAnimated ?? false,
-    lastSeenAt: user.lastSeenAt.toISOString(),
+    lastSeenAt: (user.lastSeenAt && typeof user.lastSeenAt.toISOString === "function" ? user.lastSeenAt.toISOString() : new Date().toISOString()),
     avatar,
     slotDesigns,
     stats: {
@@ -229,4 +230,25 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
   };
 
   return <ProfileTabs data={data} />;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const stack = err instanceof Error ? err.stack : undefined;
+    console.error("Profile page error:", msg, stack);
+    const showDebug = typeof searchParams?.profile_debug === "string";
+    return (
+      <main style={{ padding: 12 }}>
+        <div className="theme-card" style={{ padding: 16 }}>
+          <h2 style={{ marginTop: 0 }}>Something went wrong</h2>
+          <p>We couldn’t load your profile. Try again or come back later.</p>
+          {showDebug && (
+            <pre style={{ fontSize: 12, overflow: "auto", background: "var(--bg-muted)", padding: 12, borderRadius: 8 }}>
+              {msg}
+              {stack ? "\n\n" + stack : ""}
+            </pre>
+          )}
+          <Link href="/">Back to home</Link>
+        </div>
+      </main>
+    );
+  }
 }
