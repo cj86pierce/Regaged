@@ -8,9 +8,9 @@ function activityScore(p: { chatCount: number; plusCount: number; minusCount: nu
 /** Assign HOH for Frookies: random on round 1, activity-based otherwise (same idea as Rookies). */
 export async function assignFrookiesHoh(
   gameId: string,
-  opts: { random?: boolean; skipLock?: boolean }
+  opts: { random?: boolean; skipLock?: boolean } = {}
 ) {
-  if (!opts.skipLock) {
+  if (!opts?.skipLock) {
     const lockRows = await prisma.$queryRaw<{ locked: boolean }[]>`
       SELECT pg_try_advisory_lock(hashtext(${gameId + "_hoh_f"})) as locked
     `;

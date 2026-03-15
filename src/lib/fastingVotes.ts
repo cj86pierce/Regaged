@@ -116,7 +116,7 @@ export async function resolveFastingEviction(gameId: string) {
         data: { castingDayMiniGameScore: 0 },
       });
       try {
-        await assignFrookiesHoh(gameId);
+        await assignFrookiesHoh(gameId, { skipLock: true });
       } catch {}
     } else {
       try {
