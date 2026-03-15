@@ -234,7 +234,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
     const msg = err instanceof Error ? err.message : String(err);
     const stack = err instanceof Error ? err.stack : undefined;
     console.error("Profile page error:", msg, stack);
-    const showDebug = typeof searchParams?.profile_debug === "string";
+    const showDebug = typeof (searchParams as { page?: string; profile_debug?: string })?.profile_debug === "string";
     return (
       <main style={{ padding: 12 }}>
         <div className="theme-card" style={{ padding: 16 }}>
