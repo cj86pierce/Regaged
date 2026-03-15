@@ -32,6 +32,9 @@ export async function POST(req: Request) {
 
   const designId = body.designId === null || body.designId === undefined ? null : String(body.designId);
 
+  const ORIGINAL_SLOTS = ["BODY", "HAIR", "EYES", "MOUTH", "SHIRT", "ACCESSORY"] as const;
+  const isOriginalSlot = ORIGINAL_SLOTS.includes(slot as (typeof ORIGINAL_SLOTS)[number]);
+
   try {
     if (designId) {
       const owned = await prisma.designOwner.findUnique({
@@ -50,7 +53,15 @@ export async function POST(req: Request) {
       data: { [field]: designId },
     });
     return NextResponse.json({ ok: true });
-  } catch {
-    return NextResponse.json({ error: "Equip not available" }, { status: 503 });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    const missingColumn = /column.*does not exist|Unknown column/i.test(msg);
+    const err =
+      missingColumn && !isOriginalSlot
+        ? "This slot needs a database migration (run: npx prisma migrate deploy)"
+        : missingColumn
+          ? "Equipping designs needs a database migration (run: npx prisma migrate deploy)"
+          : "Equip failed. Try again.";
+    return NextResponse.json({ error: err }, { status: 503 });
   }
 }

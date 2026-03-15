@@ -11,23 +11,43 @@ export async function POST(req: Request) {
 
   const s = (k: string, def: string) => (typeof body[k] === "string" ? body[k] : def);
 
-  await prisma.user.update({
-    where: { id: userId },
-    data: {
-      bodyStyle: s("bodyStyle", "body_m"),
-      hairStyle: s("hairStyle", "hair_m_01"),
-      eyesStyle: s("eyesStyle", "eyes_01"),
-      mouthStyle: s("mouthStyle", "mouth_01"),
-      shirtStyle: s("shirtStyle", "shirt_01"),
-      accessoryStyle: s("accessoryStyle", "none"),
-      bodyColor: s("bodyColor", "#F1C27D"),
-      hairColor: s("hairColor", "#2B1B0E"),
-      eyeColor: s("eyeColor", "#2E7DFF"),
-      mouthColor: s("mouthColor", "#E0AC69"),
-      shirtColor: s("shirtColor", "#E53935"),
-      accessoryColor: s("accessoryColor", "#111111"),
-    } as Record<string, string>,
-  });
+  const baseData = {
+    bodyStyle: s("bodyStyle", "body_m"),
+    hairStyle: s("hairStyle", "hair_m_01"),
+    eyesStyle: s("eyesStyle", "eyes_01"),
+    mouthStyle: s("mouthStyle", "mouth_01"),
+    shirtStyle: s("shirtStyle", "shirt_01"),
+    accessoryStyle: s("accessoryStyle", "none"),
+    bodyColor: s("bodyColor", "#F1C27D"),
+    hairColor: s("hairColor", "#2B1B0E"),
+    eyeColor: s("eyeColor", "#2E7DFF"),
+    mouthColor: s("mouthColor", "#E0AC69"),
+    shirtColor: s("shirtColor", "#E53935"),
+    accessoryColor: s("accessoryColor", "#111111"),
+  };
+
+  const extendedData = {
+    ...baseData,
+    glassesStyle: s("glassesStyle", "none"),
+    scarStyle: s("scarStyle", "none"),
+    hairOrnamentStyle: s("hairOrnamentStyle", "none"),
+    backgroundColor: s("backgroundColor", "#E8E8E8"),
+    glassesColor: s("glassesColor", "#111111"),
+    scarColor: s("scarColor", "#8B4513"),
+    hairOrnamentColor: s("hairOrnamentColor", "#C0C0C0"),
+  };
+
+  try {
+    await prisma.user.update({
+      where: { id: userId },
+      data: extendedData as Record<string, string>,
+    });
+  } catch {
+    await prisma.user.update({
+      where: { id: userId },
+      data: baseData as Record<string, string>,
+    });
+  }
 
   return NextResponse.json({ ok: true });
 }
