@@ -294,6 +294,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
         <PlayerStrip
           players={data.players}
           povUserId={data.game.povUserId}
+          hohUserId={data.game.hohUserId}
           gameState={data.game.state}
           meUserId={data.meUserId}
           myNomLockedIn={myNomLockedIn}

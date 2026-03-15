@@ -30,6 +30,7 @@ function suffix(n: number) {
 export default function PlayerStrip(props: {
   players: Player[];
   povUserId: string | null;
+  hohUserId?: string | null;
   gameState: string;
   meUserId: string | null;
 
@@ -45,6 +46,7 @@ export default function PlayerStrip(props: {
   const {
     players,
     povUserId,
+    hohUserId,
     gameState,
     myNomLockedIn,
     myVoteLockedIn,
@@ -74,13 +76,14 @@ export default function PlayerStrip(props: {
       <div className="gamePlayerStrip" style={{ display: "grid", gridTemplateColumns: "repeat(15, minmax(0, 1fr))", gap: 4, alignItems: "start" }}>
         {players.map((p) => {
           const isPov = p.userId === povUserId;
+          const isHoh = hohUserId != null && p.userId === hohUserId;
           const lastSeenLabel = formatLastSeen(typeof p.lastActiveAt === "string" ? p.lastActiveAt : p.lastActiveAt.toISOString());
           const place = p.eliminatedPlace;
 
           const grayscale = isCompleted ? place !== 1 : p.status === "ELIMINATED";
 
           const canNominateThisPlayer =
-            isNominate && !myNomLockedIn && p.status === "ACTIVE" && !isPov;
+            isNominate && !myNomLockedIn && p.status === "ACTIVE" && !isPov && !isHoh;
 
           const canEvictThisPlayer =
             isVote && !myVoteLockedIn && p.status === "ACTIVE" && p.isNominee;
@@ -106,6 +109,24 @@ export default function PlayerStrip(props: {
                 }}
               >
                 POV
+              </span>
+            );
+          } else if (isHoh) {
+            slot = (
+              <span
+                style={{
+                  display: "inline-block",
+                  padding: "2px 6px",
+                  borderRadius: 999,
+                  background: "#2e7d32",
+                  color: "#fff",
+                  border: "2px solid #ffffff",
+                  fontWeight: 1000,
+                  fontSize: 10,
+                  lineHeight: "12px",
+                }}
+              >
+                HOH
               </span>
             );
           } else if (canNominateThisPlayer) {
