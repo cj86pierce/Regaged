@@ -4,7 +4,7 @@ import { useState } from "react";
 
 const PINK_BUTTON = "linear-gradient(#f8bbd9, #f48fb1)";
 
-export default function EnrollFrookiesPage() {
+export default function EnrollRookiesBotPage() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -15,7 +15,7 @@ export default function EnrollFrookiesPage() {
     const res = await fetch("/api/enroll", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ gameType: "FROOKIES" }),
+      body: JSON.stringify({ gameType: "ROOKIES_BOT" }),
     });
 
     const json = await res.json().catch(() => ({}));
@@ -29,9 +29,9 @@ export default function EnrollFrookiesPage() {
 
   return (
     <main style={{ padding: 12 }}>
-      <h1 style={{ marginTop: 0 }}>Frookies</h1>
+      <h1 style={{ marginTop: 0 }}>Rookies (Bot)</h1>
       <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 12 }}>
-        Same rules as Fastings. POV → nominate → evict. For friends and newcomers.
+        60s rounds. Bots fill slots. Same rules as Rookies. No payouts. Practice mode.
       </div>
 
       <button

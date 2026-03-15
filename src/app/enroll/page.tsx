@@ -2,7 +2,10 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 
-function GameCard({ title, desc, href, accent }: { title: string; desc: string; href: string; accent?: string }) {
+const PINK_ACCENT = "#f48fb1";
+const PINK_BUTTON = "linear-gradient(#f8bbd9, #f48fb1)";
+
+function GameCard({ title, desc, href, pink }: { title: string; desc: string; href: string; pink?: boolean }) {
   return (
     <Link
       href={href}
@@ -21,7 +24,7 @@ function GameCard({ title, desc, href, accent }: { title: string; desc: string; 
       <div
         style={{
           minHeight: 80,
-          background: accent ?? "var(--accent-bg)",
+          background: pink ? PINK_ACCENT : "var(--accent-bg)",
           margin: -20,
           marginBottom: 16,
           padding: 16,
@@ -30,11 +33,24 @@ function GameCard({ title, desc, href, accent }: { title: string; desc: string; 
           justifyContent: "center",
         }}
       >
-        <span style={{ fontWeight: 1000, fontSize: 18, color: "var(--brand)" }}>{title}</span>
+        <span style={{ fontWeight: 1000, fontSize: 18, color: pink ? "#5a2a3a" : "var(--brand)" }}>{title}</span>
       </div>
       <div style={{ fontWeight: 1000, fontSize: 16 }}>{title}</div>
       <div style={{ marginTop: 6, fontSize: 12, opacity: 0.8, lineHeight: 1.35 }}>{desc}</div>
-      <div style={{ marginTop: 12, fontWeight: 1000, color: "var(--link-color)" }}>Open ▶</div>
+      <div
+        style={{
+          marginTop: 12,
+          fontWeight: 1000,
+          color: pink ? "#8b3a52" : "var(--link-color)",
+          padding: "8px 12px",
+          borderRadius: 10,
+          background: pink ? PINK_BUTTON : "transparent",
+          border: pink ? "1px solid rgba(0,0,0,0.1)" : "none",
+          display: "inline-block",
+        }}
+      >
+        Open ▶
+      </div>
     </Link>
   );
 }
@@ -44,16 +60,22 @@ export default function EnrollHub() {
     <main style={{ padding: 12 }}>
       <h1 style={{ marginTop: 0, color: "var(--brand)" }}>Enroll</h1>
       <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 16 }}>
-        Choose a game mode. Fastings, Frookies, Rookies, and Castings available.
+        Choose a game mode. Row 1: Fastings & Castings. Row 2: Frookies & Rookies (pink).
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 }}>
-        <GameCard title="Fastings" desc="Fast mode. POV → nominate → evict. Short phases." href="/enroll/fasting" />
-        <GameCard title="Frookies" desc="Same as Fastings. For friends and newcomers." href="/enroll/frookies" />
-        <GameCard title="Rookies" desc="Same as Fastings. Rookie-friendly mode." href="/enroll/rookies" />
-        <GameCard title="Castings" desc="Slow mode (12-hour days). Health decay + drops (apples/keys/poison)." href="/enroll/casting" />
-        <GameCard title="Fastings (Bot)" desc="60s rounds. Bots fill slots. No payouts. Practice mode." href="/enroll/fasting-bot" />
-        <GameCard title="Castings (Bot)" desc="60s days. Bots fill slots. No payouts. Practice mode." href="/enroll/casting-bot" />
+      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 16 }}>
+          <GameCard title="Fastings" desc="Fast mode. POV → nominate → evict. Short phases." href="/enroll/fasting" />
+          <GameCard title="Castings" desc="Slow mode (12h days). Health decay + drops." href="/enroll/casting" />
+          <GameCard title="Fastings (Bot)" desc="60s rounds. Bots fill. Practice." href="/enroll/fasting-bot" />
+          <GameCard title="Castings (Bot)" desc="60s days. Bots fill. Practice." href="/enroll/casting-bot" />
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 16 }}>
+          <GameCard title="Frookies" desc="Same as Fastings. For friends & newcomers." href="/enroll/frookies" pink />
+          <GameCard title="Rookies" desc="Same as Fastings. Rookie-friendly." href="/enroll/rookies" pink />
+          <GameCard title="Frookies (Bot)" desc="60s rounds. Bots fill. Practice." href="/enroll/frookies-bot" pink />
+          <GameCard title="Rookies (Bot)" desc="60s rounds. Bots fill. Practice." href="/enroll/rookies-bot" pink />
+        </div>
       </div>
     </main>
   );

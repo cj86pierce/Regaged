@@ -44,7 +44,7 @@ export async function botNominate(gameId: string, voterUserId: string): Promise<
     where: { id: gameId },
     select: { gameType: true, roundNumber: true, povUserId: true, state: true },
   });
-  if (!game || game.gameType !== "FASTING_BOT" || game.state !== "ROUND_NOMINATE") return false;
+  if (!game || (game.gameType !== "FASTING_BOT" && game.gameType !== "FROOKIES_BOT" && game.gameType !== "ROOKIES_BOT") || game.state !== "ROUND_NOMINATE") return false;
 
   const povId = game.povUserId ?? "";
   const players = await prisma.gamePlayer.findMany({
@@ -76,7 +76,7 @@ export async function botVoteFasting(gameId: string, voterUserId: string): Promi
     where: { id: gameId },
     select: { gameType: true, roundNumber: true, state: true },
   });
-  if (!game || game.gameType !== "FASTING_BOT" || game.state !== "ROUND_VOTE") return false;
+  if (!game || (game.gameType !== "FASTING_BOT" && game.gameType !== "FROOKIES_BOT" && game.gameType !== "ROOKIES_BOT") || game.state !== "ROUND_VOTE") return false;
 
   const rr = await prisma.roundResult.findUnique({
     where: { gameId_roundNumber: { gameId, roundNumber: game.roundNumber } },
@@ -143,7 +143,7 @@ export async function performBotActions(gameId: string): Promise<{ chat: number;
   if (!game) return { chat: 0, nom: 0, vote: 0 };
   const gameType = game.gameType;
 
-  if (gameType !== "FASTING_BOT" && gameType !== "CASTING_BOT") return { chat: 0, nom: 0, vote: 0 };
+  if (gameType !== "FASTING_BOT" && gameType !== "CASTING_BOT" && gameType !== "FROOKIES_BOT" && gameType !== "ROOKIES_BOT") return { chat: 0, nom: 0, vote: 0 };
 
   const players = await prisma.gamePlayer.findMany({
     where: { gameId, status: "ACTIVE" },
@@ -162,7 +162,7 @@ export async function performBotActions(gameId: string): Promise<{ chat: number;
     const r = Math.random();
     if (r < 0.4) {
       if (await botSendChat(gameId, p.userId)) chat++;
-    } else if (gameType === "FASTING_BOT") {
+    } else if (gameType === "FASTING_BOT" || gameType === "FROOKIES_BOT" || gameType === "ROOKIES_BOT") {
       if (game.state === "ROUND_NOMINATE" && r < 0.7) {
         if (await botNominate(gameId, p.userId)) nom++;
       } else if (game.state === "ROUND_VOTE" && r < 0.7) {

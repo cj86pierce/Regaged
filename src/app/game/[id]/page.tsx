@@ -97,7 +97,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
     if (!res.ok) throw new Error(json?.error ?? "Failed to load game");
     setData(json);
 
-    if (json.game.gameType === "FASTING" || json.game.gameType === "FASTING_BOT" || json.game.gameType === "FROOKIES" || json.game.gameType === "ROOKIES") {
+    if (json.game.gameType === "FASTING" || json.game.gameType === "FASTING_BOT" || json.game.gameType === "FROOKIES" || json.game.gameType === "ROOKIES" || json.game.gameType === "FROOKIES_BOT" || json.game.gameType === "ROOKIES_BOT") {
       if (json.game.state !== "ROUND_NOMINATE") setNomSelected([]);
       if (json.game.state !== "ROUND_VOTE") setEvictSelected(null);
       if (json.myNomLocked) setNomSelected([]);

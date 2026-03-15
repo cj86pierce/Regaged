@@ -16,7 +16,7 @@ export async function resolveFastingEviction(gameId: string) {
       where: { id: gameId },
       select: { id: true, gameType: true, state: true, roundNumber: true },
     });
-    if (!game || (game.gameType !== "FASTING" && game.gameType !== "FASTING_BOT" && game.gameType !== "FROOKIES" && game.gameType !== "ROOKIES") || game.state !== "ROUND_VOTE") return { ok: true, skipped: true as const };
+    if (!game || (game.gameType !== "FASTING" && game.gameType !== "FASTING_BOT" && game.gameType !== "FROOKIES" && game.gameType !== "ROOKIES" && game.gameType !== "FROOKIES_BOT" && game.gameType !== "ROOKIES_BOT") || game.state !== "ROUND_VOTE") return { ok: true, skipped: true as const };
 
     const rr = await prisma.roundResult.findUnique({
       where: { gameId_roundNumber: { gameId, roundNumber: game.roundNumber } },
@@ -94,7 +94,7 @@ export async function resolveFastingEviction(gameId: string) {
 
     const nextRound = game.roundNumber + 1;
     const now2 = new Date();
-    const nomMs = game.gameType === "FASTING_BOT" ? BOT_ROUND_MS : NOM_PHASE_MS;
+    const nomMs = (game.gameType === "FASTING_BOT" || game.gameType === "FROOKIES_BOT" || game.gameType === "ROOKIES_BOT") ? BOT_ROUND_MS : NOM_PHASE_MS;
 
     await prisma.game.update({
       where: { id: gameId },
@@ -165,7 +165,7 @@ async function finishFastingGame(gameId: string, gameType?: string) {
   });
 
   // Block payouts for bot games
-  const isBotGame = gameType === "FASTING_BOT";
+  const isBotGame = gameType === "FASTING_BOT" || gameType === "FROOKIES_BOT" || gameType === "ROOKIES_BOT";
   if (!isBotGame) {
     const payout = [
       { idx: 0, karma: 12, t: 12 },

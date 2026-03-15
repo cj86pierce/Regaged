@@ -3,14 +3,14 @@ import { getCurrentUserId } from "@/lib/getCurrentUserId";
 import { prisma } from "@/lib/prisma";
 import { tryStartFastingGame, tryStartFastingStyleGame } from "@/lib/gameEngine";
 import { tryStartCastingsGame } from "@/lib/gameEngineCastings";
-import { tryStartFastingBotGame } from "@/lib/gameEngineBot";
+import { tryStartFastingBotGame, tryStartFastingStyleBotGame } from "@/lib/gameEngineBot";
 import { tryStartCastingBotGame } from "@/lib/gameEngineBot";
 import { fillGameWithBots } from "@/lib/botUsers";
 
 const FASTING_MAX = 15;
 const CASTING_MAX = 20;
 
-type GameType = "FASTING" | "CASTING" | "FASTING_BOT" | "CASTING_BOT" | "FROOKIES" | "ROOKIES";
+type GameType = "FASTING" | "CASTING" | "FASTING_BOT" | "CASTING_BOT" | "FROOKIES" | "ROOKIES" | "FROOKIES_BOT" | "ROOKIES_BOT";
 
 export async function POST(req: Request) {
   const userId = await getCurrentUserId(req);
@@ -35,7 +35,7 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   const gameType = (body?.gameType ?? "FASTING") as GameType;
 
-  if (gameType !== "FASTING" && gameType !== "CASTING" && gameType !== "FASTING_BOT" && gameType !== "CASTING_BOT" && gameType !== "FROOKIES" && gameType !== "ROOKIES") {
+  if (gameType !== "FASTING" && gameType !== "CASTING" && gameType !== "FASTING_BOT" && gameType !== "CASTING_BOT" && gameType !== "FROOKIES" && gameType !== "ROOKIES" && gameType !== "FROOKIES_BOT" && gameType !== "ROOKIES_BOT") {
     return NextResponse.json({ error: "Invalid gameType" }, { status: 400 });
   }
 
@@ -71,7 +71,7 @@ export async function POST(req: Request) {
   }
 
   // For bot modes: when human joins, immediately fill with bots and start
-  const isBotMode = gameType === "FASTING_BOT" || gameType === "CASTING_BOT";
+  const isBotMode = gameType === "FASTING_BOT" || gameType === "CASTING_BOT" || gameType === "FROOKIES_BOT" || gameType === "ROOKIES_BOT";
 
   // Join lobby if not already
   const existing = await prisma.gamePlayer.findUnique({
@@ -109,6 +109,8 @@ export async function POST(req: Request) {
     await tryStartCastingsGame(lobby.id);
   } else if (gameType === "FASTING_BOT") {
     await tryStartFastingBotGame(lobby.id);
+  } else if (gameType === "FROOKIES_BOT" || gameType === "ROOKIES_BOT") {
+    await tryStartFastingStyleBotGame(lobby.id, gameType);
   } else {
     await tryStartCastingBotGame(lobby.id);
   }

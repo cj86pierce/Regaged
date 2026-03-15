@@ -41,7 +41,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       result = await advanceCastingBotIfDue(gameId, { forceDue: force });
     } else if (game.gameType === "FASTING" || game.gameType === "FROOKIES" || game.gameType === "ROOKIES") {
       result = await advanceFastingIfDue(gameId);
-    } else if (game.gameType === "FASTING_BOT") {
+    } else if (game.gameType === "FASTING_BOT" || game.gameType === "FROOKIES_BOT" || game.gameType === "ROOKIES_BOT") {
       result = await advanceFastingBotIfDue(gameId);
     } else {
       return NextResponse.json({ ok: true, skipped: "no nudge for this game type" });

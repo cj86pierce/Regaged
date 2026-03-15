@@ -331,7 +331,7 @@ function StatLine({ label, value, suffixText, isCurrency }: { label: string; val
 function gameBubbleColor(gameType: string): string {
   const t = gameType.toUpperCase();
   if (t === "SURVIVOR") return "var(--game-bubble-survivor)";
-  if (t === "FROOKIES" || t === "ROOKIES") return "var(--game-bubble-frookies)";
+  if (t === "FROOKIES" || t === "ROOKIES" || t === "FROOKIES_BOT" || t === "ROOKIES_BOT") return "var(--game-bubble-frookies)";
   return "var(--game-bubble-fasting)";
 }
 

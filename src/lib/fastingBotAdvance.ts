@@ -23,7 +23,7 @@ export async function advanceFastingBotIfDue(gameId: string) {
       where: { id: gameId },
       select: { id: true, gameType: true, state: true, roundNumber: true, stateEndsAt: true, povUserId: true },
     });
-    if (!game || game.gameType !== "FASTING_BOT") return { ok: false, error: "not_fasting_bot" as const };
+    if (!game || (game.gameType !== "FASTING_BOT" && game.gameType !== "FROOKIES_BOT" && game.gameType !== "ROOKIES_BOT")) return { ok: false, error: "not_fasting_bot" as const };
 
     const due = !!game.stateEndsAt && game.stateEndsAt.getTime() <= now.getTime();
     const stuck = !!game.stateEndsAt && game.stateEndsAt.getTime() <= now.getTime() - 15_000;

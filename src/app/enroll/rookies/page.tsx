@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+const PINK_BUTTON = "linear-gradient(#f8bbd9, #f48fb1)";
+
 export default function EnrollRookiesPage() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -39,7 +41,8 @@ export default function EnrollRookiesPage() {
           padding: "12px 14px",
           borderRadius: 12,
           border: "1px solid rgba(0,0,0,0.14)",
-          background: "linear-gradient(#ffd85a, #ffb703)",
+          background: PINK_BUTTON,
+          color: "#5a2a3a",
           fontWeight: 1000,
           cursor: busy ? "not-allowed" : "pointer",
         }}

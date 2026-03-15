@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { advanceFastingBotIfDue } from "@/lib/fastingBotAdvance";
 import { advanceCastingBotIfDue } from "@/lib/castingBotAdvance";
-import { tryStartFastingBotGame, tryStartCastingBotGame } from "@/lib/gameEngineBot";
+import { tryStartFastingBotGame, tryStartFastingStyleBotGame, tryStartCastingBotGame } from "@/lib/gameEngineBot";
 import { applyCastingsPeriodicDecay } from "@/lib/castingsPeriodicDecay";
 import { maybeSpawnCastingsDrops } from "@/lib/castingsDrops";
 
@@ -38,7 +38,7 @@ async function runBotTick() {
     // Start full ENROLLING bot games (safety net)
     const enrollingBots = await prisma.game.findMany({
       where: {
-        gameType: { in: ["FASTING_BOT", "CASTING_BOT"] },
+        gameType: { in: ["FASTING_BOT", "CASTING_BOT", "FROOKIES_BOT", "ROOKIES_BOT"] },
         state: "ENROLLING",
       },
       select: { id: true, gameType: true },
@@ -47,6 +47,7 @@ async function runBotTick() {
     for (const g of enrollingBots) {
       try {
         if (g.gameType === "FASTING_BOT") await tryStartFastingBotGame(g.id);
+        else if (g.gameType === "FROOKIES_BOT" || g.gameType === "ROOKIES_BOT") await tryStartFastingStyleBotGame(g.id, g.gameType);
         else await tryStartCastingBotGame(g.id);
       } catch {}
     }
@@ -54,7 +55,7 @@ async function runBotTick() {
     // FASTING_BOT: advance games that are due or stuck (same logic as main tick)
     const fastingBotDue = await prisma.game.findMany({
       where: {
-        gameType: "FASTING_BOT",
+        gameType: { in: ["FASTING_BOT", "FROOKIES_BOT", "ROOKIES_BOT"] },
         state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] },
         OR: [
           { stateEndsAt: { not: null, lte: now } },
