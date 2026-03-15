@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/getCurrentUserId";
 import { touchUser } from "@/lib/touchUser";
-import { getSlotDesignsForUserIds } from "@/lib/avatarSlotDesigns";
+import { getSlotDesignsForUserIds, type SlotDesignsMap } from "@/lib/avatarSlotDesigns";
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   const gameId = params.id;
@@ -258,10 +258,12 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
     players: await (async () => {
       const playerIds = playersRaw.map((p) => p.userId);
-      const slotDesignsByUser = await getSlotDesignsForUserIds(playerIds).catch(() => ({}));
+      const slotDesignsByUser: Record<string, SlotDesignsMap> = await getSlotDesignsForUserIds(
+        playerIds
+      ).catch(() => ({}));
       return playersRaw.map((p) => {
         const u = p.user;
-        const slotDesigns = slotDesignsByUser[p.userId];
+        const slotDesigns = (slotDesignsByUser as Record<string, SlotDesignsMap>)[p.userId];
 
         const isCastingNominee =
         (game.gameType === "CASTING" || game.gameType === "CASTING_BOT") &&
