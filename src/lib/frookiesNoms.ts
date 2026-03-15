@@ -25,7 +25,7 @@ export async function resolveFrookiesNominations(gameId: string) {
       gameType: true,
     },
   });
-  if (!game || game.gameType !== "FROOKIES") return;
+  if (!game || (game.gameType !== "FROOKIES" && game.gameType !== "FROOKIES_BOT")) return;
   if (game.state !== "ROUND_NOMINATE") return;
   if (!game.hohUserId || !game.povUserId) return;
 
