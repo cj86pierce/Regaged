@@ -1,8 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { assignFastingPov } from "@/lib/fastingPov";
+import { assignRookiesHoh } from "@/lib/rookiesHoh";
 
 const FASTING_MAX = 15;
 const FASTING_NOM_MS = 2 * 60 * 1000;
+const ROOKIES_DAY_MS = 24 * 60 * 60 * 1000;
 
 const FASTING_STYLE_TYPES = ["FASTING", "FROOKIES", "ROOKIES"] as const;
 
@@ -32,6 +34,8 @@ export async function tryStartFastingStyleGame(
   if (count < FASTING_MAX) return { ok: true, skipped: true as const };
 
   const now = new Date();
+  const isRookies = gameType === "ROOKIES";
+  const phaseMs = isRookies ? ROOKIES_DAY_MS : FASTING_NOM_MS;
 
   await prisma.game.update({
     where: { id: gameId },
@@ -40,15 +44,24 @@ export async function tryStartFastingStyleGame(
       roundNumber: 1,
       startsAt: now,
       roundStartedAt: now,
-      stateEndsAt: new Date(now.getTime() + FASTING_NOM_MS),
+      stateEndsAt: new Date(now.getTime() + phaseMs),
       povUserId: null,
+      hohUserId: null,
     },
   });
 
-  try {
-    await assignFastingPov(gameId);
-  } catch {
-    // cron/state route will retry later
+  if (isRookies) {
+    try {
+      await assignRookiesHoh(gameId, { random: true });
+    } catch {
+      // cron/state route will retry later
+    }
+  } else {
+    try {
+      await assignFastingPov(gameId);
+    } catch {
+      // cron/state route will retry later
+    }
   }
 
   return { ok: true };

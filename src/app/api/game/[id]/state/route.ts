@@ -26,6 +26,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       roundNumber: true,
       stateEndsAt: true,
       povUserId: true,
+      hohUserId: true,
     },
   });
   if (!game) return NextResponse.json({ error: "Game not found" }, { status: 404 });
@@ -197,35 +198,47 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   // -----------------------
   let nomineeA: string | null = null;
   let nomineeB: string | null = null;
+  let nomineeC: string | null = null;
   let myNomLocked: boolean | null = null;
-  let voteInfo: null | { myVoteTargetUserId: string | null } = null;
+  let voteInfo: null | { myVoteTargetUserId?: string | null; myRankings?: Record<string, number> } = null;
 
   if ((game.gameType === "FASTING" || game.gameType === "FASTING_BOT" || game.gameType === "FROOKIES" || game.gameType === "ROOKIES" || game.gameType === "FROOKIES_BOT" || game.gameType === "ROOKIES_BOT") && game.state !== "ENROLLING") {
     const rr = await prisma.roundResult.findUnique({
       where: { gameId_roundNumber: { gameId, roundNumber: game.roundNumber } },
-      select: { nomineeAUserId: true, nomineeBUserId: true },
+      select: { nomineeAUserId: true, nomineeBUserId: true, nomineeCUserId: true },
     });
     nomineeA = rr?.nomineeAUserId ?? null;
     nomineeB = rr?.nomineeBUserId ?? null;
+    nomineeC = rr?.nomineeCUserId ?? null;
 
     if (meUserId && game.state === "ROUND_NOMINATE") {
       const myNoms = await prisma.nomination.count({
         where: { gameId, roundNumber: game.roundNumber, voterUserId: meUserId },
       });
-      myNomLocked = myNoms >= 2;
+      myNomLocked = game.gameType === "ROOKIES" ? myNoms >= 2 : myNoms >= 2;
     }
 
     if (game.state === "ROUND_VOTE") {
-      const myVoteTargetUserId = meUserId
-        ? (
-            await prisma.evictionVote.findFirst({
-              where: { gameId, roundNumber: game.roundNumber, voterUserId: meUserId },
-              select: { targetUserId: true },
-            })
-          )?.targetUserId ?? null
-        : null;
-
-      voteInfo = { myVoteTargetUserId };
+      const isRookies = game.gameType === "ROOKIES" && nomineeC;
+      if (isRookies && meUserId) {
+        const myRankingVotes = await prisma.rankingVote.findMany({
+          where: { gameId, roundNumber: game.roundNumber, voterUserId: meUserId },
+          select: { targetUserId: true, points: true },
+        });
+        const myRankings: Record<string, number> = {};
+        for (const v of myRankingVotes) myRankings[v.targetUserId] = v.points;
+        voteInfo = { myRankings: Object.keys(myRankings).length ? myRankings : undefined };
+      } else {
+        const myVoteTargetUserId = meUserId
+          ? (
+              await prisma.evictionVote.findFirst({
+                where: { gameId, roundNumber: game.roundNumber, voterUserId: meUserId },
+                select: { targetUserId: true },
+              })
+            )?.targetUserId ?? null
+          : null;
+        voteInfo = { myVoteTargetUserId };
+      }
     }
   }
 
@@ -250,7 +263,10 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       roundNumber: game.roundNumber,
       stateEndsAt: game.state === "COMPLETED" ? null : game.stateEndsAt,
       povUserId: game.povUserId,
+      hohUserId: game.hohUserId ?? undefined,
     },
+
+    nomineeCUserId: nomineeC ?? undefined,
 
     lobby,
 
@@ -272,7 +288,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         const isCastingNominee =
         (game.gameType === "CASTING" || game.gameType === "CASTING_BOT") &&
         castingNominees.includes(p.userId);
-      const isFastingNominee = !!(nomineeA && nomineeB && (p.userId === nomineeA || p.userId === nomineeB));
+      const isFastingNominee = !!(nomineeA && nomineeB && (p.userId === nomineeA || p.userId === nomineeB)) ||
+        (!!nomineeC && (p.userId === nomineeA || p.userId === nomineeB || p.userId === nomineeC));
 
       return {
         userId: p.userId,

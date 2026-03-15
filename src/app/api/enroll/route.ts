@@ -39,6 +39,48 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid gameType" }, { status: 400 });
   }
 
+  // FROOKIES: Card Required = Yellow, Entrance = T$10
+  if (gameType === "FROOKIES") {
+    const yellow = await prisma.colorLevel.findUnique({ where: { name: "Yellow" }, select: { id: true } });
+    const meForFrookies = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { tMoney: true, equippedColorId: true },
+    });
+    if (!yellow || meForFrookies?.equippedColorId !== yellow.id) {
+      return NextResponse.json(
+        { error: "Yellow card required. Equip Yellow in Shop → Colors to play Frookies." },
+        { status: 403 }
+      );
+    }
+    if ((meForFrookies?.tMoney ?? 0) < 10) {
+      return NextResponse.json(
+        { error: "Entrance fee is T$10. You need more T$ to join." },
+        { status: 403 }
+      );
+    }
+  }
+
+  // ROOKIES: Card Required = Yellow, Entrance = T$15
+  if (gameType === "ROOKIES") {
+    const yellow = await prisma.colorLevel.findUnique({ where: { name: "Yellow" }, select: { id: true } });
+    const meForRookies = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { tMoney: true, equippedColorId: true },
+    });
+    if (!yellow || meForRookies?.equippedColorId !== yellow.id) {
+      return NextResponse.json(
+        { error: "Yellow card required. Equip Yellow in Shop → Colors to play Rookies." },
+        { status: 403 }
+      );
+    }
+    if ((meForRookies?.tMoney ?? 0) < 15) {
+      return NextResponse.json(
+        { error: "Entrance fee is T$15. You need more T$ to join." },
+        { status: 403 }
+      );
+    }
+  }
+
   const MAX = gameType === "CASTING" || gameType === "CASTING_BOT" ? CASTING_MAX : FASTING_MAX;
 
   // ✅ Only redirect if already ACTIVE in THIS requested gameType
@@ -80,6 +122,27 @@ export async function POST(req: Request) {
   });
 
   if (!existing) {
+    // FROOKIES: deduct entrance fee T$10
+    if (gameType === "FROOKIES") {
+      const updated = await prisma.user.updateMany({
+        where: { id: userId, tMoney: { gte: 10 } },
+        data: { tMoney: { decrement: 10 } },
+      });
+      if (updated.count === 0) {
+        return NextResponse.json({ error: "Not enough T$. Entrance fee is T$10." }, { status: 403 });
+      }
+    }
+    // ROOKIES: deduct entrance fee T$15
+    if (gameType === "ROOKIES") {
+      const updated = await prisma.user.updateMany({
+        where: { id: userId, tMoney: { gte: 15 } },
+        data: { tMoney: { decrement: 15 } },
+      });
+      if (updated.count === 0) {
+        return NextResponse.json({ error: "Not enough T$. Entrance fee is T$15." }, { status: 403 });
+      }
+    }
+
     const takenRows = await prisma.gamePlayer.findMany({
       where: { gameId: lobby.id, seatIndex: { not: null } },
       select: { seatIndex: true },

@@ -117,7 +117,7 @@ export async function resolveFastingEviction(gameId: string) {
   }
 }
 
-async function finishFastingGame(gameId: string, gameType?: string) {
+export async function finishFastingGame(gameId: string, gameType?: string) {
   const now = new Date();
   const systemUserId = await getSystemUserId();
 
@@ -135,6 +135,8 @@ async function finishFastingGame(gameId: string, gameType?: string) {
   });
 
   const winners = ranked.slice(0, 3);
+  const top6 = ranked.slice(0, 6);
+  const top10 = ranked.slice(0, 10);
 
   await prisma.$transaction(async (tx) => {
     for (let i = 0; i < ranked.length; i++) {
@@ -150,16 +152,22 @@ async function finishFastingGame(gameId: string, gameType?: string) {
 
     await tx.game.update({
       where: { id: gameId },
-      data: { state: "COMPLETED", completedAt: now, stateEndsAt: null, povUserId: null },
+      data: { state: "COMPLETED", completedAt: now, stateEndsAt: null, povUserId: null, hohUserId: null },
     });
 
+    const isFrookiesMsg = gameType === "FROOKIES";
+    const isRookiesMsg = gameType === "ROOKIES";
+    const placementMsg = isRookiesMsg && top10.length > 0
+      ? `1st: ${top10[0]?.user.username ?? "?"} (80 Karma + 50 T$) - 2nd: ${top10[1]?.user.username ?? "?"} - 3rd: ${top10[2]?.user.username ?? "?"} - 4th: ${top10[3]?.user.username ?? "?"} - 5th: ${top10[4]?.user.username ?? "?"} - 6th–10th: ${top10.slice(5).map((u) => u?.user.username ?? "?").join(", ")}`
+      : isFrookiesMsg && top6.length > 0
+        ? `1st: ${top6[0]?.user.username ?? "?"} (25 Karma + 60 T$) - 2nd: ${top6[1]?.user.username ?? "?"} (3 Karma + 20 T$) - 3rd: ${top6[2]?.user.username ?? "?"} - 4th: ${top6[3]?.user.username ?? "?"} - 5th: ${top6[4]?.user.username ?? "?"} - 6th: ${top6[5]?.user.username ?? "?"}`
+        : `1st: ${winners[0]?.user.username ?? "?"} - 2nd: ${winners[1]?.user.username ?? "?"} - 3rd: ${winners[2]?.user.username ?? "?"}`;
     await tx.gameMessage.create({
       data: {
         gameId,
         userId: systemUserId,
         channel: "PUBLIC",
-        body:
-          `[SYSTEM] Game finished! - 1st: ${winners[0]?.user.username ?? "?"} - 2nd: ${winners[1]?.user.username ?? "?"} - 3rd: ${winners[2]?.user.username ?? "?"}`,
+        body: `[SYSTEM] Game finished! - ${placementMsg}`,
       },
     });
   });
@@ -167,14 +175,38 @@ async function finishFastingGame(gameId: string, gameType?: string) {
   // Block payouts for bot games
   const isBotGame = gameType === "FASTING_BOT" || gameType === "FROOKIES_BOT" || gameType === "ROOKIES_BOT";
   if (!isBotGame) {
-    const payout = [
-      { idx: 0, karma: 12, t: 12 },
-      { idx: 1, karma: 5, t: 10 },
-      { idx: 2, karma: 3, t: 6 },
-    ];
+    const isFrookies = gameType === "FROOKIES";
+    const isRookies = gameType === "ROOKIES";
+    const payout = isFrookies
+      ? [
+          { idx: 0, karma: 25, t: 60 },
+          { idx: 1, karma: 3, t: 20 },
+          { idx: 2, karma: 0, t: 10 },
+          { idx: 3, karma: 0, t: 10 },
+          { idx: 4, karma: 0, t: 10 },
+          { idx: 5, karma: 0, t: 10 },
+        ]
+      : isRookies
+        ? [
+            { idx: 0, karma: 80, t: 50 },
+            { idx: 1, karma: 20, t: 30 },
+            { idx: 2, karma: 15, t: 20 },
+            { idx: 3, karma: 10, t: 10 },
+            { idx: 4, karma: 8, t: 5 },
+            { idx: 5, karma: 6, t: 0 },
+            { idx: 6, karma: 5, t: 0 },
+            { idx: 7, karma: 4, t: 0 },
+            { idx: 8, karma: 2, t: 0 },
+            { idx: 9, karma: 1, t: 0 },
+          ]
+        : [
+            { idx: 0, karma: 12, t: 12 },
+            { idx: 1, karma: 5, t: 10 },
+            { idx: 2, karma: 3, t: 6 },
+          ];
 
     for (const p of payout) {
-      const u = winners[p.idx];
+      const u = ranked[p.idx];
       if (!u) continue;
       await prisma.user.update({
         where: { id: u.userId },

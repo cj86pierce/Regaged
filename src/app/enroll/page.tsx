@@ -71,8 +71,8 @@ export default function EnrollHub() {
           <GameCard title="Castings (Bot)" desc="60s days. Bots fill. Practice." href="/enroll/casting-bot" />
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 16 }}>
-          <GameCard title="Frookies" desc="Same as Fastings. For friends & newcomers." href="/enroll/frookies" pink />
-          <GameCard title="Rookies" desc="Same as Fastings. Rookie-friendly." href="/enroll/rookies" pink />
+          <GameCard title="Frookies" desc="Yellow card required. Entrance T$10. Prizes: 1st 25 Karma + 60 T$, 2nd 3 Karma + 20 T$, 3rd–6th T$10." href="/enroll/frookies" pink />
+          <GameCard title="Rookies" desc="Yellow card required. Entrance T$15. 1 week. Prizes: 1st 80 Karma + 50 T$, 2nd–10th Karma + T$." href="/enroll/rookies" pink />
           <GameCard title="Frookies (Bot)" desc="60s rounds. Bots fill. Practice." href="/enroll/frookies-bot" pink />
           <GameCard title="Rookies (Bot)" desc="60s rounds. Bots fill. Practice." href="/enroll/rookies-bot" pink />
         </div>

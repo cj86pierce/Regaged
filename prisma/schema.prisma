@@ -465,13 +465,15 @@ model Game {
   stateEndsAt    DateTime?
   roundStartedAt DateTime?
 
-  povUserId   String?
+  povUserId   String?  // POV holder (veto); in FASTING = nominator
+  hohUserId   String?  // HOH (nominates 2) for FROOKIES / ROOKIES
   createdAt   DateTime  @default(now())
   completedAt DateTime?
 
   players       GamePlayer[]
   nominations   Nomination[]
   evictionVotes EvictionVote[]
+  rankingVotes  RankingVote[]
   messages      GameMessage[]
   roundResults  RoundResult[]
   pmMessages    GamePmMessage[]
@@ -559,14 +561,31 @@ model EvictionVote {
   @@index([gameId, roundNumber, targetUserId])
 }
 
+model RankingVote {
+  id           String   @id @default(cuid())
+  gameId       String
+  roundNumber  Int
+  voterUserId  String
+  targetUserId String
+  points       Int      // 1=save, 2=evict if #1 saved, 3=evict
+  createdAt    DateTime @default(now())
+
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@unique([gameId, roundNumber, voterUserId, targetUserId])
+  @@index([gameId, roundNumber])
+}
+
 model RoundResult {
-  id             String   @id @default(cuid())
-  gameId         String
-  roundNumber    Int
-  nomineeAUserId String
-  nomineeBUserId String
-  evictedUserId  String?
-  createdAt      DateTime @default(now())
+  id              String   @id @default(cuid())
+  gameId          String
+  roundNumber     Int
+  nomineeAUserId  String
+  nomineeBUserId  String
+  nomineeCUserId  String?  // ROOKIES: 3rd nominee (algorithm pick)
+  evictedUserId   String?
+  povSavedUserId  String?  // FROOKIES: who POV saved (replacement then chosen by HOH)
+  createdAt       DateTime @default(now())
 
   game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
 
