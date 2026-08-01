@@ -1,4 +1,14 @@
-/* Mobile-first responsive helpers – breakpoint 640px */
+/* Mobile-first responsive helpers – breakpoint 640px / 900px */
+
+/* Safe areas + base overflow */
+html {
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
 @media (max-width: 640px) {
   .mobileStack {
     flex-direction: column !important;
@@ -28,7 +38,6 @@
   .mobileWrapped {
     flex-wrap: wrap !important;
   }
-  /* Design card image: full width when stacked, keep aspect ratio */
   .designCardThumb {
     width: 100% !important;
     min-width: 0 !important;
@@ -36,7 +45,6 @@
     height: auto !important;
     aspect-ratio: 200 / 230;
   }
-  /* Design detail hero image: responsive */
   .designDetailImage {
     width: 100% !important;
     max-width: 200px;
@@ -45,38 +53,81 @@
   }
 }
 
-/* Nav: compact on small screens */
+/* Nav: compact + horizontal scroll on small screens */
 @media (max-width: 640px) {
   .navInner {
     padding: 8px 10px !important;
     gap: 8px !important;
-  }
-  .navLinks {
-    gap: 8px !important;
-    font-size: 12px !important;
+    max-width: none !important;
   }
   .navLogo {
-    font-size: 18px !important;
+    font-size: 17px !important;
+    flex-shrink: 0;
+  }
+  .navLinks {
+    gap: 4px !important;
+    font-size: 12px !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    mask-image: linear-gradient(90deg, #000 85%, transparent);
+  }
+  .navLinks::-webkit-scrollbar {
+    display: none;
+  }
+  .navLink {
+    white-space: nowrap;
+    padding: 6px 8px;
+    font-size: 12px !important;
+  }
+  .navDivider {
+    display: none;
+  }
+  .navLinkSecondary {
+    display: none !important;
+  }
+  .onlineCountBadge {
+    top: auto !important;
+    bottom: calc(10px + env(safe-area-inset-bottom)) !important;
+    left: 10px !important;
+    font-size: 11px !important;
+    opacity: 0.92;
   }
 }
 
-/* Main content: prevent overflow */
+/* Main content */
 @media (max-width: 640px) {
   .mainContent {
-    padding-left: 10px !important;
-    padding-right: 10px !important;
+    padding: 10px 10px calc(28px + env(safe-area-inset-bottom)) !important;
     min-width: 0 !important;
+  }
+  .pageShell {
+    padding: 8px !important;
   }
 }
 
-/* Home page hero grid: stack on mobile */
+/* Home */
 @media (max-width: 640px) {
   .homeGrid {
     grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  .homeCtaRow a {
+    flex: 1 1 auto;
+    text-align: center;
+  }
+  .homeShopTiles {
+    grid-template-columns: 1fr 1fr 1fr !important;
+    gap: 8px !important;
+  }
+  .homeBanner {
+    min-height: 88px !important;
+    border-radius: 4px !important;
   }
 }
 
-/* Shop: color level grid and auction rows stack on mobile */
+/* Shop */
 @media (max-width: 640px) {
   .shopColorGrid {
     grid-template-columns: 1fr !important;
@@ -101,7 +152,7 @@
   }
 }
 
-/* Games page: fit on mobile */
+/* Games / enroll */
 @media (max-width: 640px) {
   .gamesPage {
     padding: 10px !important;
@@ -117,9 +168,13 @@
     word-break: break-all;
     font-size: 11px !important;
   }
+  .enrollGrid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
 }
 
-/* Profile page: stack layout on mobile, keep desktop unchanged */
+/* Profile */
 @media (max-width: 640px) {
   .profilePage {
     padding: 10px !important;
@@ -153,7 +208,6 @@
   }
 }
 
-/* Profile: prevent avatars (friends + game bubbles) from overlapping */
 .profileFriendsList {
   display: flex;
   flex-wrap: wrap;
@@ -172,29 +226,50 @@
   flex-shrink: 0;
 }
 
-/* Game page: player strip avatars – allow wrap on mobile so they don't squish */
+/* Game page */
 @media (max-width: 640px) {
+  .game-page-content {
+    padding: 8px !important;
+  }
+  .gameHeaderTitle {
+    font-size: 18px !important;
+  }
   .gamePlayerStrip {
-    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)) !important;
+    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)) !important;
+    gap: 6px !important;
   }
   .gamePlayerStripItem {
-    min-width: 72px;
+    min-width: 70px;
   }
-}
-
-@media (max-width: 640px) {
   .gameCastingStripLayout {
     grid-template-columns: 1fr !important;
   }
   .gameCastingStripPlayers {
-    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)) !important;
+    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)) !important;
   }
   .gameCastingStripItem {
-    min-width: 72px;
+    min-width: 70px;
+  }
+  .gamePageGrid {
+    gap: 10px !important;
+    min-height: 0 !important;
+  }
+  /* Put action sidebar above chat on phones so votes/noms aren't buried */
+  .gamePageGrid > :last-child {
+    order: -1;
+  }
+  .theme-chat-feed {
+    max-height: min(52vh, 420px) !important;
+  }
+  .theme-chat-input,
+  .theme-tab-btn,
+  .theme-tab-btn-active,
+  .theme-btn-primary,
+  .theme-btn-secondary {
+    min-height: 44px;
   }
 }
 
-/* Game page: stack chat + sidebar on tablet/mobile so Competition button is visible */
 @media (max-width: 900px) {
   .gamePageGrid {
     grid-template-columns: 1fr !important;
@@ -202,10 +277,13 @@
   .blogsLayout {
     grid-template-columns: 1fr !important;
   }
+  .rightRail {
+    display: none !important;
+  }
 }
 
-/* Right rail: hide earlier on tablet/mobile */
-@media (max-width: 900px) {
+/* Tablet: keep right rail off a bit earlier than desktop max */
+@media (max-width: 1150px) {
   .rightRail {
     display: none;
   }

@@ -146,13 +146,21 @@
 
 .theme-body {
   margin: 0;
+  min-height: 100dvh;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   background: var(--bg-body);
+  background-attachment: fixed;
   color: var(--text-primary);
+  line-height: 1.45;
 }
 
 .mainContent {
   padding: 16px 12px 40px;
+}
+
+.pageShell {
+  padding: 12px;
+  min-width: 0;
 }
 
 /* NavBar */
@@ -278,23 +286,69 @@ html:not([data-theme]) .theme-username {
   display: inline-block;
   text-decoration: none;
   font-weight: 1000;
-  padding: 10px 12px;
-  border-radius: 10px;
+  padding: 10px 14px;
+  border-radius: 4px;
   background: var(--btn-primary-bg);
   color: var(--btn-primary-text);
   border: 1px solid var(--border);
   box-shadow: var(--btn-primary-shadow);
+  transition: filter 0.15s ease, transform 0.15s ease;
+}
+.theme-btn-primary:hover {
+  filter: brightness(1.04);
+}
+.theme-btn-primary:active {
+  transform: translateY(1px);
 }
 
 .theme-btn-secondary {
   display: inline-block;
   text-decoration: none;
   font-weight: 1000;
-  padding: 10px 12px;
-  border-radius: 10px;
+  padding: 10px 14px;
+  border-radius: 4px;
   background: var(--accent-bg);
   color: var(--accent);
   border: 1px solid var(--border);
+  transition: filter 0.15s ease, transform 0.15s ease;
+}
+.theme-btn-secondary:hover {
+  filter: brightness(1.03);
+}
+
+.homeShopTile {
+  padding: 12px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  text-decoration: none;
+  color: inherit;
+  text-align: center;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.homeShopTile:hover {
+  border-color: var(--brand);
+  box-shadow: var(--shadow-card);
+}
+
+.enrollCard {
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-card);
+  padding: 18px;
+  display: block;
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.enrollCard:hover {
+  border-color: var(--brand);
+  transform: translateY(-1px);
+}
+.enrollCard:active {
+  transform: none;
 }
 
 .theme-panel {
@@ -328,17 +382,17 @@ html:not([data-theme]) .theme-username {
 }
 
 /* Game page / chat */
-.theme-chat-wrap { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 10px; }
-.theme-chat-feed { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 6px; }
-.theme-chat-msg { background: var(--bg-msg); border: 1px solid var(--border); border-radius: 12px; padding: 10px; }
-.theme-chat-msg-sys { background: var(--bg-msg-system); border: 1px solid var(--border); border-radius: 12px; padding: 10px; }
-.theme-chat-input { background: var(--bg-input); border: 1px solid var(--border-input); color: var(--text-primary); }
+.theme-chat-wrap { background: var(--bg-card); border: 1px solid var(--border); border-radius: 4px; padding: 10px; }
+.theme-chat-feed { background: var(--bg-card); border: 1px solid var(--border); border-radius: 4px; padding: 6px; max-height: 520px; overflow: auto; }
+.theme-chat-msg { background: var(--bg-msg); border: 1px solid var(--border); border-radius: 4px; padding: 10px; }
+.theme-chat-msg-sys { background: var(--bg-msg-system); border: 1px solid var(--border); border-radius: 4px; padding: 10px; }
+.theme-chat-input { background: var(--bg-input); border: 1px solid var(--border-input); color: var(--text-primary); border-radius: 4px; }
 .theme-tab-btn {
   background: var(--bg-btn-disabled);
   border: 1px solid var(--border);
   color: var(--text-primary);
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: 4px;
   font-weight: 1000;
   cursor: pointer;
 }
@@ -347,7 +401,7 @@ html:not([data-theme]) .theme-username {
   border: 1px solid var(--border);
   color: var(--text-primary);
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: 4px;
   font-weight: 800;
   cursor: pointer;
 }

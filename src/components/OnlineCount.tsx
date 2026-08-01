@@ -40,6 +40,7 @@ export default function OnlineCount() {
 
   return (
     <div
+      className="onlineCountBadge"
       style={{
         position: "fixed",
         top: 10,
@@ -49,9 +50,10 @@ export default function OnlineCount() {
         color: "var(--text-muted)",
         background: "var(--bg-card)",
         border: "1px solid var(--border)",
-        borderRadius: 8,
+        borderRadius: 4,
         padding: "4px 8px",
         boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+        pointerEvents: "none",
       }}
       title="Users active in the last 5 minutes (excluding bots)"
     >

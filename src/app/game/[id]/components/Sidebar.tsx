@@ -87,7 +87,7 @@ export default function Sidebar(props: {
 
   const box: React.CSSProperties = {
     border: "1px solid var(--border)",
-    borderRadius: 10,
+    borderRadius: 4,
     padding: 10,
     background: "var(--bg-card)",
     maxHeight: 240,

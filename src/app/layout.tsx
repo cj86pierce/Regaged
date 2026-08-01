@@ -18,6 +18,12 @@ export const metadata: Metadata = {
   description: "Reality social game",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover" as const,
+};
+
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const userId = await getCurrentUserIdFromHeaders();
   if (userId) {

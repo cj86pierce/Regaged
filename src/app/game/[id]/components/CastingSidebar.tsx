@@ -60,7 +60,7 @@ export default function CastingSidebar(props: {
       {/* READ THIS */}
       <div
         className="theme-sidebar-panel"
-        style={{ borderRadius: 12, padding: 12, flexShrink: 0 }}
+        style={{ borderRadius: 4, padding: 12, flexShrink: 0 }}
       >
         <div style={{ fontWeight: 1000, marginBottom: 8 }}>Read this</div>
         <div style={{ fontSize: 12, opacity: 0.8, lineHeight: 1.35 }}>
@@ -99,7 +99,7 @@ export default function CastingSidebar(props: {
                 style={{
                   background: "var(--bg-msg-system)",
                   border: "1px solid var(--border)",
-                  borderRadius: 12,
+                  borderRadius: 4,
                   padding: 10,
                 }}
               >

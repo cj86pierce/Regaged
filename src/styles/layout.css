@@ -1,14 +1,11 @@
 .rightRail {
   position: fixed;
-  top: 72px;          /* under the navbar */
+  top: 72px; /* under the navbar */
   right: 12px;
   width: 240px;
   z-index: 40;
+  max-height: calc(100dvh - 88px);
+  overflow: auto;
 }
 
-/* Right rail hidden via responsive.css at 900px */
-@media (max-width: 1150px) {
-  .rightRail {
-    display: none;
-  }
-}
+/* Visibility handled in responsive.css */

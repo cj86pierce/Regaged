@@ -59,11 +59,11 @@ export default function NavBar() {
         </Link>
 
         <div className="navLinks">
-          <Link href="/" className="navLink">
+          <Link href="/" className="navLink navLinkSecondary">
             Community
           </Link>
-          <Link href="/" className="navLink">Groups</Link>
           <Link href="/games" className="navLink">Games</Link>
+          <Link href="/enroll" className="navLink">Enroll</Link>
           <Link href="/blogs" className="navLink">Blogs</Link>
           <Link href="/designs" className="navLink">Designs</Link>
           <Link href="/shop" className="navLink">Shop</Link>

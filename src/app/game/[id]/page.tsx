@@ -317,23 +317,48 @@ export default function GamePage({ params }: { params: { id: string } }) {
   const meStats = data.meUserId ? data.players.find((p) => p.userId === data.meUserId) ?? null : null;
 
   return (
-    <div className="game-page-content" style={{ padding: 12 }}>
-      <div style={{ marginBottom: 8 }}>
-        <div style={{ fontSize: 22, fontWeight: 800 }}>
-          {data.game.gameType} <span style={{ opacity: 0.6, fontWeight: 900 }}>· Game #{data.game.number}</span>
+    <div className="game-page-content pageShell">
+      <div style={{ marginBottom: 10 }}>
+        <div className="gameHeaderTitle" style={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.3 }}>
+          {data.game.gameType.replace(/_/g, " ")}{" "}
+          <span style={{ opacity: 0.55, fontWeight: 800 }}>#{data.game.number}</span>
         </div>
 
-        <div style={{ fontSize: 12, opacity: 0.75, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <div
+          style={{
+            marginTop: 4,
+            fontSize: 12,
+            opacity: 0.8,
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            flexWrap: "wrap",
+          }}
+        >
           {data.game.state === "ENROLLING" && data.lobby ? (
             <>
-              Filling: <b>{data.lobby.current}/{maxPlayers}</b> ({data.lobby.needed} needed)
+              Filling: <b>{data.lobby.current}/{maxPlayers}</b>
+              <span style={{ opacity: 0.7 }}>({data.lobby.needed} needed)</span>
             </>
           ) : data.game.state === "COMPLETED" ? (
             <>Game ended · Final placements below</>
           ) : (
             <>
-              Day/Round <b>{data.game.roundNumber}</b> · State <b>{data.game.state}</b>
-              {timeLeft !== null && <> · Ends in <b>{fmtHMS(timeLeft)}</b></>}
+              <span>
+                Round <b>{data.game.roundNumber}</b>
+              </span>
+              <span>·</span>
+              <span>
+                <b>{data.game.state.replace(/_/g, " ")}</b>
+              </span>
+              {timeLeft !== null && (
+                <>
+                  <span>·</span>
+                  <span>
+                    Ends in <b>{fmtHMS(timeLeft)}</b>
+                  </span>
+                </>
+              )}
             </>
           )}
         </div>
@@ -366,7 +391,17 @@ export default function GamePage({ params }: { params: { id: string } }) {
         />
       )}
 
-      <div className="gamePageGrid" style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 14, marginTop: 10, alignItems: "stretch", minHeight: 400 }}>
+      <div
+        className="gamePageGrid"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr minmax(260px, 360px)",
+          gap: 14,
+          marginTop: 12,
+          alignItems: "stretch",
+          minHeight: 400,
+        }}
+      >
         <div>
           <Tabs tab={tab} setTab={setTab} publicCount={data.pagination.totalCount} />
 
