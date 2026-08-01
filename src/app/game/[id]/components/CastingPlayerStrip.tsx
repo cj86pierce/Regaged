@@ -101,7 +101,7 @@ export default function CastingPlayerStrip(props: {
                 }}
               >
                 <div style={{ display: "grid", placeItems: "center" }}>
-                  <Avatar config={p.avatar} width={64} grayscale={grayscale} slotDesigns={p.slotDesigns} />
+                  <Avatar config={p.avatar} width={72} grayscale={grayscale} slotDesigns={p.slotDesigns} />
                 </div>
 
                 <Link

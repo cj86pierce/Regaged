@@ -41,13 +41,13 @@ body {
   .designCardThumb {
     width: 100% !important;
     min-width: 0 !important;
-    max-width: 200px;
+    max-width: 160px;
     height: auto !important;
     aspect-ratio: 200 / 230;
   }
   .designDetailImage {
     width: 100% !important;
-    max-width: 200px;
+    max-width: 280px;
     height: auto !important;
     aspect-ratio: 200 / 230;
   }

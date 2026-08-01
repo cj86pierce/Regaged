@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Avatar, { type AvatarConfig, type SlotDesignType } from "@/components/Avatar";
+import DesignImage from "@/components/DesignImage";
 
 type Comment = {
   id: string;
@@ -164,20 +165,18 @@ export default function DesignDetailClient({ initialDesign }: { initialDesign: D
         <div
           className="designDetailImage"
           style={{
-            width: 200,
-            height: 230,
-            borderRadius: 8,
+            width: 240,
+            maxWidth: "100%",
+            height: Math.round((240 * 230) / 200),
+            borderRadius: 6,
             overflow: "hidden",
             border: "1px solid var(--border)",
             background: "var(--bg-input)",
             marginBottom: 12,
+            boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
           }}
         >
-          <img
-            src={`/api/designs/${design.id}/image`}
-            alt={design.title}
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-          />
+          <DesignImage src={`/api/designs/${design.id}/image`} alt={design.title} />
         </div>
         <h1 style={{ margin: "0 0 8px 0", fontSize: "clamp(18px, 5vw, 24px)", fontWeight: 1000 }}>{design.title}</h1>
         {design.designType && (

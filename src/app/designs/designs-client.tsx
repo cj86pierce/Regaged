@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import DesignImage from "@/components/DesignImage";
 
 const DESIGN_TYPES = [
   { value: "BODY", label: "Body" },
@@ -266,21 +267,18 @@ function DesignCard({
         <div
           className="designCardThumb"
           style={{
-            width: 120,
-            minWidth: 120,
-            height: Math.round((120 * 230) / 200),
-            borderRadius: 8,
+            width: 132,
+            minWidth: 132,
+            height: Math.round((132 * 230) / 200),
+            borderRadius: 6,
             overflow: "hidden",
             border: "1px solid var(--border)",
             background: "var(--bg-input)",
             flexShrink: 0,
+            boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
           }}
         >
-          <img
-            src={`/api/designs/${design.id}/image`}
-            alt={design.title}
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-          />
+          <DesignImage src={`/api/designs/${design.id}/image`} alt={design.title} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
