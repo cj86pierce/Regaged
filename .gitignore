@@ -35,6 +35,10 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# secrets that should never be committed
+jwt_secret.txt
+*.secret
+
 # vercel
 .vercel
 
