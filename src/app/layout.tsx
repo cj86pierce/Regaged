@@ -20,7 +20,13 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const userId = await getCurrentUserIdFromHeaders();
-  if (userId) touchUser(userId).catch(() => {});
+  if (userId) {
+    try {
+      await touchUser(userId);
+    } catch {
+      // Presence is best-effort; never block the app shell if it fails.
+    }
+  }
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="theme-body">

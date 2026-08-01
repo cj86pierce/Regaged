@@ -135,8 +135,6 @@ export default function AuctionsClient({ meUserId }: { meUserId?: string | null 
               const now = Date.now();
               const end = new Date(a.endsAt).getTime();
               const isClosed = end <= now;
-              const timeLeft = isClosed ? 0 : Math.max(0, Math.ceil((end - now) / 1000));
-              const fmt = (s: number) => `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m`;
               const history = [...a.bidHistory].reverse();
               return (
                 <div

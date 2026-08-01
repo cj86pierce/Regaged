@@ -9,7 +9,7 @@ export async function GET() {
   const count = await prisma.user.count({
     where: {
       lastSeenAt: { gte: since },
-      username: { not: { startsWith: "__" } },
+      NOT: { username: { startsWith: "Bot_" } },
     },
   });
   return NextResponse.json({ count });

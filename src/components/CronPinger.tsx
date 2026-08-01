@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 
-const TICK_INTERVAL_MS = 45_000;
+const TICK_INTERVAL_MS = 15_000;
 
 /**
  * When a logged-in user has any page open, ping the tick so games advance
@@ -21,9 +21,8 @@ export default function CronPinger() {
       }
     }
 
-    ping().then((ok) => {
-      if (ok) intervalRef.current = setInterval(ping, TICK_INTERVAL_MS);
-    });
+    ping();
+    intervalRef.current = setInterval(ping, TICK_INTERVAL_MS);
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);

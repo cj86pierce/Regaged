@@ -8,15 +8,32 @@ export default function OnlineCount() {
   const [count, setCount] = useState<number | null>(null);
 
   useEffect(() => {
-    function fetchCount() {
+    async function touchAndFetchCount() {
+      await fetch("/api/me/heartbeat", {
+        method: "POST",
+        cache: "no-store",
+        credentials: "include",
+      }).catch(() => null);
+
       fetch("/api/online-count", { cache: "no-store" })
         .then((r) => r.json())
         .then((d) => setCount(typeof d.count === "number" ? d.count : 0))
         .catch(() => setCount(null));
     }
-    fetchCount();
-    const t = setInterval(fetchCount, POLL_MS);
-    return () => clearInterval(t);
+
+    function onVisibilityChange() {
+      if (!document.hidden) touchAndFetchCount();
+    }
+
+    touchAndFetchCount();
+    const t = setInterval(touchAndFetchCount, POLL_MS);
+    window.addEventListener("focus", touchAndFetchCount);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener("focus", touchAndFetchCount);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
   }, []);
 
   if (count === null) return null;

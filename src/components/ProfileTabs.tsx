@@ -52,7 +52,6 @@ export type ProfileTabsData = {
 
 function AddFriendButton({
   username,
-  profileUserId,
   onAdded,
 }: {
   username: string;
@@ -680,7 +679,6 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
               {data.canAddFriend && data.profileUserId && (
                 <AddFriendButton
                   username={data.username}
-                  profileUserId={data.profileUserId}
                   onAdded={() => window.location.reload()}
                 />
               )}

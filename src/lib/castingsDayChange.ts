@@ -9,7 +9,6 @@ import { getSystemUserId } from "@/lib/systemUser";
 import { getCastingDayMs } from "@/lib/castingDayLength";
 import { finalizeCastingGame } from "@/lib/castingEngine";
 
-const DAY_MS = 12 * 60 * 60 * 1000;
 const HOUR_MS = 60 * 60 * 1000;
 
 function netChecks(plus: number | null, minus: number | null) {

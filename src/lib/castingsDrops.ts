@@ -7,7 +7,6 @@ import { prisma } from "@/lib/prisma";
 import { getSystemUserId } from "@/lib/systemUser";
 
 const APPLE_CHANCE = 0.7;
-const KEY_CHANCE = 0.3;
 
 function hourKey(d: Date) {
   const y = d.getUTCFullYear();

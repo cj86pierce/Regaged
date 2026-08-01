@@ -35,7 +35,7 @@ export async function POST(req: Request) {
   let res: Response;
   try {
     res = await fetch(url.toString());
-  } catch (e) {
+  } catch {
     return NextResponse.json({ error: "Steam API unreachable" }, { status: 502 });
   }
 
