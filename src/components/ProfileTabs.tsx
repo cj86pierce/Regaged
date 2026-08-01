@@ -55,7 +55,6 @@ function AddFriendButton({
   onAdded,
 }: {
   username: string;
-  profileUserId: string;
   onAdded: () => void;
 }) {
   const [loading, setLoading] = useState(false);
