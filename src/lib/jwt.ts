@@ -1,14 +1,24 @@
 import * as jose from "jose";
 
 const ALG = "HS256";
-const SECRET = process.env.JWT_SECRET ?? "dev-secret-change-in-production";
+const DEV_FALLBACK_SECRET = "dev-secret-change-in-production";
 
 let secret: Uint8Array | null = null;
 
 function getSecret(): Uint8Array {
   if (!secret) {
-    const s = SECRET;
-    secret = new TextEncoder().encode(s.length >= 32 ? s : s.padEnd(32, "0").slice(0, 32));
+    const s = process.env.JWT_SECRET;
+    if (!s) {
+      if (process.env.NODE_ENV === "production") {
+        throw new Error(
+          "JWT_SECRET is not set. Refusing to sign/verify Steam auth tokens with an insecure default in production."
+        );
+      }
+      // Local/dev convenience only — never reached in production (see above).
+      secret = new TextEncoder().encode(DEV_FALLBACK_SECRET.padEnd(32, "0").slice(0, 32));
+    } else {
+      secret = new TextEncoder().encode(s.length >= 32 ? s : s.padEnd(32, "0").slice(0, 32));
+    }
   }
   return secret;
 }
