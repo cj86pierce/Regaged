@@ -13,7 +13,8 @@ function isValidEmail(email: string) {
 }
 
 function code6() {
-  return String(Math.floor(100000 + Math.random() * 900000)); // 100000-999999
+  // crypto.randomInt is cryptographically strong, unlike Math.random()
+  return String(crypto.randomInt(100000, 1000000)); // 100000-999999
 }
 
 function hashCode(code: string) {
