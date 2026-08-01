@@ -104,14 +104,17 @@ export async function assignFastingPov(gameId: string, opts?: { skipLock?: boole
         data: { povWins: { increment: 1 }, lastHadPovRound: game.roundNumber },
       });
 
-      await tx.gameMessage.create({
-        data: {
-          gameId,
-          userId: systemUserId,
-          channel: "PUBLIC",
-          body: `[SYSTEM] POV awarded to ${winner.username}.`,
-        },
-      });
+      // Classic Rookies: POV is awarded secretly (FAQ). Others announce publicly.
+      if (game.gameType !== "ROOKIES" && game.gameType !== "ROOKIES_BOT") {
+        await tx.gameMessage.create({
+          data: {
+            gameId,
+            userId: systemUserId,
+            channel: "PUBLIC",
+            body: `[SYSTEM] POV awarded to ${winner.username}.`,
+          },
+        });
+      }
 
       return { ok: true, won: true as const, povUserId: winner.userId };
     });

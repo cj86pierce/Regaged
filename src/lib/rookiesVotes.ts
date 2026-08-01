@@ -6,7 +6,13 @@ import { finishFastingGame } from "@/lib/fastingVotes";
 const ROOKIES_DAY_MS = 24 * 60 * 60 * 1000;
 const ROOKIES_DAY_7 = 7;
 
-/** Resolve Rookies eviction from ranking votes (3=evict, 2=evict if #1 saved, 1=save). Evict nominee with highest eviction score. */
+/**
+ * Classic Rookies eviction (FAQ):
+ * - Rank nominees with 0–3 points (3 = most want out)
+ * - Evict the two highest point totals (one if only 3 nominees / final 5)
+ * - If POV was used on one of those, replace with the next-highest
+ * - Place top 3 when ≤3 remain
+ */
 export async function resolveRookiesEviction(gameId: string) {
   const lockRows = await prisma.$queryRaw<{ locked: boolean }[]>`
     SELECT pg_try_advisory_lock(hashtext(${gameId})) as locked
@@ -16,84 +22,119 @@ export async function resolveRookiesEviction(gameId: string) {
   try {
     const game = await prisma.game.findUnique({
       where: { id: gameId },
-      select: { id: true, gameType: true, state: true, roundNumber: true },
+      select: {
+        id: true,
+        gameType: true,
+        state: true,
+        roundNumber: true,
+        povUserId: true,
+        povSavedUserId: true,
+      },
     });
     if (!game || game.gameType !== "ROOKIES" || game.state !== "ROUND_VOTE") return { ok: true, skipped: true as const };
 
     const rr = await prisma.roundResult.findUnique({
       where: { gameId_roundNumber: { gameId, roundNumber: game.roundNumber } },
-      select: { nomineeAUserId: true, nomineeBUserId: true, nomineeCUserId: true, evictedUserId: true },
+      select: {
+        nomineeAUserId: true,
+        nomineeBUserId: true,
+        nomineeCUserId: true,
+        nomineeDUserId: true,
+        evictedUserId: true,
+        povSavedUserId: true,
+      },
     });
     if (!rr || rr.evictedUserId) return { ok: true, skipped: true as const };
 
-    const nominees = [rr.nomineeAUserId, rr.nomineeBUserId, rr.nomineeCUserId].filter(Boolean) as string[];
+    const nominees = [
+      rr.nomineeAUserId,
+      rr.nomineeBUserId,
+      rr.nomineeCUserId,
+      rr.nomineeDUserId,
+    ].filter(Boolean) as string[];
     if (nominees.length < 2) return { ok: true, skipped: true as const };
 
-    let evictedUserId: string;
     const scoreByNominee = new Map<string, number>();
+    for (const n of nominees) scoreByNominee.set(n, 0);
 
     if (nominees.length === 2) {
       const evictionVotes = await prisma.evictionVote.findMany({
         where: { gameId, roundNumber: game.roundNumber },
         select: { targetUserId: true },
       });
-      const votesA = evictionVotes.filter((v) => v.targetUserId === nominees[0]).length;
-      const votesB = evictionVotes.filter((v) => v.targetUserId === nominees[1]).length;
-      scoreByNominee.set(nominees[0]!, votesA);
-      scoreByNominee.set(nominees[1]!, votesB);
-      evictedUserId =
-        votesA === votesB
-          ? (Math.random() < 0.5 ? nominees[0]! : nominees[1]!)
-          : votesA > votesB
-            ? nominees[0]!
-            : nominees[1]!;
+      for (const v of evictionVotes) {
+        if (scoreByNominee.has(v.targetUserId)) {
+          scoreByNominee.set(v.targetUserId, (scoreByNominee.get(v.targetUserId) ?? 0) + 1);
+        }
+      }
     } else {
       const rankingVotes = await prisma.rankingVote.findMany({
         where: { gameId, roundNumber: game.roundNumber },
         select: { targetUserId: true, points: true },
       });
-      for (const n of nominees) scoreByNominee.set(n, 0);
       for (const v of rankingVotes) {
         if (!nominees.includes(v.targetUserId)) continue;
         scoreByNominee.set(v.targetUserId, (scoreByNominee.get(v.targetUserId) ?? 0) + v.points);
       }
-      const withScore = nominees.map((id) => ({ userId: id, score: scoreByNominee.get(id) ?? 0 }));
-      withScore.sort((a, b) => b.score - a.score);
-      evictedUserId =
-        withScore[0]!.score === withScore[1]?.score
-          ? (Math.random() < 0.5 ? withScore[0]!.userId : withScore[1]!.userId)
-          : withScore[0]!.userId;
+    }
+
+    const ranked = nominees
+      .map((id) => ({ userId: id, score: scoreByNominee.get(id) ?? 0 }))
+      .sort((a, b) => b.score - a.score || Math.random() - 0.5);
+
+    // POV immunity: explicit save, else POV holder if they are a nominee
+    const povImmune =
+      game.povSavedUserId ??
+      rr.povSavedUserId ??
+      (game.povUserId && nominees.includes(game.povUserId) ? game.povUserId : null);
+
+    const evictCount = nominees.length >= 4 ? 2 : 1;
+    const evicted: string[] = [];
+    for (const r of ranked) {
+      if (evicted.length >= evictCount) break;
+      if (povImmune && r.userId === povImmune) continue;
+      evicted.push(r.userId);
+    }
+    // If POV blocked everyone somehow, fall back without immunity
+    if (evicted.length < evictCount) {
+      for (const r of ranked) {
+        if (evicted.length >= evictCount) break;
+        if (!evicted.includes(r.userId)) evicted.push(r.userId);
+      }
     }
 
     const systemUserId = await getSystemUserId();
     const now = new Date();
+    // Store first eviction on RoundResult for recovery; both are eliminated
+    const primaryEvicted = evicted[0]!;
 
     await prisma.$transaction(async (tx) => {
       await tx.roundResult.update({
         where: { gameId_roundNumber: { gameId, roundNumber: game.roundNumber } },
-        data: { evictedUserId },
+        data: { evictedUserId: primaryEvicted },
       });
 
-      await tx.gamePlayer.update({
-        where: { gameId_userId: { gameId, userId: evictedUserId } },
-        data: { status: "ELIMINATED", eliminatedAt: now },
-      });
-
-      const remainingActive = await tx.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
-      const place = remainingActive + 1;
-      await tx.gamePlayer.update({
-        where: { gameId_userId: { gameId, userId: evictedUserId } },
-        data: { eliminatedPlace: place },
-      });
+      for (const uid of evicted) {
+        await tx.gamePlayer.update({
+          where: { gameId_userId: { gameId, userId: uid } },
+          data: { status: "ELIMINATED", eliminatedAt: now },
+        });
+        const remainingActive = await tx.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
+        await tx.gamePlayer.update({
+          where: { gameId_userId: { gameId, userId: uid } },
+          data: { eliminatedPlace: remainingActive + 1 },
+        });
+      }
 
       const users = await tx.user.findMany({
-        where: { id: { in: [...nominees, evictedUserId] } },
+        where: { id: { in: [...nominees, ...evicted] } },
         select: { id: true, username: true },
       });
       const nameOf = (id: string) => users.find((u) => u.id === id)?.username ?? id;
       const lines = nominees.map((id) => {
         const s = scoreByNominee.get(id) ?? 0;
-        return `${nameOf(id)}|${s}|${id === evictedUserId ? "OUT" : ""}`;
+        const out = evicted.includes(id) ? "OUT" : povImmune === id ? "POV" : "";
+        return `${nameOf(id)}|${s}|${out}`;
       });
 
       await tx.gameMessage.create({
@@ -107,7 +148,8 @@ export async function resolveRookiesEviction(gameId: string) {
     });
 
     const remainingActive = await prisma.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
-    if (remainingActive <= 2) {
+    // FAQ: top 3 place by activity when final 3 reached
+    if (remainingActive <= 3) {
       await finishFastingGame(gameId, "ROOKIES");
       return { ok: true, finished: true as const };
     }
@@ -122,6 +164,7 @@ export async function resolveRookiesEviction(gameId: string) {
         roundNumber: nextRound,
         povUserId: null,
         hohUserId: null,
+        povSavedUserId: null,
         roundStartedAt: now,
         stateEndsAt: new Date(now.getTime() + ROOKIES_DAY_MS),
       },
@@ -133,7 +176,6 @@ export async function resolveRookiesEviction(gameId: string) {
       } catch {}
     }
 
-    // POV only from day 2 onward; day 7 no HOH so no POV needed for noms
     const game2 = await prisma.game.findUnique({
       where: { id: gameId },
       select: { hohUserId: true, state: true },

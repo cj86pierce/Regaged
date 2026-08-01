@@ -82,8 +82,8 @@ export async function maybeSpawnCastingsDrops(gameId: string) {
   });
 
   if (!g || (g.gameType !== "CASTING" && g.gameType !== "CASTING_BOT")) return;
-  if (g.gameType === "CASTING" && g.state !== "ROUND_VOTE") return;
-  if (g.gameType === "CASTING_BOT" && g.state !== "ROUND_NOMINATE" && g.state !== "ROUND_VOTE") return;
+  // Keys/apples should drop during both compete (nominate) and vote windows
+  if (g.state !== "ROUND_NOMINATE" && g.state !== "ROUND_VOTE") return;
 
   const dayNum = g.roundNumber ?? 1;
   const now = new Date();
@@ -100,7 +100,7 @@ export async function maybeSpawnCastingsDrops(gameId: string) {
     return;
   }
 
-  if (g.gameType === "CASTING" && g.state === "ROUND_VOTE") {
+  if (g.gameType === "CASTING") {
     if (g.castingLastAppleHourKey !== hk && Math.random() < 0.55) {
       await spawnNormalDrop(gameId, dayNum);
       await prisma.game.update({ where: { id: gameId }, data: { castingLastAppleHourKey: hk } });

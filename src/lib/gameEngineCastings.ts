@@ -4,7 +4,8 @@ import { getCastingDayMs } from "@/lib/castingDayLength";
 const CASTING_MAX = 20;
 
 /**
- * Wiki: Day 1 has no nominees. Just set timer; resolveDay1 will expel 1 by algorithm at end.
+ * Day 1 has no algorithmic nominees or eviction - only votes/health decay can
+ * eliminate someone. Real nominate/vote days begin on day 2 (see castingVotes.ts).
  */
 export async function tryStartCastingsGame(gameId: string) {
   const g = await prisma.game.findUnique({
@@ -18,10 +19,11 @@ export async function tryStartCastingsGame(gameId: string) {
 
   const now = new Date();
 
+  // Day 1 = nominate/compete window (no nominees yet). Voting starts day 2+.
   await prisma.game.update({
     where: { id: gameId },
     data: {
-      state: "ROUND_VOTE",
+      state: "ROUND_NOMINATE",
       roundNumber: 1,
       startsAt: now,
       castingDayStartedAt: now,

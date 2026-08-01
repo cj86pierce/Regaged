@@ -1,6 +1,11 @@
 /**
  * Resolve ROUND_NOMINATE for Casting day 2+.
- * Pick nominees by mini-game score (3 lowest); ties: checks, then random.
+ *
+ * Per Tengaged FAQ:
+ * - Nominees decided by activity/checkmarks, challenge score, and keys
+ * - Keys are the primary protection (more keys = safer)
+ * - Normal days: 3 nominees; at final 7 (≤7 active): 2 nominees
+ * - Final ranking day begins at 5 remaining (handled in castingVotes / finalize)
  */
 import { prisma } from "@/lib/prisma";
 import { getSystemUserId } from "@/lib/systemUser";
@@ -10,14 +15,11 @@ function netChecks(plus: number | null, minus: number | null) {
   return (plus ?? 0) - (minus ?? 0);
 }
 
-function evictCount(activeCount: number) {
-  if (activeCount >= 6) return 2;
-  if (activeCount === 5) return 1;
-  return 0;
-}
-
-function nomineeCountForEvict(ev: number) {
-  return ev >= 1 ? 3 : 0;
+/** Wiki: 3 nominees normally; at final 7 only 2. */
+export function castingNomineeCount(activeCount: number): number {
+  if (activeCount <= 5) return 0;
+  if (activeCount <= 7) return 2;
+  return 3;
 }
 
 function pickNominees(
@@ -26,15 +28,19 @@ function pickNominees(
     castingDayMiniGameScore: number;
     plusCount: number | null;
     minusCount: number | null;
+    keys: number | null;
   }[],
   count: number
 ): string[] {
   const withChecks = rows.map((r) => ({
     ...r,
+    keys: r.keys ?? 0,
     checks: netChecks(r.plusCount, r.minusCount),
     rnd: Math.random(),
   }));
+  // Ascending keys (fewest keys most vulnerable), then low challenge score, then low checks
   const sorted = [...withChecks].sort((a, b) => {
+    if (a.keys !== b.keys) return a.keys - b.keys;
     if (a.castingDayMiniGameScore !== b.castingDayMiniGameScore)
       return a.castingDayMiniGameScore - b.castingDayMiniGameScore;
     if (a.checks !== b.checks) return a.checks - b.checks;
@@ -55,13 +61,12 @@ export async function resolveCastingNominations(gameId: string) {
   if (dayNum <= 1) return; // day 1 has no nominees
 
   const activeCount = await prisma.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
-  const ev = evictCount(activeCount);
-  const nomCount = nomineeCountForEvict(ev);
+  const nomCount = castingNomineeCount(activeCount);
   if (nomCount === 0) return;
 
   const rows = await prisma.gamePlayer.findMany({
     where: { gameId, status: "ACTIVE" },
-    select: { userId: true, castingDayMiniGameScore: true, plusCount: true, minusCount: true },
+    select: { userId: true, castingDayMiniGameScore: true, plusCount: true, minusCount: true, keys: true },
   });
   const nominees = pickNominees(
     rows.map((r) => ({
@@ -73,6 +78,11 @@ export async function resolveCastingNominations(gameId: string) {
 
   const dayMs = await getDayMsForGame(gameId);
   const sysId = await getSystemUserId();
+  const names = await prisma.user.findMany({
+    where: { id: { in: nominees } },
+    select: { id: true, username: true },
+  });
+  const nameOf = (id: string) => names.find((u) => u.id === id)?.username ?? id;
 
   await prisma.$transaction(async (tx) => {
     await tx.castingDayResult.upsert({
@@ -85,7 +95,12 @@ export async function resolveCastingNominations(gameId: string) {
       data: { state: "ROUND_VOTE", stateEndsAt: new Date(Date.now() + dayMs) },
     });
     await tx.gameMessage.create({
-      data: { gameId, userId: sysId, channel: "PUBLIC", body: `[SYSTEM] Day ${dayNum}: Nominees selected.` },
+      data: {
+        gameId,
+        userId: sysId,
+        channel: "PUBLIC",
+        body: `[SYSTEM] Day ${dayNum}: Nominees — ${nominees.map(nameOf).join(", ")}. Vote now (1/2/3 points).`,
+      },
     });
   });
 }

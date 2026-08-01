@@ -31,6 +31,63 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       frookiesPhase: true,
     },
   });
+
+  // -----------------------
+  // FROOKIES jury phase
+  // -----------------------
+  let jury: {
+    finalists: { userId: string; username: string }[];
+    isJuror: boolean;
+    myVoteTargetUserId: string | null;
+    voteCount: number;
+    jurorCount: number;
+  } | null = null;
+
+  if (
+    game &&
+    (game.gameType === "FROOKIES" || game.gameType === "FROOKIES_BOT") &&
+    game.state === "JURY_VOTE"
+  ) {
+    const { JURY_MIN_PLACE, JURY_MAX_PLACE } = await import("@/lib/frookiesJury");
+    const [finalistRows, jurorCount, voteCount, myVote] = await Promise.all([
+      prisma.gamePlayer.findMany({
+        where: { gameId, status: "ACTIVE" },
+        select: { userId: true, user: { select: { username: true } } },
+      }),
+      prisma.gamePlayer.count({
+        where: { gameId, status: "ELIMINATED", eliminatedPlace: { gte: JURY_MIN_PLACE, lte: JURY_MAX_PLACE } },
+      }),
+      prisma.juryVote.count({ where: { gameId } }),
+      meUserId
+        ? prisma.juryVote.findUnique({
+            where: { gameId_voterUserId: { gameId, voterUserId: meUserId } },
+            select: { targetUserId: true },
+          })
+        : null,
+    ]);
+
+    const myPlayer = meUserId
+      ? await prisma.gamePlayer.findUnique({
+          where: { gameId_userId: { gameId, userId: meUserId } },
+          select: { status: true, eliminatedPlace: true },
+        })
+      : null;
+    const isJuror = !!(
+      myPlayer &&
+      myPlayer.status === "ELIMINATED" &&
+      myPlayer.eliminatedPlace &&
+      myPlayer.eliminatedPlace >= JURY_MIN_PLACE &&
+      myPlayer.eliminatedPlace <= JURY_MAX_PLACE
+    );
+
+    jury = {
+      finalists: finalistRows.map((f) => ({ userId: f.userId, username: f.user.username })),
+      isJuror,
+      myVoteTargetUserId: myVote?.targetUserId ?? null,
+      voteCount,
+      jurorCount,
+    };
+  }
   if (!game) return NextResponse.json({ error: "Game not found" }, { status: 404 });
 
   // Having the tab open counts as activity - fire and forget so response is faster
@@ -201,17 +258,24 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   let nomineeA: string | null = null;
   let nomineeB: string | null = null;
   let nomineeC: string | null = null;
+  let nomineeD: string | null = null;
   let myNomLocked: boolean | null = null;
   let voteInfo: null | { myVoteTargetUserId?: string | null; myRankings?: Record<string, number> } = null;
 
   if ((game.gameType === "FASTING" || game.gameType === "FASTING_BOT" || game.gameType === "FROOKIES" || game.gameType === "ROOKIES" || game.gameType === "FROOKIES_BOT" || game.gameType === "ROOKIES_BOT") && game.state !== "ENROLLING") {
     const rr = await prisma.roundResult.findUnique({
       where: { gameId_roundNumber: { gameId, roundNumber: game.roundNumber } },
-      select: { nomineeAUserId: true, nomineeBUserId: true, nomineeCUserId: true },
+      select: {
+        nomineeAUserId: true,
+        nomineeBUserId: true,
+        nomineeCUserId: true,
+        nomineeDUserId: true,
+      },
     });
     nomineeA = rr?.nomineeAUserId ?? null;
     nomineeB = rr?.nomineeBUserId ?? null;
     nomineeC = rr?.nomineeCUserId ?? null;
+    nomineeD = rr?.nomineeDUserId ?? null;
 
     if (meUserId && game.state === "ROUND_NOMINATE") {
       const myNoms = await prisma.nomination.count({
@@ -221,7 +285,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     }
 
     if (game.state === "ROUND_VOTE") {
-      const isRookies = game.gameType === "ROOKIES" && nomineeC;
+      const isRookies = game.gameType === "ROOKIES" && !!nomineeC;
       if (isRookies && meUserId) {
         const myRankingVotes = await prisma.rankingVote.findMany({
           where: { gameId, roundNumber: game.roundNumber, voterUserId: meUserId },
@@ -257,6 +321,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       myVoteTargetUserId: castingMyVoteTargetUserId,
     },
 
+    jury,
+
     game: {
       id: game.id,
       number: game.number,
@@ -264,13 +330,25 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       state: game.state,
       roundNumber: game.roundNumber,
       stateEndsAt: game.state === "COMPLETED" ? null : game.stateEndsAt,
-      povUserId: game.povUserId,
+      // Classic Rookies POV is secret — only reveal to the holder
+      povUserId:
+        game.gameType === "ROOKIES" || game.gameType === "ROOKIES_BOT"
+          ? meUserId && game.povUserId === meUserId
+            ? game.povUserId
+            : null
+          : game.povUserId,
       hohUserId: game.hohUserId ?? undefined,
-      povSavedUserId: game.povSavedUserId ?? undefined,
+      povSavedUserId:
+        game.gameType === "ROOKIES" || game.gameType === "ROOKIES_BOT"
+          ? meUserId && game.povUserId === meUserId
+            ? game.povSavedUserId ?? undefined
+            : undefined
+          : game.povSavedUserId ?? undefined,
       frookiesPhase: game.frookiesPhase ?? undefined,
     },
 
     nomineeCUserId: nomineeC ?? undefined,
+    nomineeDUserId: nomineeD ?? undefined,
 
     lobby,
 
@@ -292,8 +370,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         const isCastingNominee =
         (game.gameType === "CASTING" || game.gameType === "CASTING_BOT") &&
         castingNominees.includes(p.userId);
-      const isFastingNominee = !!(nomineeA && nomineeB && (p.userId === nomineeA || p.userId === nomineeB)) ||
-        (!!nomineeC && (p.userId === nomineeA || p.userId === nomineeB || p.userId === nomineeC));
+      const fastingNomineeIds = [nomineeA, nomineeB, nomineeC, nomineeD].filter(Boolean) as string[];
+      const isFastingNominee = fastingNomineeIds.includes(p.userId);
 
       return {
         userId: p.userId,

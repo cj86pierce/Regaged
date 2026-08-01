@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { advanceFastingIfDue } from "@/lib/fastingAdvance";
 import { advanceFastingBotIfDue } from "@/lib/fastingBotAdvance";
-import { runCastingsDayChangeIfDue } from "@/lib/castingsDayChange";
+import { advanceCastingIfDue } from "@/lib/castingAdvance";
 import { advanceCastingBotIfDue } from "@/lib/castingBotAdvance";
 import { tryStartFastingBotGame, tryStartFastingStyleBotGame, tryStartCastingBotGame } from "@/lib/gameEngineBot";
 import { maybeSpawnCastingsDrops } from "@/lib/castingsDrops";
@@ -89,7 +89,7 @@ export async function runTick(): Promise<TickResult> {
     const fastingDue = await prisma.game.findMany({
       where: {
         gameType: { in: ["FASTING", "FROOKIES", "ROOKIES"] },
-        state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] },
+        state: { in: ["ROUND_NOMINATE", "ROUND_VOTE", "JURY_VOTE", "FINAL3"] },
         OR: [
           { stateEndsAt: { not: null, lte: now } },
           { stateEndsAt: null },
@@ -115,7 +115,7 @@ export async function runTick(): Promise<TickResult> {
     const fastingBotDue = await prisma.game.findMany({
       where: {
         gameType: { in: ["FASTING_BOT", "FROOKIES_BOT", "ROOKIES_BOT"] },
-        state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] },
+        state: { in: ["ROUND_NOMINATE", "ROUND_VOTE", "JURY_VOTE", "FINAL3"] },
         OR: [
           { stateEndsAt: { not: null, lte: now } },
           { stateEndsAt: null },
@@ -136,13 +136,16 @@ export async function runTick(): Promise<TickResult> {
     }
 
     // -----------------------
-    // CASTING (12h day system: nominees from mini game, vote, health decay)
+    // CASTING (12h day system: nominees from mini game/checks/keys, vote, health decay)
     // -----------------------
     const castingDue = await prisma.game.findMany({
       where: {
         gameType: "CASTING",
-        state: "ROUND_VOTE",
-        stateEndsAt: { not: null, lte: now },
+        state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] },
+        OR: [
+          { stateEndsAt: { not: null, lte: now } },
+          { stateEndsAt: null },
+        ],
       },
       select: { id: true },
       take: 25,
@@ -151,20 +154,26 @@ export async function runTick(): Promise<TickResult> {
     let castingAdvanced = 0;
     for (const g of castingDue) {
       try {
-        const r = await runCastingsDayChangeIfDue(g.id);
-        if (r.ok && ((r as any).advanced || (r as any).finished)) castingAdvanced++;
+        const r = await advanceCastingIfDue(g.id);
+        if (r.ok && ((r as any).advanced || (r as any).fixed)) castingAdvanced++;
       } catch (e) {
-        console.error("CASTING day change failed", { gameId: g.id, err: String(e) });
+        console.error("CASTING advance failed", { gameId: g.id, err: String(e) });
       }
     }
-    for (const g of castingDue) {
-      try { await maybeSpawnCastingsDrops(g.id); } catch (e) {
-        console.error("CASTING drops failed", { gameId: g.id, err: String(e) });
-      }
-    }
-    for (const g of castingBotDue) {
-      try { await maybeSpawnCastingsDrops(g.id); } catch (e) {
-        console.error("CASTING_BOT drops failed", { gameId: g.id, err: String(e) });
+    // Drops must run for all active Castings, not only games whose day timer is due
+    const castingActiveForDrops = await prisma.game.findMany({
+      where: {
+        gameType: { in: ["CASTING", "CASTING_BOT"] },
+        state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] },
+      },
+      select: { id: true, gameType: true },
+      take: 50,
+    });
+    for (const g of castingActiveForDrops) {
+      try {
+        await maybeSpawnCastingsDrops(g.id);
+      } catch (e) {
+        console.error(`${g.gameType} drops failed`, { gameId: g.id, err: String(e) });
       }
     }
 

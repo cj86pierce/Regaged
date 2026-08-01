@@ -5,13 +5,13 @@
 import { prisma } from "@/lib/prisma";
 import { assignFastingPov } from "@/lib/fastingPov";
 import { resolveFastingNominations } from "@/lib/fastingNoms";
-import { resolveFastingEviction } from "@/lib/fastingVotes";
+import { enterFastingFinal3, resolveFastingEviction, resolveFastingFinal3IfDue } from "@/lib/fastingVotes";
 import { performBotActions } from "@/lib/botActions";
 import { assignFrookiesHoh } from "@/lib/frookiesHoh";
 import { assignFrookiesPov } from "@/lib/frookiesPov";
 import { resolveFrookiesNominations } from "@/lib/frookiesNoms";
-
-const BOT_ROUND_MS = 2 * 60 * 1000;
+import { enterFrookiesJuryPhase, resolveFrookiesJuryVoteIfDue } from "@/lib/frookiesJury";
+import { BOT_ROUND_MS } from "@/lib/fastingTiming";
 
 export async function advanceFastingBotIfDue(gameId: string) {
   const lockRows = await prisma.$queryRaw<{ locked: boolean }[]>`
@@ -46,6 +46,16 @@ export async function advanceFastingBotIfDue(gameId: string) {
     });
 
     const isFrookiesBot = game.gameType === "FROOKIES_BOT";
+
+    if (isFrookiesBot && game.state === "JURY_VOTE") {
+      const r = await resolveFrookiesJuryVoteIfDue(gameId);
+      return { ok: r.ok, advanced: (r as any).finished ? ("jury_resolved" as const) : undefined, skipped: (r as any).skipped };
+    }
+
+    if (game.gameType === "FASTING_BOT" && game.state === "FINAL3") {
+      const r = await resolveFastingFinal3IfDue(gameId);
+      return { ok: r.ok, advanced: (r as any).finished ? ("final3" as const) : undefined, skipped: (r as any).skipped };
+    }
 
     if (game.state === "ROUND_NOMINATE") {
       if (isFrookiesBot) {
@@ -94,12 +104,13 @@ export async function advanceFastingBotIfDue(gameId: string) {
       if (rr?.evictedUserId) {
         const activeCount = await prisma.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
 
-        if (activeCount <= 3) {
-          await prisma.game.update({
-            where: { id: gameId },
-            data: { state: "COMPLETED", stateEndsAt: null, povUserId: null, hohUserId: null, completedAt: new Date() },
-          });
-          return { ok: true, fixed: "evicted_exists_forced_complete" as const };
+        if (isFrookiesBot ? activeCount <= 2 : activeCount <= 3) {
+          if (isFrookiesBot) {
+            await enterFrookiesJuryPhase(gameId);
+            return { ok: true, fixed: "evicted_exists_forced_jury" as const };
+          }
+          await enterFastingFinal3(gameId, game.gameType);
+          return { ok: true, fixed: "evicted_exists_forced_final3" as const };
         }
 
         const nextRound = (game.roundNumber ?? 0) + 1;

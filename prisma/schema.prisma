@@ -24,6 +24,7 @@ enum GameState {
   ROUND_NOMINATE
   ROUND_VOTE
   FINAL3
+  JURY_VOTE
   COMPLETED
 }
 
@@ -479,6 +480,7 @@ model Game {
   messages      GameMessage[]
   roundResults  RoundResult[]
   pmMessages    GamePmMessage[]
+  juryVotes     JuryVote[]
 
   // CASTINGS day system (dayEndsAt = stateEndsAt during ROUND_VOTE)
   castingDayStartedAt     DateTime?
@@ -584,7 +586,8 @@ model RoundResult {
   roundNumber     Int
   nomineeAUserId  String
   nomineeBUserId  String
-  nomineeCUserId  String?  // ROOKIES: 3rd nominee (algorithm pick)
+  nomineeCUserId  String?  // ROOKIES: 3rd nominee (algorithm / HOH)
+  nomineeDUserId  String?  // ROOKIES: 4th nominee (algorithm; null at final 5)
   evictedUserId   String?
   povSavedUserId  String?  // FROOKIES: who POV saved (replacement then chosen by HOH)
   createdAt       DateTime @default(now())
@@ -666,6 +669,20 @@ model CastingDayResult {
 
   @@unique([gameId, dayNumber])
   @@index([gameId, dayNumber])
+}
+
+model JuryVote {
+  id           String   @id @default(cuid())
+  gameId       String
+  voterUserId  String
+  targetUserId String
+  createdAt    DateTime @default(now())
+
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@unique([gameId, voterUserId])
+  @@index([gameId])
+  @@index([gameId, targetUserId])
 }
 
 model CastingVote {

@@ -5,7 +5,12 @@ function activityScore(p: { chatCount: number; plusCount: number; minusCount: nu
   return p.chatCount + 2 * p.plusCount - p.minusCount;
 }
 
-/** Resolve Rookies nominations: 2 from HOH + 1 algorithm, or day 7 (no HOH) all 3 from algorithm. */
+/**
+ * Resolve Rookies nominations (Classic Rookies FAQ):
+ * - Normal day: HOH picks 2 + algorithm adds 2 least-active → 4 nominees
+ * - Final 5 (≤5 active): HOH picks 2 + algorithm adds 1 → 3 nominees
+ * - Day 7 (no HOH): all nominees from algorithm
+ */
 export async function resolveRookiesNominations(gameId: string) {
   const game = await prisma.game.findUnique({
     where: { id: gameId },
@@ -25,19 +30,30 @@ export async function resolveRookiesNominations(gameId: string) {
     : players;
   if (eligible.length < 2) return;
 
-  const useThreeNominees = eligible.length >= 4;
+  const activeCount = players.length;
+  // FAQ: final 5 → 3 nominees; otherwise 4 when possible
+  const targetNomCount = activeCount <= 5 ? 3 : Math.min(4, eligible.length);
 
   let nomA: string;
   let nomB: string;
-  let nomC: string | null;
+  let nomC: string | null = null;
+  let nomD: string | null = null;
+
+  const pickWorst = (pool: typeof eligible, n: number, exclude: Set<string>) => {
+    return [...pool]
+      .filter((p) => !exclude.has(p.userId))
+      .sort((a, b) => activityScore(a) - activityScore(b))
+      .slice(0, n)
+      .map((p) => p.userId);
+  };
 
   if (isDay7NoHoh) {
-    const byWorst = [...eligible].sort((a, b) => activityScore(a) - activityScore(b));
-    nomA = byWorst[0]!.userId;
-    nomB = byWorst[1]!.userId;
-    nomC = useThreeNominees && byWorst[2] ? byWorst[2].userId : null;
+    const worst = pickWorst(eligible, targetNomCount, new Set());
+    nomA = worst[0]!;
+    nomB = worst[1]!;
+    nomC = worst[2] ?? null;
+    nomD = worst[3] ?? null;
   } else {
-    // HOH's 2 nominations from Nomination table
     const noms = await prisma.nomination.findMany({
       where: { gameId, roundNumber: game.roundNumber, voterUserId: game.hohUserId! },
       select: { targetUserId: true },
@@ -51,47 +67,42 @@ export async function resolveRookiesNominations(gameId: string) {
     let nomineeB = hohNoms[1]?.userId ?? null;
 
     if (!nomineeA || !nomineeB) {
-      const byActivity = [...eligible].sort((a, b) => activityScore(a) - activityScore(b));
-      const worst = byActivity[0]?.userId;
-      const second = byActivity[1]?.userId;
-      if (!nomineeA) nomineeA = worst ?? eligible[0]!.userId;
-      if (!nomineeB) nomineeB = (nomineeA === worst ? second : worst) ?? eligible[1]!.userId;
-      if (nomineeA === nomineeB) {
-        const other = eligible.find((p) => p.userId !== nomineeA);
-        if (other) nomineeB = other.userId;
-      }
+      const byActivity = pickWorst(eligible, 2, new Set());
+      if (!nomineeA) nomineeA = byActivity[0] ?? eligible[0]!.userId;
+      if (!nomineeB) nomineeB = byActivity.find((id) => id !== nomineeA) ?? eligible.find((p) => p.userId !== nomineeA)!.userId;
     }
     nomA = nomineeA;
     nomB = nomineeB;
 
-    if (useThreeNominees) {
-      const excluded = new Set([game.hohUserId, nomA, nomB]);
-      const forAlgo = eligible.filter((p) => !excluded.has(p.userId));
-      const byWorst = [...forAlgo].sort((a, b) => activityScore(a) - activityScore(b));
-      nomC = byWorst[0]?.userId ?? eligible.find((p) => p.userId !== nomA && p.userId !== nomB)?.userId ?? null;
-    } else {
-      nomC = null;
-    }
+    const algoNeeded = Math.max(0, targetNomCount - 2);
+    const algo = pickWorst(eligible, algoNeeded, new Set([game.hohUserId!, nomA, nomB]));
+    nomC = algo[0] ?? null;
+    nomD = algo[1] ?? null;
   }
 
   if (!nomA || !nomB) return;
-  if (nomC && new Set([nomA, nomB, nomC]).size < 3) return;
 
   const systemUserId = await getSystemUserId();
-  const nameA = eligible.find((p) => p.userId === nomA)?.user.username ?? "?";
-  const nameB = eligible.find((p) => p.userId === nomB)?.user.username ?? "?";
-  const nameC = nomC ? (eligible.find((p) => p.userId === nomC)?.user.username ?? "?") : null;
+  const nameOf = (id: string | null) =>
+    id ? (eligible.find((p) => p.userId === id)?.user.username ?? "?") : null;
+  const names = [nomA, nomB, nomC, nomD].filter(Boolean).map((id) => nameOf(id as string));
 
   await prisma.$transaction(async (tx) => {
     await tx.roundResult.upsert({
       where: { gameId_roundNumber: { gameId, roundNumber: game.roundNumber } },
-      update: { nomineeAUserId: nomA, nomineeBUserId: nomB, nomineeCUserId: nomC },
+      update: {
+        nomineeAUserId: nomA,
+        nomineeBUserId: nomB,
+        nomineeCUserId: nomC,
+        nomineeDUserId: nomD,
+      },
       create: {
         gameId,
         roundNumber: game.roundNumber,
         nomineeAUserId: nomA,
         nomineeBUserId: nomB,
         nomineeCUserId: nomC,
+        nomineeDUserId: nomD,
       },
     });
 
@@ -102,11 +113,17 @@ export async function resolveRookiesNominations(gameId: string) {
     });
 
     const tag = `[SYSTEM:NOM_ROOKIES:R${game.roundNumber}]`;
-    const msgBody = nomC
-      ? `${tag}\n[SYSTEM] Nominees (3–2–1 vote): ${nameA}, ${nameB}, ${nameC}. Rank 3=evict, 2=evict if #1 saved, 1=save.`
-      : `${tag}\n[SYSTEM] Nominees (vote to evict): ${nameA}, ${nameB}.`;
+    const pointsHint =
+      names.length >= 4
+        ? "Rank 0–3 (3=most want out). Top 2 by points are evicted."
+        : "Rank nominees (highest points = out).";
     await tx.gameMessage.create({
-      data: { gameId, userId: systemUserId, channel: "PUBLIC", body: msgBody },
+      data: {
+        gameId,
+        userId: systemUserId,
+        channel: "PUBLIC",
+        body: `${tag}\n[SYSTEM] Nominees (${names.length}): ${names.join(", ")}. ${pointsHint}`,
+      },
     });
   });
 }

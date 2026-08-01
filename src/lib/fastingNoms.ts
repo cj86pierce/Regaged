@@ -1,9 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getSystemUserId } from "@/lib/systemUser";
 import { assignFastingPov } from "@/lib/fastingPov";
-
-const VOTE_PHASE_MS = 2 * 60 * 1000;
-const BOT_ROUND_MS = 2 * 60 * 1000; // 2 min for testing
+import { BOT_ROUND_MS, getFastingVoteMs } from "@/lib/fastingTiming";
 
 export async function resolveFastingNominations(gameId: string) {
   const game = await prisma.game.findUnique({
@@ -79,7 +77,7 @@ export async function resolveFastingNominations(gameId: string) {
       create: { gameId, roundNumber: game.roundNumber, nomineeAUserId: nomineeA, nomineeBUserId: nomineeB, evictedUserId: null },
     });
 
-    const voteMs = game.gameType === "FASTING_BOT" ? BOT_ROUND_MS : VOTE_PHASE_MS;
+    const voteMs = game.gameType === "FASTING_BOT" ? BOT_ROUND_MS : getFastingVoteMs();
     await tx.game.update({
       where: { id: gameId },
       data: { state: "ROUND_VOTE", stateEndsAt: new Date(Date.now() + voteMs) },

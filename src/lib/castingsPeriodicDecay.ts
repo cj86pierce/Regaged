@@ -1,27 +1,22 @@
 /**
- * Periodic health decay for Castings.
- * CASTING: runs every hour.
- * CASTING_BOT: runs every minute.
+ * Periodic health decay for Castings, driven by inactivity.
+ *
+ * Decay is computed as a *cumulative* amount for total time inactive, then
+ * only the delta since the last time decay was applied to a player is
+ * subtracted from their health. This makes the function safe to call at any
+ * frequency (every tick, every hour, whatever) without re-applying the same
+ * damage repeatedly - which is what caused CASTING_BOT players to die almost
+ * instantly, since that path was previously ungated and re-subtracted the
+ * full inactivity-bracket damage on every ~10s tick.
  */
-import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getSystemUserId } from "@/lib/systemUser";
 
 const HOUR_MS = 60 * 60 * 1000;
 
-function hourKey(d: Date) {
-  const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(d.getUTCDate()).padStart(2, "0");
-  const h = String(d.getUTCHours()).padStart(2, "0");
-  return `${y}-${m}-${day}T${h}`;
-}
-
-/** Decay by inactivity: <1h no decay; 12-24h=-5; 24-36h=-15; 36-48h=-35; 48h+=-35-30 per day */
-function healthDecayForInactivity(lastActiveAt: Date, now: Date): number {
-  const ms = now.getTime() - lastActiveAt.getTime();
-  const hours = ms / HOUR_MS;
-  if (hours < 1) return 0;
+/** Cumulative decay for total hours inactive: <1h=0; 12-24h=5; 24-36h=15; 36-48h=35; 48h+=35+30/day. */
+function cumulativeDecayForInactivity(hoursInactive: number): number {
+  const hours = Math.max(0, hoursInactive);
   if (hours < 12) return 0;
   if (hours < 24) return 5;
   if (hours < 36) return 5 + 10;
@@ -34,26 +29,13 @@ export async function applyCastingsPeriodicDecay(options: {
   gameType: "CASTING" | "CASTING_BOT";
 }): Promise<{ processed: number }> {
   const now = new Date();
-  const hk = hourKey(now);
-
-  const where: Prisma.GameWhereInput =
-    options.gameType === "CASTING"
-      ? {
-          gameType: "CASTING",
-          state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] },
-          OR: [
-            { castingLastDecayHourKey: null },
-            { castingLastDecayHourKey: { not: hk } },
-          ],
-        }
-      : {
-          gameType: "CASTING_BOT",
-          state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] },
-        };
 
   const games = await prisma.game.findMany({
-    where,
-    select: { id: true, castingLastDecayHourKey: true },
+    where: {
+      gameType: options.gameType,
+      state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] },
+    },
+    select: { id: true },
     take: 50,
   });
 
@@ -63,14 +45,36 @@ export async function applyCastingsPeriodicDecay(options: {
   for (const g of games) {
     const players = await prisma.gamePlayer.findMany({
       where: { gameId: g.id, status: "ACTIVE" },
-      select: { userId: true, health: true, lastActiveAt: true },
+      select: { userId: true, health: true, lastActiveAt: true, castingLastDecayAt: true },
     });
 
     const deaths: string[] = [];
 
     for (const p of players) {
-      const damage = healthDecayForInactivity(p.lastActiveAt ?? now, now);
-      if (damage <= 0) continue;
+      const lastActiveAt = p.lastActiveAt ?? now;
+      const hoursSinceActive = (now.getTime() - lastActiveAt.getTime()) / HOUR_MS;
+
+      // How much decay was already "priced in" as of the last time we checked this player.
+      const lastDecayAt = p.castingLastDecayAt;
+      const hoursSinceActiveAtLastDecay =
+        lastDecayAt && lastDecayAt.getTime() > lastActiveAt.getTime()
+          ? (lastDecayAt.getTime() - lastActiveAt.getTime()) / HOUR_MS
+          : 0;
+
+      const totalDecayNow = cumulativeDecayForInactivity(hoursSinceActive);
+      const totalDecayAlready = cumulativeDecayForInactivity(hoursSinceActiveAtLastDecay);
+      const damage = Math.max(0, totalDecayNow - totalDecayAlready);
+
+      if (damage <= 0) {
+        // Still record that we checked, so a later activity reset is tracked correctly.
+        if (!lastDecayAt || lastDecayAt.getTime() !== now.getTime()) {
+          await prisma.gamePlayer.update({
+            where: { gameId_userId: { gameId: g.id, userId: p.userId } },
+            data: { castingLastDecayAt: now },
+          });
+        }
+        continue;
+      }
 
       const hp = (p.health ?? 70) - damage;
       const newHp = Math.max(0, hp);
@@ -79,6 +83,7 @@ export async function applyCastingsPeriodicDecay(options: {
         where: { gameId_userId: { gameId: g.id, userId: p.userId } },
         data: {
           health: newHp,
+          castingLastDecayAt: now,
           ...(newHp <= 0 ? { status: "ELIMINATED", eliminatedAt: now } : {}),
         },
       });
@@ -100,14 +105,6 @@ export async function applyCastingsPeriodicDecay(options: {
           channel: "PUBLIC",
           body: `[SYSTEM] ${names.join(", ")} died from inactivity.`,
         },
-      });
-    }
-
-    // Update last decay hour (for CASTING)
-    if (options.gameType === "CASTING") {
-      await prisma.game.update({
-        where: { id: g.id },
-        data: { castingLastDecayHourKey: hk },
       });
     }
   }

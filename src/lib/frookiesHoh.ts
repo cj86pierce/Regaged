@@ -33,13 +33,20 @@ export async function assignFrookiesHoh(
     });
     if (players.length === 0) return { ok: true, skipped: true as const, reason: "no_players" as const };
 
+    // The Game row's hohUserId has already been cleared for the new round by
+    // this point, so we can't read it directly - recover the actual previous
+    // HOH from who submitted nominations last round (only the HOH nominates
+    // in Frookies, so the voterUserId on any Nomination row from that round
+    // is the previous HOH).
     const prevRound = game.roundNumber - 1;
     const prevHoh =
       prevRound >= 1
-        ? await prisma.game.findFirst({
-            where: { id: gameId },
-            select: { hohUserId: true },
-          }).then((g) => g?.hohUserId)
+        ? await prisma.nomination
+            .findFirst({
+              where: { gameId, roundNumber: prevRound },
+              select: { voterUserId: true },
+            })
+            .then((n) => n?.voterUserId ?? null)
         : null;
     const eligible = prevHoh ? players.filter((p) => p.userId !== prevHoh) : players;
     const pool = eligible.length ? eligible : players;

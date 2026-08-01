@@ -70,13 +70,11 @@ export async function tryStartCastingBotGame(gameId: string) {
 
   const now = new Date();
 
-  /**
-   * Wiki: Day 1 has no nominees. Just set timer; catchUpCastingBotGame will expel 1 by algorithm at end.
-   */
+  /** Day 1 = nominate/compete window (no nominees). Voting begins day 2+. */
   await prisma.game.update({
     where: { id: gameId },
     data: {
-      state: "ROUND_VOTE",
+      state: "ROUND_NOMINATE",
       roundNumber: 1,
       startsAt: now,
       castingDayStartedAt: now,

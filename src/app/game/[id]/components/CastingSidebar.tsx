@@ -24,7 +24,7 @@ export default function CastingSidebar(props: {
   onReload?: () => Promise<void>;
   meUserId?: string | null;
 }) {
-  const showVote = props.state === "ROUND_VOTE" && props.nominees.length >= 3;
+  const showVote = props.state === "ROUND_VOTE" && props.nominees.length >= 2;
 
   return (
     <div
@@ -65,10 +65,11 @@ export default function CastingSidebar(props: {
         <div style={{ fontWeight: 1000, marginBottom: 8 }}>Read this</div>
         <div style={{ fontSize: 12, opacity: 0.8, lineHeight: 1.35 }}>
           <b>Castings</b> runs in 12-hour days.<br />
-          Play the mini game—lower score = more likely to be nominated.<br />
+          <b>Keys protect you from nomination</b> — collect them from drops.<br />
+          Among players with equal keys, low mini-game score and low checks make you more likely to be nominated.<br />
           Public drops appear in chat (center slot = reward).<br />
           Every 3000 checks = private care package (see above).<br />
-          Final 4 is decided by <b>health → keys → checks</b>.
+          At final 7 there are only 2 nominees. Final 5 is ranked by <b>checks → challenge → keys</b>.
         </div>
       </div>
 

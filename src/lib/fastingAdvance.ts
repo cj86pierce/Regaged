@@ -1,16 +1,16 @@
 import { prisma } from "@/lib/prisma";
 import { assignFastingPov } from "@/lib/fastingPov";
 import { resolveFastingNominations } from "@/lib/fastingNoms";
-import { resolveFastingEviction } from "@/lib/fastingVotes";
+import { enterFastingFinal3, resolveFastingEviction, resolveFastingFinal3IfDue } from "@/lib/fastingVotes";
 import { assignRookiesHoh } from "@/lib/rookiesHoh";
 import { resolveRookiesNominations } from "@/lib/rookiesNoms";
 import { resolveRookiesEviction } from "@/lib/rookiesVotes";
 import { assignFrookiesHoh } from "@/lib/frookiesHoh";
 import { assignFrookiesPov } from "@/lib/frookiesPov";
 import { resolveFrookiesNominations } from "@/lib/frookiesNoms";
+import { enterFrookiesJuryPhase, resolveFrookiesJuryVoteIfDue } from "@/lib/frookiesJury";
+import { getFastingNomMs, getFastingVoteMs } from "@/lib/fastingTiming";
 
-const NOM_PHASE_MS = 3 * 60 * 1000;
-const VOTE_PHASE_MS = 2 * 60 * 1000;
 const ROOKIES_DAY_MS = 24 * 60 * 60 * 1000;
 const ROOKIES_DAY_7 = 7;
 
@@ -30,11 +30,19 @@ export async function advanceFastingIfDue(gameId: string) {
     });
     if (!game || (game.gameType !== "FASTING" && game.gameType !== "FROOKIES" && game.gameType !== "ROOKIES")) return { ok: false, error: "not_fasting" as const };
 
+    if (game.state === "FINAL3") {
+      const r = await resolveFastingFinal3IfDue(gameId);
+      return { ok: r.ok, advanced: (r as any).finished ? ("final3" as const) : undefined, skipped: (r as any).skipped };
+    }
+
     // Only advance if due, clearly stuck, or stateEndsAt missing (unstick)
     const due = !!game.stateEndsAt && game.stateEndsAt.getTime() <= now.getTime();
     const stuck = !!game.stateEndsAt && game.stateEndsAt.getTime() <= now.getTime() - 15_000; // 15s grace
     const missingTimer = !game.stateEndsAt && (game.state === "ROUND_NOMINATE" || game.state === "ROUND_VOTE");
     if (!due && !stuck && !missingTimer) return { ok: true, skipped: true as const, reason: "not_due" as const };
+
+    const NOM_PHASE_MS = getFastingNomMs();
+    const VOTE_PHASE_MS = getFastingVoteMs();
 
     // Read round result (if exists) for recovery
     const rr = await prisma.roundResult.findUnique({
@@ -49,6 +57,10 @@ export async function advanceFastingIfDue(gameId: string) {
     // FROOKIES: Casting-style competition (highest score = POV), POV save, then HOH nominates 2
     // -------------------------
     if (isFrookies) {
+      if (game.state === "JURY_VOTE") {
+        const r = await resolveFrookiesJuryVoteIfDue(gameId);
+        return { ok: r.ok, advanced: (r as any).finished ? ("jury_resolved" as const) : undefined, skipped: (r as any).skipped };
+      }
       if (game.state === "ROUND_NOMINATE") {
         const phase = (game as { frookiesPhase?: string | null }).frookiesPhase;
 
@@ -113,12 +125,9 @@ export async function advanceFastingIfDue(gameId: string) {
       if (game.state === "ROUND_VOTE") {
         if (rr?.evictedUserId) {
           const activeCount = await prisma.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
-          if (activeCount <= 3) {
-            await prisma.game.update({
-              where: { id: gameId },
-              data: { state: "COMPLETED", stateEndsAt: null, povUserId: null, hohUserId: null, completedAt: new Date() },
-            });
-            return { ok: true, fixed: "evicted_exists_forced_complete" as const };
+          if (activeCount <= 2) {
+            await enterFrookiesJuryPhase(gameId);
+            return { ok: true, fixed: "evicted_exists_forced_jury" as const };
           }
           const nextRound = game.roundNumber + 1;
           const now2 = new Date();
@@ -247,13 +256,8 @@ export async function advanceFastingIfDue(gameId: string) {
         const activeCount = await prisma.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
 
         if (activeCount <= 3) {
-          // resolveFastingEviction() would normally finish; if we’re here, finish might have failed
-          // safest: force stateEndsAt null and state COMPLETED if not already
-          await prisma.game.update({
-            where: { id: gameId },
-            data: { state: "COMPLETED", stateEndsAt: null, povUserId: null, completedAt: new Date() },
-          });
-          return { ok: true, fixed: "evicted_exists_forced_complete" as const };
+          await enterFastingFinal3(gameId, game.gameType);
+          return { ok: true, fixed: "evicted_exists_forced_final3" as const };
         }
 
         // Otherwise force next round

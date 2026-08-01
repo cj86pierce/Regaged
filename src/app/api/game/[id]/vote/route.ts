@@ -24,11 +24,21 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   const rr = await prisma.roundResult.findUnique({
     where: { gameId_roundNumber: { gameId, roundNumber: game.roundNumber } },
-    select: { nomineeAUserId: true, nomineeBUserId: true, nomineeCUserId: true },
+    select: {
+      nomineeAUserId: true,
+      nomineeBUserId: true,
+      nomineeCUserId: true,
+      nomineeDUserId: true,
+    },
   });
   if (!rr) return NextResponse.json({ error: "Nominees not set yet" }, { status: 400 });
 
-  const nominees = [rr.nomineeAUserId, rr.nomineeBUserId, rr.nomineeCUserId].filter(Boolean) as string[];
+  const nominees = [
+    rr.nomineeAUserId,
+    rr.nomineeBUserId,
+    rr.nomineeCUserId,
+    rr.nomineeDUserId,
+  ].filter(Boolean) as string[];
   const isRookies = game.gameType === "ROOKIES" && nominees.length >= 3;
 
   if (nominees.includes(userId))
@@ -37,15 +47,30 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const body = await req.json().catch(() => null);
 
   if (isRookies) {
+    // FAQ: assign 0,1,2,3 (3 = highest / most want out). Final 5 uses 1–3 with 3 nominees.
+    const allowedPoints =
+      nominees.length >= 4 ? [0, 1, 2, 3] : nominees.length === 3 ? [1, 2, 3] : [1, 2];
     const rankings = body?.rankings && typeof body.rankings === "object" ? body.rankings as Record<string, number> : null;
-    if (!rankings) return NextResponse.json({ error: "rankings required: { nomineeUserId: 1|2|3 } for each nominee (1=save, 2=evict if #1 saved, 3=evict)" }, { status: 400 });
+    if (!rankings) {
+      return NextResponse.json({
+        error: `rankings required: { nomineeUserId: points } using each of [${allowedPoints.join(",")}] once`,
+      }, { status: 400 });
+    }
     const given = new Set<number>();
     for (const uid of nominees) {
       const p = Number(rankings[uid]);
-      if (!Number.isInteger(p) || p < 1 || p > 3) return NextResponse.json({ error: "Each nominee must receive exactly one of 1, 2, 3" }, { status: 400 });
+      if (!Number.isInteger(p) || !allowedPoints.includes(p)) {
+        return NextResponse.json({
+          error: `Each nominee must receive exactly one of ${allowedPoints.join(", ")}`,
+        }, { status: 400 });
+      }
       given.add(p);
     }
-    if (given.size !== 3) return NextResponse.json({ error: "Each nominee must receive exactly one of 1, 2, 3" }, { status: 400 });
+    if (given.size !== allowedPoints.length) {
+      return NextResponse.json({
+        error: `Each nominee must receive exactly one of ${allowedPoints.join(", ")}`,
+      }, { status: 400 });
+    }
 
     await prisma.$transaction(async (tx) => {
       for (const targetUserId of nominees) {
@@ -77,7 +102,9 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     });
     const countByVoter = new Map<string, number>();
     for (const v of rankingVotes) countByVoter.set(v.voterUserId, (countByVoter.get(v.voterUserId) ?? 0) + 1);
-    const allDone = eligibleVoters.length > 0 && eligibleVoters.every((uid) => (countByVoter.get(uid) ?? 0) >= 3);
+    const allDone =
+      eligibleVoters.length > 0 &&
+      eligibleVoters.every((uid) => (countByVoter.get(uid) ?? 0) >= nominees.length);
     if (allDone && game.stateEndsAt) {
       const leftMs = game.stateEndsAt.getTime() - Date.now();
       if (leftMs > FAST_FORWARD_SECONDS * 1000) {

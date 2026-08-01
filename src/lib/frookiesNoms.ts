@@ -1,8 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getSystemUserId } from "@/lib/systemUser";
 
-const VOTE_PHASE_MS = 2 * 60 * 1000;
-const BOT_ROUND_MS = 2 * 60 * 1000;
+import { BOT_ROUND_MS, getFastingVoteMs } from "@/lib/fastingTiming";
 
 function activityScore(p: { chatCount: number; plusCount: number; minusCount: number }) {
   return p.chatCount + 2 * p.plusCount - p.minusCount;
@@ -70,7 +69,7 @@ export async function resolveFrookiesNominations(gameId: string) {
 
   const systemUserId = await getSystemUserId();
   const tag = `[SYSTEM:NOM_VOTES:R${game.roundNumber}]`;
-  const voteMs = game.gameType === "FROOKIES_BOT" ? BOT_ROUND_MS : VOTE_PHASE_MS;
+  const voteMs = game.gameType === "FROOKIES_BOT" ? BOT_ROUND_MS : getFastingVoteMs();
 
   await prisma.$transaction(async (tx) => {
     await tx.roundResult.upsert({
@@ -98,7 +97,7 @@ export async function resolveFrookiesNominations(gameId: string) {
         ? { state: "ROUND_VOTE", stateEndsAt: new Date(Date.now() + voteMs), povSavedUserId: null }
         : {
             frookiesPhase: "POV_SAVE",
-            stateEndsAt: new Date(Date.now() + Math.min(90_000, voteMs)),
+            stateEndsAt: new Date(Date.now() + Math.min(5 * 60_000, voteMs)),
           },
     });
 

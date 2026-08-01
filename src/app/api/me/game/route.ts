@@ -10,7 +10,7 @@ export async function GET(req: Request) {
     where: {
       userId,
       status: "ACTIVE",
-      game: { state: { in: ["ROUND_NOMINATE", "ROUND_VOTE", "FINAL3"] } },
+      game: { state: { in: ["ROUND_NOMINATE", "ROUND_VOTE", "JURY_VOTE", "FINAL3"] } },
     },
     select: { gameId: true },
   });

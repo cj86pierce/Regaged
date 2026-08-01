@@ -91,7 +91,15 @@ async function runBotTick() {
       console.error("CASTING_BOT periodic decay failed", { err: String(e) });
     }
 
-    for (const g of castingBotDue) {
+    const castingBotActive = await prisma.game.findMany({
+      where: {
+        gameType: "CASTING_BOT",
+        state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] },
+      },
+      select: { id: true },
+      take: 50,
+    });
+    for (const g of castingBotActive) {
       try {
         await maybeSpawnCastingsDrops(g.id);
       } catch (e) {

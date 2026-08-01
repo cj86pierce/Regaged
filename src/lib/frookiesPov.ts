@@ -55,9 +55,15 @@ export async function assignFrookiesPov(gameId: string, opts?: { skipLock?: bool
 
       if (updated.count === 0) return { ok: true, won: false as const };
 
+      // Winning the POV competition costs health (random amount), per the
+      // original game's rule - be strategic about when to compete.
+      const healthCost = 5 + Math.floor(Math.random() * 11); // 5-15
+      const currentHealth = winner.health ?? 70;
+      const newHealth = Math.max(10, currentHealth - healthCost);
+
       await tx.gamePlayer.update({
         where: { gameId_userId: { gameId, userId: winner.userId } },
-        data: { povWins: { increment: 1 }, lastHadPovRound: game.roundNumber },
+        data: { povWins: { increment: 1 }, lastHadPovRound: game.roundNumber, health: newHealth },
       });
 
       await tx.gameMessage.create({

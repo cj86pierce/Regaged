@@ -90,7 +90,7 @@ export async function POST(req: Request) {
       status: "ACTIVE",
       game: {
         gameType,
-        state: { in: ["ENROLLING", "ROUND_NOMINATE", "ROUND_VOTE", "FINAL3"] },
+        state: { in: ["ENROLLING", "ROUND_NOMINATE", "ROUND_VOTE", "JURY_VOTE", "FINAL3"] },
       },
     },
     select: { gameId: true },

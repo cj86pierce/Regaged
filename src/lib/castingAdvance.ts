@@ -1,11 +1,17 @@
 /**
  * Casting day advance - Fasting-style day rolling.
  * Advisory lock, due check, state machine with recovery.
+ *
+ * Day flow (wiki-aligned):
+ *   ROUND_NOMINATE (full day: compete / collect keys) → pick nominees →
+ *   ROUND_VOTE (full day: cast 1/2/3 points) → evict → next ROUND_NOMINATE
+ * Day 1 has no nominees; when due it rolls into day 2 nominate.
  */
 import { prisma } from "@/lib/prisma";
 import { resolveCastingNominations } from "./castingNoms";
 import { resolveCastingEviction } from "./castingVotes";
 import { getDayMsForGame } from "./castingDayLength";
+import { finalizeCastingGame } from "./castingEngine";
 
 export async function advanceCastingIfDue(gameId: string, options?: { forceDue?: boolean }) {
   const forceDue = options?.forceDue === true;
@@ -38,10 +44,28 @@ export async function advanceCastingIfDue(gameId: string, options?: { forceDue?:
     });
 
     // -------------------------
-    // ROUND_NOMINATE (day 2+ only)
+    // ROUND_NOMINATE
     // -------------------------
     if (game.state === "ROUND_NOMINATE") {
-      if (dayNum <= 1) return { ok: true, skipped: true as const, reason: "day1_no_nom" as const };
+      // Day 1: no noms — roll into day 2 nominate window
+      if (dayNum <= 1) {
+        const dayMs = await getDayMsForGame(gameId);
+        await prisma.$transaction([
+          prisma.game.update({
+            where: { id: gameId },
+            data: {
+              state: "ROUND_NOMINATE",
+              roundNumber: 2,
+              stateEndsAt: new Date(now.getTime() + dayMs),
+            },
+          }),
+          prisma.gamePlayer.updateMany({
+            where: { gameId, status: "ACTIVE" },
+            data: { castingDayMiniGameScore: 0 },
+          }),
+        ]);
+        return { ok: true, advanced: "day1_to_day2_nominate" as const };
+      }
 
       if (dayResult?.nomineeUserIds?.length) {
         const dayMs = await getDayMsForGame(gameId);
@@ -60,28 +84,34 @@ export async function advanceCastingIfDue(gameId: string, options?: { forceDue?:
     // ROUND_VOTE
     // -------------------------
     if (game.state === "ROUND_VOTE") {
-      if (dayResult?.evictedUserIds?.length) {
+      if (dayResult?.evictedUserIds?.length || (dayNum === 1 && dayResult)) {
         const activeCount = await prisma.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
-        if (activeCount <= 4) {
-          await prisma.game.update({
-            where: { id: gameId },
-            data: { state: "COMPLETED", stateEndsAt: null, completedAt: new Date() },
-          });
+        if (activeCount <= 5) {
+          await finalizeCastingGame(gameId);
           return { ok: true, fixed: "evicted_exists_forced_complete" as const };
         }
 
-        const nextDay = dayNum + 1;
-        const dayMs = await getDayMsForGame(gameId);
-        await prisma.game.update({
-          where: { id: gameId },
-          data: {
-            state: "ROUND_NOMINATE",
-            roundNumber: nextDay,
-            stateEndsAt: new Date(now.getTime() + dayMs),
-          },
-        });
-        await resolveCastingNominations(gameId);
-        return { ok: true, fixed: "evicted_exists_forced_next_round" as const };
+        // Already resolved — ensure we're on the next nominate day (do not pick noms yet)
+        if (game.roundNumber === dayNum) {
+          const nextDay = dayNum + 1;
+          const dayMs = await getDayMsForGame(gameId);
+          await prisma.$transaction([
+            prisma.game.update({
+              where: { id: gameId },
+              data: {
+                state: "ROUND_NOMINATE",
+                roundNumber: nextDay,
+                stateEndsAt: new Date(now.getTime() + dayMs),
+              },
+            }),
+            prisma.gamePlayer.updateMany({
+              where: { gameId, status: "ACTIVE" },
+              data: { castingDayMiniGameScore: 0 },
+            }),
+          ]);
+          return { ok: true, fixed: "evicted_exists_forced_next_nominate" as const };
+        }
+        return { ok: true, skipped: true as const, reason: "already_advanced" as const };
       }
 
       await resolveCastingEviction(gameId);

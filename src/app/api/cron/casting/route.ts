@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { maybeSpawnCastingsDrops } from "@/lib/castingsDrops";
-import { runCastingsDayChangeIfDue } from "@/lib/castingsDayChange";
+import { advanceCastingIfDue } from "@/lib/castingAdvance";
+import { applyCastingsPeriodicDecay } from "@/lib/castingsPeriodicDecay";
 import { requireCronAuth } from "@/lib/cronAuth";
 
 async function runCastingTick() {
@@ -15,8 +16,11 @@ async function runCastingTick() {
     const games = await prisma.game.findMany({
       where: {
         gameType: "CASTING",
-        state: "ROUND_VOTE",
-        stateEndsAt: { not: null, lte: now },
+        state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] },
+        OR: [
+          { stateEndsAt: { not: null, lte: now } },
+          { stateEndsAt: null },
+        ],
       },
       select: { id: true },
       take: 50,
@@ -25,14 +29,23 @@ async function runCastingTick() {
     let advanced = 0;
     for (const g of games) {
       try {
-        const r = await runCastingsDayChangeIfDue(g.id);
-        if (r.ok && ((r as any).advanced || (r as any).finished)) advanced++;
+        const r = await advanceCastingIfDue(g.id);
+        if (r.ok && ((r as any).advanced || (r as any).fixed)) advanced++;
       } catch (e) {
         console.error("CASTING catchUp failed", { gameId: g.id, err: String(e) });
       }
     }
 
-    for (const g of games) {
+    // Spawn drops for every active Casting (not only timer-due games)
+    const activeForDrops = await prisma.game.findMany({
+      where: {
+        gameType: "CASTING",
+        state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] },
+      },
+      select: { id: true },
+      take: 50,
+    });
+    for (const g of activeForDrops) {
       try {
         await maybeSpawnCastingsDrops(g.id);
       } catch (e) {
@@ -40,7 +53,11 @@ async function runCastingTick() {
       }
     }
 
-    // Health decay is inside runCastingsDayChangeIfDue (at day end)
+    try {
+      await applyCastingsPeriodicDecay({ gameType: "CASTING" });
+    } catch (e) {
+      console.error("CASTING periodic decay failed", { err: String(e) });
+    }
 
     return { due: games.length, advanced };
   } finally {

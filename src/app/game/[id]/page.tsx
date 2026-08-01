@@ -46,7 +46,9 @@ type GameState = {
   myNomLocked: boolean | null;
   game: { id: string; number: number; gameType: string; state: string; roundNumber: number; povUserId: string | null; hohUserId?: string | null; povSavedUserId?: string | null; frookiesPhase?: string | null; stateEndsAt: string | null };
   lobby: { current: number; needed: number } | null;
-  voteInfo: { myVoteTargetUserId: string | null } | null;
+  voteInfo: { myVoteTargetUserId?: string | null; myRankings?: Record<string, number> } | null;
+  nomineeCUserId?: string;
+  nomineeDUserId?: string;
   players: Player[];
   messages: Message[];
   pagination: { page: number; pageSize: number; totalPages: number; totalCount: number };
@@ -57,6 +59,13 @@ type GameState = {
     options: { slotIndex: number; kind: "APPLE" | "KEY" | "POISON" }[];
   }>;
   casting?: { nominees: string[]; myVoted: boolean };
+  jury?: {
+    finalists: { userId: string; username: string }[];
+    isJuror: boolean;
+    myVoteTargetUserId: string | null;
+    voteCount: number;
+    jurorCount: number;
+  } | null;
 };
 
 function fmtHMS(totalSeconds: number) {
@@ -266,6 +275,21 @@ export default function GamePage({ params }: { params: { id: string } }) {
     load({ bust: true }).catch((e) => setError(e.message));
   }
 
+  async function submitJuryVote(targetUserId: string) {
+    setError(null);
+    const res = await fetch(`/api/game/${gameId}/jury-vote`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ targetUserId }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(json?.error ?? "Jury vote failed");
+      return;
+    }
+    load({ bust: true }).catch((e) => setError(e.message));
+  }
+
   async function submitPovSave(targetUserId: string | null) {
     setError(null);
     const res = await fetch(`/api/game/${gameId}/pov-save`, {
@@ -419,7 +443,10 @@ export default function GamePage({ params }: { params: { id: string } }) {
       !myNomLockedIn &&
       (((data.game.gameType === "FROOKIES" || data.game.gameType === "FROOKIES_BOT") && data.game.frookiesPhase === "HOH_RENOM")
         ? nomSelected.length === 1 && data.game.hohUserId === data.meUserId
-        : nomSelected.length === 2 && ((data.game.gameType === "FROOKIES" || data.game.gameType === "FROOKIES_BOT") ? data.game.hohUserId === data.meUserId : true))
+        : nomSelected.length === 2 &&
+          ((data.game.gameType === "FROOKIES" || data.game.gameType === "FROOKIES_BOT" || data.game.gameType === "ROOKIES" || data.game.gameType === "ROOKIES_BOT")
+            ? data.game.hohUserId === data.meUserId
+            : true))
     }
     onConfirmNoms={confirmNoms}
     myNomLockedIn={myNomLockedIn}
@@ -427,6 +454,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
     canConfirmVote={!isCasting && data.game.state === "ROUND_VOTE" && !myVoteLockedIn && !!evictSelected}
     onConfirmVote={confirmVote}
     myVoteLockedIn={myVoteLockedIn}
+    myRankingsLocked={!!data.voteInfo?.myRankings && Object.keys(data.voteInfo.myRankings).length > 0}
     messages={data.messages}
     gameId={gameId}
     gameType={data.game.gameType}
@@ -435,9 +463,12 @@ export default function GamePage({ params }: { params: { id: string } }) {
     hohUserId={data.game.hohUserId}
     povSavedUserId={data.game.povSavedUserId}
     frookiesPhase={data.game.frookiesPhase}
-    players={data.players.map((p) => ({ userId: p.userId, username: p.username, status: p.status }))}
+    players={data.players.map((p) => ({ userId: p.userId, username: p.username, status: p.status, isNominee: p.isNominee }))}
+    rookiesNominees={data.players.filter((p) => p.isNominee).map((p) => ({ userId: p.userId, username: p.username }))}
     onPovSave={submitPovSave}
     onReload={() => load().catch((e) => setError(e.message))}
+    jury={data.jury}
+    onJuryVote={submitJuryVote}
   />
 )}
       </div>

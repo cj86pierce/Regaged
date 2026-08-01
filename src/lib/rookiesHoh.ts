@@ -38,14 +38,19 @@ export async function assignRookiesHoh(
     });
     if (players.length === 0) return { ok: true, skipped: true as const, reason: "no_players" as const };
 
-    // Previous round HOH (cannot be HOH two days in a row)
+    // Previous round HOH (cannot be HOH two days in a row). The Game row's
+    // hohUserId has already been cleared for the new round by this point, so
+    // recover it from who submitted nominations last round instead (only the
+    // HOH nominates in Rookies, enforced in nominations/route.ts).
     const prevRound = game.roundNumber - 1;
     const prevHoh =
       prevRound >= 1
-        ? await prisma.game.findFirst({
-            where: { id: gameId },
-            select: { hohUserId: true },
-          }).then((g) => g?.hohUserId)
+        ? await prisma.nomination
+            .findFirst({
+              where: { gameId, roundNumber: prevRound },
+              select: { voterUserId: true },
+            })
+            .then((n) => n?.voterUserId ?? null)
         : null;
     const eligible = prevHoh ? players.filter((p) => p.userId !== prevHoh) : players;
     const pool = eligible.length ? eligible : players;

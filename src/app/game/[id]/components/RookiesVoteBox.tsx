@@ -4,30 +4,25 @@ import { useMemo, useState } from "react";
 
 type Nominee = { userId: string; username: string };
 
-export default function CastingVoteBox(props: {
+/** Classic Rookies ranking vote: assign each point value once (0–3 or 1–3). */
+export default function RookiesVoteBox(props: {
   gameId: string;
   nominees: Nominee[];
+  locked?: boolean;
   onSaved: () => Promise<void>;
 }) {
   const { gameId, nominees } = props;
-
-  // Must match nominee count so every point value is assigned exactly once
   const pointsOptions =
-    nominees.length === 4
-      ? [0, 1, 2, 3]
-      : nominees.length === 2
-        ? [1, 2]
-        : [1, 2, 3];
+    nominees.length >= 4 ? [0, 1, 2, 3] : nominees.length === 3 ? [1, 2, 3] : [1, 2];
 
   const [pointsMap, setPointsMap] = useState<Record<string, number>>(() => {
     const init: Record<string, number> = {};
     nominees.forEach((n) => (init[n.userId] = Number.NaN));
     return init;
   });
-
   const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
 
   const usedPoints = useMemo(() => {
     const s = new Set<number>();
@@ -49,60 +44,53 @@ export default function CastingVoteBox(props: {
   function setPoint(nomineeId: string, p: number) {
     setErr(null);
     setMsg(null);
-
     setPointsMap((prev) => {
       const next = { ...prev };
-
-      // toggle off if clicked again
       if (next[nomineeId] === p) {
         next[nomineeId] = Number.NaN;
         return next;
       }
-
-      // remove this point from anyone else
       for (const id of Object.keys(next)) {
         if (id !== nomineeId && next[id] === p) next[id] = Number.NaN;
       }
-
       next[nomineeId] = p;
       return next;
     });
   }
 
   async function save() {
-    setErr(null);
-    setMsg(null);
-
-    if (!complete) return setErr(`Assign ${pointsOptions.join(",")} once each.`);
-
+    if (props.locked || !complete) return;
     setSaving(true);
-    const res = await fetch(`/api/game/${gameId}/casting/vote`, {
+    setErr(null);
+    const res = await fetch(`/api/game/${gameId}/vote`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ pointsMap }),
+      body: JSON.stringify({ rankings: pointsMap }),
     });
     const json = await res.json().catch(() => ({}));
     setSaving(false);
-
-    if (!res.ok) return setErr(json?.error ?? "Save failed");
-
-    setMsg("Saved!");
+    if (!res.ok) return setErr(json?.error ?? "Vote failed");
+    setMsg("Vote locked in.");
     await props.onSaved();
   }
 
-  return (
-    <div className="theme-sidebar-panel" style={{ borderRadius: 12, padding: 12, maxHeight: 340, overflowY: "auto" }}>
-      <div style={{ fontWeight: 1000, marginBottom: 8 }}>Vote</div>
+  if (props.locked) {
+    return (
+      <div style={{ fontWeight: 1000, color: "var(--success)" }}>✅ Ranking vote locked in.</div>
+    );
+  }
 
+  return (
+    <div>
+      <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 8 }}>
+        Assign each of <b>{pointsOptions.join(", ")}</b> once (higher = more want out).
+      </div>
       <div style={{ display: "grid", gap: 10 }}>
         {nominees.map((n) => {
           const myP = pointsMap[n.userId];
           return (
             <div key={n.userId} style={{ display: "grid", gap: 6 }}>
-              <div title={n.username} className="theme-username" style={{ fontSize: 12, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                {n.username}
-              </div>
-
+              <div className="theme-username" style={{ fontSize: 12 }}>{n.username}</div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 {pointsOptions.map((p) => {
                   const selected = myP === p;
@@ -110,6 +98,7 @@ export default function CastingVoteBox(props: {
                   return (
                     <button
                       key={p}
+                      type="button"
                       onClick={() => setPoint(n.userId, p)}
                       disabled={saving || disabled}
                       style={{
@@ -132,18 +121,17 @@ export default function CastingVoteBox(props: {
           );
         })}
       </div>
-
       {err && <div style={{ marginTop: 10, color: "var(--text-error)", fontWeight: 1000 }}>{err}</div>}
       {msg && <div style={{ marginTop: 10, color: "var(--success)", fontWeight: 1000 }}>{msg}</div>}
-
       <button
+        type="button"
         disabled={saving || !complete}
         onClick={save}
         style={{
           marginTop: 12,
           width: "100%",
           padding: "10px 12px",
-          borderRadius: 12,
+          borderRadius: 10,
           border: "1px solid rgba(0,0,0,0.12)",
           background: saving || !complete ? "var(--bg-btn-disabled)" : "var(--bg-btn-send)",
           color: saving || !complete ? "var(--text-primary)" : "var(--text-btn-send)",
@@ -151,7 +139,7 @@ export default function CastingVoteBox(props: {
           cursor: saving || !complete ? "not-allowed" : "pointer",
         }}
       >
-        {saving ? "Saving..." : "Save votes"}
+        {saving ? "Saving..." : "Confirm ranking vote"}
       </button>
     </div>
   );

@@ -3,8 +3,9 @@ import { assignFastingPov } from "@/lib/fastingPov";
 import { assignRookiesHoh } from "@/lib/rookiesHoh";
 import { assignFrookiesHoh } from "@/lib/frookiesHoh";
 
+import { getFastingNomMs } from "@/lib/fastingTiming";
+
 const FASTING_MAX = 15;
-const FASTING_NOM_MS = 2 * 60 * 1000;
 const ROOKIES_DAY_MS = 24 * 60 * 60 * 1000;
 
 const FASTING_STYLE_TYPES = ["FASTING", "FROOKIES", "ROOKIES"] as const;
@@ -37,7 +38,7 @@ export async function tryStartFastingStyleGame(
   const now = new Date();
   const isRookies = gameType === "ROOKIES";
   const isFrookies = gameType === "FROOKIES";
-  const phaseMs = isRookies ? ROOKIES_DAY_MS : FASTING_NOM_MS;
+  const phaseMs = isRookies ? ROOKIES_DAY_MS : getFastingNomMs();
 
   await prisma.game.update({
     where: { id: gameId },
