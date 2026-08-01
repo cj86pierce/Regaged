@@ -9,22 +9,7 @@ import { advanceCastingBotIfDue } from "@/lib/castingBotAdvance";
 import { tryStartFastingBotGame, tryStartFastingStyleBotGame, tryStartCastingBotGame } from "@/lib/gameEngineBot";
 import { applyCastingsPeriodicDecay } from "@/lib/castingsPeriodicDecay";
 import { maybeSpawnCastingsDrops } from "@/lib/castingsDrops";
-
-function requireCronAuth(req: Request) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return null;
-
-  if (req.headers.get("x-vercel-cron") === "1") return null;
-
-  const auth = req.headers.get("authorization") ?? "";
-  const url = new URL(req.url);
-  const qs = url.searchParams.get("secret");
-
-  if (auth === `Bearer ${secret}`) return null;
-  if (qs === secret) return null;
-
-  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-}
+import { requireCronAuth } from "@/lib/cronAuth";
 
 async function runBotTick() {
   const now = new Date();
@@ -125,7 +110,7 @@ async function runBotTick() {
 
 export async function GET(req: Request) {
   if (process.env.CRON_DISABLED === "1") return NextResponse.json({ ok: true, disabled: true });
-  const authErr = requireCronAuth(req);
+  const authErr = await requireCronAuth(req);
   if (authErr) return authErr;
 
   const r = await runBotTick();
@@ -134,7 +119,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   if (process.env.CRON_DISABLED === "1") return NextResponse.json({ ok: true, disabled: true });
-  const authErr = requireCronAuth(req);
+  const authErr = await requireCronAuth(req);
   if (authErr) return authErr;
 
   const r = await runBotTick();

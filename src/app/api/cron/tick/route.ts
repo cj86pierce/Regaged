@@ -1,23 +1,11 @@
 import { NextResponse } from "next/server";
-import { getCurrentUserId } from "@/lib/getCurrentUserId";
+import { requireCronAuth } from "@/lib/cronAuth";
 import { runTick } from "@/lib/runTick";
-
-async function requireCronAuth(req: Request) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return null;
-  if (req.headers.get("x-vercel-cron") === "1") return null;
-  const auth = req.headers.get("authorization") ?? "";
-  const url = new URL(req.url);
-  if (auth === `Bearer ${secret}` || url.searchParams.get("secret") === secret) return null;
-  // Allow authenticated users to trigger tick (keeps games advancing when user has any page open)
-  const userId = await getCurrentUserId(req);
-  if (userId) return null;
-  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-}
 
 async function handleTick(req: Request) {
   if (process.env.CRON_DISABLED === "1") return NextResponse.json({ ok: true, disabled: true });
-  const authErr = await requireCronAuth(req);
+  // Allow authenticated users to trigger tick (keeps games advancing when user has any page open)
+  const authErr = await requireCronAuth(req, { allowLoggedInUser: true });
   if (authErr) return authErr;
 
   try {

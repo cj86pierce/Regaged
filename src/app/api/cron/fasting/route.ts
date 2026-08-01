@@ -1,21 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { advanceFastingIfDue } from "@/lib/fastingAdvance";
-
-function requireCronAuth(req: Request) {
-  // ✅ Allow Vercel Cron header
-  if (req.headers.get("x-vercel-cron") === "1") return null;
-
-  // ✅ Or allow Bearer secret
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return null; // if no secret set, allow
-
-  const auth = req.headers.get("authorization") ?? "";
-  if (auth !== `Bearer ${secret}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  return null;
-}
+import { requireCronAuth } from "@/lib/cronAuth";
 
 async function runFastingTick() {
   const now = new Date();
@@ -61,7 +47,7 @@ async function runFastingTick() {
 export async function GET(req: Request) {
   if (process.env.CRON_DISABLED === "1") return NextResponse.json({ ok: true, disabled: true });
 
-  const authErr = requireCronAuth(req);
+  const authErr = await requireCronAuth(req);
   if (authErr) return authErr;
 
   const r = await runFastingTick();
@@ -71,7 +57,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   if (process.env.CRON_DISABLED === "1") return NextResponse.json({ ok: true, disabled: true });
 
-  const authErr = requireCronAuth(req);
+  const authErr = await requireCronAuth(req);
   if (authErr) return authErr;
 
   const r = await runFastingTick();
