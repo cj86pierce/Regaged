@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  let dbCheck: { database?: string; lastUserCreatedAt?: string; error?: string } = {};
+  const dbCheck: { database?: string; lastUserCreatedAt?: string; error?: string } = {};
   try {
     const db = await prisma.$queryRaw<[{ current_database: string }]>`SELECT current_database() as current_database`;
     dbCheck.database = db[0]?.current_database ?? undefined;

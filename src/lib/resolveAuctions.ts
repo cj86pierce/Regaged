@@ -44,7 +44,7 @@ export async function resolveEndedAuctions(): Promise<{ resolved: number }> {
         await prisma.designOwner.create({
           data: { userId: winnerId, designId: a.designId },
         });
-      } catch (e) {
+      } catch {
         console.warn("DesignOwner create skipped (table may not exist)", { auctionId: a.id });
       }
       resolved++;

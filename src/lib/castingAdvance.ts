@@ -5,7 +5,6 @@
 import { prisma } from "@/lib/prisma";
 import { resolveCastingNominations } from "./castingNoms";
 import { resolveCastingEviction } from "./castingVotes";
-import { finalizeCastingGame } from "./castingEngine";
 import { getDayMsForGame } from "./castingDayLength";
 
 export async function advanceCastingIfDue(gameId: string, options?: { forceDue?: boolean }) {

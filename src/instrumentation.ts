@@ -1,10 +1,10 @@
 /**
  * Runs when the Node server starts. Starts an internal tick so games advance
  * without relying on an external cron (PM2 regaged-cron, crontab, or cron-job.org).
- * The tick uses the same runTick() as /api/cron/tick (with DB advisory lock).
+ * The tick uses the same runTick() as /api/cron/tick.
  */
 
-const TICK_INTERVAL_MS = Number(process.env.TICK_INTERVAL_MS) || 10_000;
+const TICK_INTERVAL_MS = Number(process.env.TICK_INTERVAL_MS) || 15_000;
 const TICK_FIRST_DELAY_MS = 5_000;
 
 export async function register() {

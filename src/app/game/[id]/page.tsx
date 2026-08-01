@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import PlayerStrip from "./components/PlayerStrip";
 import CastingPlayerStrip from "./components/CastingPlayerStrip";
 import ChatPanel from "./components/ChatPanel";
@@ -8,7 +8,6 @@ import CastingChatPanel from "./components/CastingChatPanel";
 import Sidebar from "./components/Sidebar";
 import Tabs from "./components/Tabs";
 import PmPanel from "./components/PmPanel";
-import CastingVoteBox from "./components/CastingVoteBox";
 import type { AvatarConfig } from "@/components/Avatar";
 import CastingSidebar from "./components/CastingSidebar";
 
@@ -83,6 +82,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
 
   const [sending, setSending] = useState(false);
   const [reactingIds, setReactingIds] = useState<Record<string, boolean>>({});
+  const lastZeroTickRef = useRef<string | null>(null);
 
   const [now, setNow] = useState<number>(() => Date.now());
   useEffect(() => {
@@ -108,11 +108,27 @@ export default function GamePage({ params }: { params: { id: string } }) {
     }
   }
 
-  const pollInterval = 5000; // 5s for faster real-time updates
+  const pollInterval = 2000;
   useEffect(() => {
     load().catch((e) => setError(e.message));
     const poll = setInterval(() => load().catch(() => {}), pollInterval);
     return () => clearInterval(poll);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameId, page]);
+
+  useEffect(() => {
+    function refreshVisibleGame() {
+      if (document.visibilityState === "visible") {
+        load({ bust: true }).catch(() => {});
+      }
+    }
+
+    window.addEventListener("focus", refreshVisibleGame);
+    document.addEventListener("visibilitychange", refreshVisibleGame);
+    return () => {
+      window.removeEventListener("focus", refreshVisibleGame);
+      document.removeEventListener("visibilitychange", refreshVisibleGame);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameId, page]);
 
@@ -122,6 +138,21 @@ export default function GamePage({ params }: { params: { id: string } }) {
     const ms = end - now;
     return Math.max(0, Math.ceil(ms / 1000));
   }, [data?.game.stateEndsAt, now]);
+
+  useEffect(() => {
+    const endKey = data?.game.stateEndsAt;
+    if (!data || !endKey || timeLeft !== 0) return;
+    if (data.game.state === "ENROLLING" || data.game.state === "COMPLETED") return;
+    if (lastZeroTickRef.current === endKey) return;
+
+    lastZeroTickRef.current = endKey;
+    (async () => {
+      await fetch("/api/cron/tick", { method: "POST", credentials: "include" }).catch(() => null);
+      await load({ bust: true }).catch(() => null);
+      setTimeout(() => load({ bust: true }).catch(() => null), 750);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data?.game.state, data?.game.stateEndsAt, timeLeft]);
 
   async function sendChat() {
     if (sending) return;
@@ -154,6 +185,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
       if (!prev) return prev;
       return { ...prev, messages: [real, ...prev.messages] };
     });
+    load({ bust: true }).catch(() => {});
   }
 
   async function react(messageId: string, type: "PLUS" | "MINUS") {
@@ -214,7 +246,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
       return;
     }
     setNomSelected([]);
-    load().catch((e) => setError(e.message));
+    load({ bust: true }).catch((e) => setError(e.message));
   }
 
   async function confirmVote() {
@@ -231,7 +263,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
       return;
     }
     setEvictSelected(null);
-    load().catch((e) => setError(e.message));
+    load({ bust: true }).catch((e) => setError(e.message));
   }
 
   async function submitPovSave(targetUserId: string | null) {
@@ -246,7 +278,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
       setError(json?.error ?? "POV save failed");
       return;
     }
-    load().catch((e) => setError(e.message));
+    load({ bust: true }).catch((e) => setError(e.message));
   }
 
   if (!data) return <p style={{ padding: 16 }}>Loading game…</p>;

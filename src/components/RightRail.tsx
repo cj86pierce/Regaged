@@ -78,7 +78,7 @@ export default async function RightRail() {
         )}
       </Card>
     );
-  } catch (e) {
+  } catch {
     return (
       <Card title="My Active Games">
         <div style={{ fontSize: 12, opacity: 0.7 }}>Unable to load games.</div>

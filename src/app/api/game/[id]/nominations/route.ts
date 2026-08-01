@@ -3,7 +3,7 @@ import { getCurrentUserId } from "@/lib/getCurrentUserId";
 import { prisma } from "@/lib/prisma";
 import { touchUser } from "@/lib/touchUser";
 
-const FAST_FORWARD_SECONDS = 15;
+const FAST_FORWARD_SECONDS = 3;
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   const userId = await getCurrentUserId(req);

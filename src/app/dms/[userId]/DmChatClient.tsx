@@ -14,7 +14,6 @@ type Msg = {
 
 export default function DmChatClient({
   otherUserId,
-  otherUsername,
 }: {
   otherUserId: string;
   otherUsername: string;

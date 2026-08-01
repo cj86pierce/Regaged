@@ -13,17 +13,29 @@ export type TickResult =
   | { skipped: true; reason: "locked" }
   | Record<string, unknown>;
 
+const TICK_LOCK_STALE_MS = 5 * 60 * 1000;
+
+declare global {
+  // eslint-disable-next-line no-var
+  var __regagedTickLock: { startedAt: number } | undefined;
+}
+
 /**
  * Run the main game tick: advance fasting/casting rounds, bot games, auctions, etc.
- * Uses a global DB advisory lock so only one tick runs at a time (safe with internal + HTTP triggers).
+ * Uses an in-process guard so local page pings cannot overlap.
+ * Avoid DB session advisory locks here: Supabase poolers can keep those locks stuck
+ * when lock/unlock land on different backend connections.
  */
 export async function runTick(): Promise<TickResult> {
   const now = new Date();
 
-  const lockRows = await prisma.$queryRaw<{ locked: boolean }[]>`
-    SELECT pg_try_advisory_lock(hashtext('cron_tick')) as locked
-  `;
-  if (!lockRows?.[0]?.locked) return { skipped: true, reason: "locked" };
+  const startedAt = Date.now();
+  const currentLock = globalThis.__regagedTickLock;
+  if (currentLock && startedAt - currentLock.startedAt < TICK_LOCK_STALE_MS) {
+    return { skipped: true, reason: "locked" };
+  }
+  const lock = { startedAt };
+  globalThis.__regagedTickLock = lock;
 
   try {
     // -----------------------
@@ -189,6 +201,8 @@ export async function runTick(): Promise<TickResult> {
 
     return result;
   } finally {
-    await prisma.$queryRaw`SELECT pg_advisory_unlock(hashtext('cron_tick'))`;
+    if (globalThis.__regagedTickLock === lock) {
+      globalThis.__regagedTickLock = undefined;
+    }
   }
 }

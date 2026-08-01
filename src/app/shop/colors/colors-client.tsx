@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 type Me = { username: string; karma: number; tMoney: number; pMoney: number };
 

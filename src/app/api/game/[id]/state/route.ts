@@ -104,7 +104,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   // -----------------------
   // CASTING drop events (for messages on this page)
   // -----------------------
-  let dropEvents: Record<
+  const dropEvents: Record<
     string,
     { eventId: string; claimedAt: string | null; options: { slotIndex: number; kind: "APPLE" | "KEY" | "POISON" }[] }
   > = {};
