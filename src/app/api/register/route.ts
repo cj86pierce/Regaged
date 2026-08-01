@@ -28,7 +28,7 @@ export async function POST(req: Request) {
   const hit = checkBlockedContent(usernameRaw);
   if (hit) return errJson("Username contains blocked language.", 400);
 
-  if (password.length < 4) return errJson("Password too short.");
+  if (password.length < 6) return errJson("Password must be at least 6 characters.");
 
   const usernameLower = usernameRaw.toLowerCase();
 
