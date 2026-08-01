@@ -276,7 +276,7 @@ function RemoveFriendButton({ friendId, onRemoved }: { friendId: string; onRemov
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="theme-card" style={{ borderRadius: 14, boxShadow: "var(--shadow-card)", overflow: "hidden" }}>
+    <div className="theme-card" style={{ borderRadius: 4, boxShadow: "var(--shadow-card)", overflow: "hidden" }}>
       <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--border)", fontWeight: 1000 }}>{title}</div>
       <div style={{ padding: 14 }}>{children}</div>
     </div>

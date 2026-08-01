@@ -268,7 +268,7 @@ export default function Avatar({
         width: w,
         height: h,
         position: "relative",
-        borderRadius: 12,
+        borderRadius: 3,
         overflow: "hidden",
         border: "1px solid rgba(0,0,0,0.15)",
         background: backgroundImg ? undefined : (safe.backgroundColor ?? DEFAULTS.backgroundColor),

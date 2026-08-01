@@ -225,7 +225,7 @@ export default function AvatarEditor({
       <h1 style={{ marginTop: 0 }}>Customize Avatar</h1>
 
       <div style={{ display: "grid", gridTemplateColumns: "360px 1fr", gap: 14 }}>
-        <div style={{ border: "1px solid rgba(0,0,0,0.10)", borderRadius: 14, padding: 12, background: "var(--bg-card)" }}>
+        <div style={{ border: "1px solid rgba(0,0,0,0.10)", borderRadius: 4, padding: 12, background: "var(--bg-card)" }}>
           <div style={{ fontWeight: 900, marginBottom: 10 }}>Preview</div>
           <Avatar config={cfg} width={240} slotDesigns={slotDesigns} />
           <button
@@ -235,7 +235,7 @@ export default function AvatarEditor({
               marginTop: 12,
               width: "100%",
               padding: "10px 12px",
-              borderRadius: 12,
+              borderRadius: 3,
               border: "1px solid var(--border)",
               background: saving ? "var(--bg-btn-disabled)" : "var(--bid-btn-bg)",
               color: saving ? "var(--text-muted)" : "var(--bid-btn-text)",
@@ -249,7 +249,7 @@ export default function AvatarEditor({
           {msg && <div style={{ marginTop: 10, fontWeight: 900, color: "var(--text-primary)" }}>{msg}</div>}
         </div>
 
-        <div style={{ border: "1px solid var(--border)", borderRadius: 14, padding: 12, background: "var(--bg-card)" }}>
+        <div style={{ border: "1px solid var(--border)", borderRadius: 4, padding: 12, background: "var(--bg-card)" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
             <StylePicker
               label="Body"

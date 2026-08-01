@@ -7,6 +7,7 @@ import ProfileTabs, { ProfileTabsData, ProfileGameBubble } from "@/components/Pr
 import Link from "next/link";
 import type { AvatarConfig } from "@/components/Avatar";
 import { getSlotDesignsForUser, getSlotDesignsForUserIds } from "@/lib/avatarSlotDesigns";
+import { sortProfileGames } from "@/lib/sortProfileGames";
 
 function oneOf(v: string, allowed: string[], fallback: string) {
   return allowed.includes(v) ? v : fallback;
@@ -53,7 +54,7 @@ export default async function PublicProfilePage({
   if (!user) {
     return (
       <main style={{ padding: 8 }}>
-        <div style={{ border: "1px solid var(--border)", borderRadius: 14, background: "var(--bg-card)", padding: 14 }}>
+        <div style={{ border: "1px solid var(--border)", borderRadius: 4, background: "var(--bg-card)", padding: 14 }}>
           <h1 style={{ marginTop: 0 }}>Profile</h1>
           <p>User not found.</p>
           <Link href="/">Back to home</Link>
@@ -96,15 +97,17 @@ export default async function PublicProfilePage({
     },
   });
 
-  const all: ProfileGameBubble[] = raw.map((r) => ({
-    gameId: r.gameId,
-    gameNumber: r.game.number,
-    gameType: r.game.gameType,
-    state: r.game.state,
-    joinedAt: r.joinedAt.toISOString(),
-    yourStatus: r.status,
-    eliminatedPlace: r.eliminatedPlace ?? null,
-  }));
+  const all: ProfileGameBubble[] = sortProfileGames(
+    raw.map((r) => ({
+      gameId: r.gameId,
+      gameNumber: r.game.number,
+      gameType: r.game.gameType,
+      state: r.game.state,
+      joinedAt: r.joinedAt.toISOString(),
+      yourStatus: r.status,
+      eliminatedPlace: r.eliminatedPlace ?? null,
+    }))
+  );
 
   const pageSize = 6;
   const page = Math.max(1, Number(searchParams?.page ?? "1") || 1);

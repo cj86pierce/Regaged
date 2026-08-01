@@ -58,7 +58,7 @@ export default function CastingPlayerStrip(props: {
       className="gameCastingStrip theme-sidebar-panel"
       style={{
         border: "1px solid var(--border)",
-        borderRadius: 12,
+        borderRadius: 4,
         padding: 10,
       }}
     >
@@ -148,7 +148,7 @@ export default function CastingPlayerStrip(props: {
           className="gameCastingStripStats"
           style={{
             border: "1px solid rgba(0,0,0,0.10)",
-            borderRadius: 12,
+            borderRadius: 4,
             padding: 12,
             background: "var(--bg-card)",
             minHeight: 140,

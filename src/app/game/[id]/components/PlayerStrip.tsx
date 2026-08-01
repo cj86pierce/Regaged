@@ -86,7 +86,7 @@ export default function PlayerStrip(props: {
   }
 
   return (
-    <div className="theme-sidebar-panel" style={{ borderRadius: 10, padding: "6px 8px", overflow: "hidden" }}>
+    <div className="theme-sidebar-panel" style={{ borderRadius: 4, padding: "6px 8px", overflow: "hidden" }}>
       <div className="gamePlayerStrip" style={{ display: "grid", gridTemplateColumns: "repeat(15, minmax(0, 1fr))", gap: 4, alignItems: "start" }}>
         {players.map((p) => {
           const isPov = p.userId === povUserId;
