@@ -1,5 +1,8 @@
 /** Built-in avatar style ids (must match files under public/avatars/). */
 
+/** Bump when regenerating public/avatars assets so browsers/tint cache reload them. */
+export const AVATAR_ASSET_VERSION = "20260801c";
+
 export const BODY_STYLES = ["body_m", "body_f"] as const;
 
 export const HAIR_STYLES = [

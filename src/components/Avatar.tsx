@@ -1,6 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { AVATAR_ASSET_VERSION } from "@/lib/avatarStyles";
+
+function assetUrl(path: string | null): string | null {
+  if (!path) return null;
+  const sep = path.includes("?") ? "&" : "?";
+  return `${path}${sep}v=${AVATAR_ASSET_VERSION}`;
+}
 
 export type AvatarConfig = {
   bodyStyle: "body_m" | "body_f";
@@ -220,20 +227,24 @@ export default function Avatar({
     [config]
   );
 
-  const bodySrc = `/avatars/body/${safe.bodyStyle}.png`;
-  const shirtBaseSrc = `/avatars/shirts/${safe.shirtStyle}_base.png`;
-  const shirtHighlightSrc = `/avatars/shirts/${safe.shirtStyle}_highlight.png`;
+  const bodySrc = assetUrl(`/avatars/body/${safe.bodyStyle}.png`)!;
+  const shirtBaseSrc = assetUrl(`/avatars/shirts/${safe.shirtStyle}_base.png`)!;
+  const shirtHighlightSrc = assetUrl(`/avatars/shirts/${safe.shirtStyle}_highlight.png`)!;
   const hasHighlight = safe.shirtStyle === "shirt_01";
-  const mouthSrc = `/avatars/mouth/${safe.mouthStyle}.png`;
-  const hairSrc = `/avatars/hair/${safe.hairStyle}.png`;
-  const eyesWhiteSrc = `/avatars/eyes/${safe.eyesStyle}_white.png`;
-  const eyesIrisSrc = `/avatars/eyes/${safe.eyesStyle}.png`;
-  const accessorySrc =
-    safe.accessoryStyle !== "none" ? `/avatars/accessories/${safe.accessoryStyle}.png` : null;
-  const glassesSrc = safe.glassesStyle !== "none" ? `/avatars/glasses/${safe.glassesStyle}.png` : null;
-  const scarSrc = safe.scarStyle !== "none" ? `/avatars/scars/${safe.scarStyle}.png` : null;
-  const hairOrnamentSrc =
-    safe.hairOrnamentStyle !== "none" ? `/avatars/hair-ornaments/${safe.hairOrnamentStyle}.png` : null;
+  const mouthSrc = assetUrl(`/avatars/mouth/${safe.mouthStyle}.png`)!;
+  const hairSrc = assetUrl(`/avatars/hair/${safe.hairStyle}.png`)!;
+  const eyesWhiteSrc = assetUrl(`/avatars/eyes/${safe.eyesStyle}_white.png`)!;
+  const eyesIrisSrc = assetUrl(`/avatars/eyes/${safe.eyesStyle}.png`)!;
+  const accessorySrc = assetUrl(
+    safe.accessoryStyle !== "none" ? `/avatars/accessories/${safe.accessoryStyle}.png` : null
+  );
+  const glassesSrc = assetUrl(
+    safe.glassesStyle !== "none" ? `/avatars/glasses/${safe.glassesStyle}.png` : null
+  );
+  const scarSrc = assetUrl(safe.scarStyle !== "none" ? `/avatars/scars/${safe.scarStyle}.png` : null);
+  const hairOrnamentSrc = assetUrl(
+    safe.hairOrnamentStyle !== "none" ? `/avatars/hair-ornaments/${safe.hairOrnamentStyle}.png` : null
+  );
 
   const bodyTinted = useTint(slotDesigns?.BODY ? null : bodySrc, safe.bodyColor);
   const shirtTinted = useTint(slotDesigns?.SHIRT ? null : shirtBaseSrc, safe.shirtColor);
