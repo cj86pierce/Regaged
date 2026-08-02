@@ -100,10 +100,10 @@ export const STYLE_LABELS: Record<string, string> = {
   hair_m_06: "Pompadour",
   hair_f_01: "Long Straight",
   hair_f_02: "Long Side",
-  hair_f_03: "Long Layers",
+  hair_f_03: "Long Braids",
   hair_f_04: "Top Bun",
   hair_f_05: "Bob",
-  hair_f_06: "Pigtails",
+  hair_f_06: "Short Braids",
 
   // Eyes
   eyes_01: "Dots",

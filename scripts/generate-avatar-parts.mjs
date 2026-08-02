@@ -526,12 +526,25 @@ function mouth12_pout() {
   save(png, "public/avatars/mouth/mouth_12.png");
 }
 
-// ---------- hair (built from original hand-drawn bases so they fit the head) ----------
+// ---------- hair: morph original hand-drawn pixels (no geometric blobs) ----------
 function cloneLayer(srcRel) {
   const src = loadPng(srcRel);
   const png = blank();
   src.data.copy(png.data);
   return png;
+}
+
+function pix(png, x, y) {
+  x = Math.round(x);
+  y = Math.round(y);
+  if (x < 0 || y < 0 || x >= W || y >= H) return [0, 0, 0, 0];
+  const i = (W * y + x) << 2;
+  return [png.data[i], png.data[i + 1], png.data[i + 2], png.data[i + 3]];
+}
+
+function topYAt(png, x) {
+  for (let y = 0; y < H; y++) if (png.data[((W * y + x) << 2) + 3] > 12) return y;
+  return -1;
 }
 
 function trimBelow(png, baseY, curve = 0) {
@@ -543,75 +556,130 @@ function trimBelow(png, baseY, curve = 0) {
   }
 }
 
-function paintIfEmpty(png, x, y, rgba) {
-  x = Math.round(x);
-  y = Math.round(y);
-  if (x < 0 || y < 0 || x >= W || y >= H) return;
-  if (png.data[((W * y + x) << 2) + 3] > 10) return;
-  set(png, x, y, rgba);
-}
-
-/** Dark strand ticks only on already-opaque hair pixels. */
-function strandDetail(png, x0, y0, x1, y1, step = 4) {
-  for (let y = y0; y <= y1; y += step) {
-    for (let x = x0; x <= x1; x++) {
+/** Soften a hard cut edge by fading alpha on the last few rows. */
+function softenBottom(png, fromY, toY) {
+  for (let y = fromY; y <= toY; y++) {
+    const t = (y - fromY) / Math.max(1, toY - fromY);
+    for (let x = 0; x < W; x++) {
       const i = (W * y + x) << 2;
-      if (png.data[i + 3] > 200 && (x + y * 3) % 11 === 0) set(png, x, y, MID);
+      if (png.data[i + 3] <= 10) continue;
+      png.data[i + 3] = Math.round(png.data[i + 3] * (1 - t * 0.85));
     }
   }
 }
 
 function hair_m_04_spiky() {
+  // Grow soft peaks from hair_m_02's real top edge (keeps fringe/sideburns/AA)
   const png = cloneLayer("public/avatars/hair/hair_m_02.png");
-  // irregular clumps rooted in crown (not a perfect crown of triangles)
-  const spikes = [
-    [66, 50, 58, 28, 5],
-    [80, 46, 74, 20, 6],
-    [96, 44, 94, 16, 7],
-    [104, 44, 106, 15, 7],
-    [120, 46, 126, 20, 6],
-    [134, 50, 142, 28, 5],
+  const peaks = [
+    { x: 70, h: 18, w: 9 },
+    { x: 86, h: 24, w: 8 },
+    { x: 100, h: 28, w: 9 },
+    { x: 114, h: 24, w: 8 },
+    { x: 130, h: 18, w: 9 },
   ];
-  for (const [bx, by, tx, ty, half] of spikes) {
-    fillPolygon(png, [[bx - half, by + 8], [bx + half, by + 8], [tx, ty]], FILL);
-    fillPolygon(png, [[bx - half + 1, by + 4], [bx + half - 1, by + 4], [tx, ty + 6]], MID);
+  for (let x = 50; x <= 150; x++) {
+    let lift = 0;
+    for (const p of peaks) {
+      const d = (x - p.x) / p.w;
+      lift = Math.max(lift, p.h * Math.exp(-d * d));
+    }
+    lift = Math.round(lift);
+    if (lift < 2) continue;
+    const ty = topYAt(png, x);
+    if (ty < 0) continue;
+    for (let k = 0; k < lift; k++) {
+      const srcY = Math.min(H - 1, ty + Math.min(4, Math.floor(k / 4)));
+      const dstY = ty - lift + k;
+      const [r, g, b, a] = pix(png, x, srcY);
+      if (a <= 12) continue;
+      // taper alpha near tip
+      const tipT = k / lift;
+      const aa = tipT < 0.2 ? Math.round(a * (tipT / 0.2)) : a;
+      set(png, x, dstY, [r, g, b, aa]);
+      // slight thickness
+      if (aa > 40) {
+        const [r2, g2, b2, a2] = pix(png, x, srcY + 1);
+        if (a2 > 12) set(png, x, dstY + 1, [r2, g2, b2, Math.round(a2 * 0.7)]);
+      }
+    }
   }
-  strandDetail(png, 50, 44, 150, 74, 3);
   save(png, "public/avatars/hair/hair_m_04.png");
 }
 
 function hair_m_05_buzz() {
-  // Smooth scalp cap following head curve (from m_01)
-  const png = cloneLayer("public/avatars/hair/hair_m_01.png");
+  // Clean short cap carved from m_02 (same AA/gray as originals)
+  const png = cloneLayer("public/avatars/hair/hair_m_02.png");
+  const cx = 100,
+    cy = 58,
+    rx = 50,
+    ry = 24;
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
-      if (png.data[((W * y + x) << 2) + 3] <= 10) continue;
-      // keep only upper dome; curved bottom ~y66-70
-      const rim = 66 + Math.abs(x - 100) * 0.04;
-      if (y > rim) set(png, x, y, CLEAR);
+      const i = (W * y + x) << 2;
+      if (png.data[i + 3] <= 10) continue;
+      const nx = (x - cx) / rx;
+      const ny = (y - cy) / ry;
+      const d = nx * nx + ny * ny;
+      if (d > 1.05 || y > 72) {
+        set(png, x, y, CLEAR);
+      } else if (d > 0.82) {
+        // soft rim
+        const fade = 1 - (d - 0.82) / 0.23;
+        png.data[i + 3] = Math.round(png.data[i + 3] * Math.max(0, fade));
+      }
     }
   }
-  // subtle scalp texture
-  for (let y = 48; y <= 64; y += 2) {
-    for (let x = 60; x <= 140; x += 3) {
-      if (png.data[((W * y + x) << 2) + 3] > 200) set(png, x, y, MID);
+  // short temple fades only (not long sideburns)
+  const src = loadPng("public/avatars/hair/hair_m_02.png");
+  for (let y = 72; y <= 82; y++) {
+    for (let x = 0; x < W; x++) {
+      if (x > 54 && x < 146) continue;
+      const i = (W * y + x) << 2;
+      if (src.data[i + 3] > 12) {
+        const fade = 1 - (y - 72) / 10;
+        png.data[i] = src.data[i];
+        png.data[i + 1] = src.data[i + 1];
+        png.data[i + 2] = src.data[i + 2];
+        png.data[i + 3] = Math.round(src.data[i + 3] * fade);
+      }
     }
   }
   save(png, "public/avatars/hair/hair_m_05.png");
 }
 
 function hair_m_06_pompadour() {
+  // Vertically stretch the crown of m_02 upward (real pixels, not ellipses)
+  const base = cloneLayer("public/avatars/hair/hair_m_02.png");
   const png = cloneLayer("public/avatars/hair/hair_m_02.png");
-  const base = loadPng("public/avatars/hair/hair_m_02.png");
-  // tall swept mound
-  fillEllipse(png, 96, 38, 22, 16, FILL);
-  fillEllipse(png, 88, 44, 20, 14, FILL);
-  fillEllipse(png, 100, 48, 28, 12, FILL);
-  // highlight + shadow for volume
-  fillEllipse(png, 90, 36, 10, 8, LIGHT);
-  fillEllipse(png, 108, 48, 12, 6, MID);
-  // restore original fringe/face window below y70
-  for (let y = 70; y < H; y++) {
+  const y0 = 40,
+    y1 = 70,
+    factor = 1.75;
+  const extra = Math.round((y1 - y0) * (factor - 1));
+  // clear the stretch destination band
+  for (let y = y0 - extra; y < y1; y++) {
+    for (let x = 55; x <= 145; x++) set(png, x, y, CLEAR);
+  }
+  for (let y = y0 - extra; y < y1; y++) {
+    const srcY = y0 + (y - (y0 - extra)) / factor;
+    const sy0 = Math.floor(srcY);
+    const sy1 = Math.min(H - 1, sy0 + 1);
+    const t = srcY - sy0;
+    for (let x = 55; x <= 145; x++) {
+      // only rewrite crown region (leave sideburns of lower base later)
+      const [r0, g0, b0, a0] = pix(base, x, sy0);
+      const [r1, g1, b1, a1] = pix(base, x, sy1);
+      if (a0 <= 12 && a1 <= 12) continue;
+      const a = Math.round(a0 * (1 - t) + a1 * t);
+      if (a <= 12) continue;
+      const r = Math.round(r0 * (1 - t) + r1 * t);
+      const g = Math.round(g0 * (1 - t) + g1 * t);
+      const b = Math.round(b0 * (1 - t) + b1 * t);
+      set(png, x, y, [r, g, b, a]);
+    }
+  }
+  // restore original from fringe down (face window + sideburns)
+  for (let y = 72; y < H; y++) {
     for (let x = 0; x < W; x++) {
       const i = (W * y + x) << 2;
       png.data[i] = base.data[i];
@@ -620,102 +688,109 @@ function hair_m_06_pompadour() {
       png.data[i + 3] = base.data[i + 3];
     }
   }
-  strandDetail(png, 70, 28, 130, 68, 3);
+  // subtle darker underside of pompadour for volume
+  for (let y = 48; y <= 60; y++) {
+    for (let x = 78; x <= 122; x++) {
+      const i = (W * y + x) << 2;
+      if (png.data[i + 3] > 200 && y > 54) {
+        png.data[i] = Math.max(100, png.data[i] - 30);
+        png.data[i + 1] = png.data[i];
+        png.data[i + 2] = png.data[i];
+      }
+    }
+  }
   save(png, "public/avatars/hair/hair_m_06.png");
 }
 
 function hair_f_04_bun() {
+  // Shoulder-length f_01 + bun made by copying/scaling crown pixels upward
   const png = cloneLayer("public/avatars/hair/hair_f_01.png");
-  trimBelow(png, 142, 8);
-  // connected bun with shading rings
-  fillCircle(png, 100, 36, 15, FILL);
-  fillEllipse(png, 100, 46, 17, 9, FILL);
-  fillCircle(png, 100, 34, 9, LIGHT);
-  fillEllipse(png, 100, 42, 12, 5, MID);
-  strokeLine(png, 100, 44, 100, 56, DARK, 1);
-  strandDetail(png, 40, 50, 70, 140, 5);
-  strandDetail(png, 130, 50, 160, 140, 5);
+  trimBelow(png, 145, 10);
+  softenBottom(png, 138, 148);
+  const base = cloneLayer("public/avatars/hair/hair_f_01.png");
+  // stamp a soft bun from crown samples
+  for (let dy = -16; dy <= 10; dy++) {
+    for (let dx = -16; dx <= 16; dx++) {
+      const dist = Math.hypot(dx / 15, dy / 12);
+      if (dist > 1) continue;
+      const sx = 100 + Math.round(dx * 0.55);
+      const sy = 56 + Math.round(dy * 0.35 + 4);
+      const [r, g, b, a] = pix(base, sx, sy);
+      if (a <= 12) continue;
+      const aa = Math.round(a * Math.max(0, 1 - dist * dist));
+      const dstX = 100 + dx;
+      const dstY = 36 + dy;
+      // prefer denser coverage; don't wipe darker part line entirely
+      const curA = pix(png, dstX, dstY)[3];
+      if (aa > curA) set(png, dstX, dstY, [r, g, b, aa]);
+    }
+  }
+  // keep the original middle part notch visible on bun base
+  strokeLine(png, 100, 48, 100, 58, DARK, 1);
   save(png, "public/avatars/hair/hair_f_04.png");
 }
 
 function hair_f_05_bob() {
+  // Chin bob from f_01 — clean trim + soft bangs from crown pixels
   const png = cloneLayer("public/avatars/hair/hair_f_01.png");
-  trimBelow(png, 150, 12);
-  // bangs across forehead
-  for (let x = 64; x <= 136; x++) {
-    for (let y = 60; y <= 76; y++) {
-      const edge = 68 + Math.sin(((x - 64) / 72) * Math.PI) * 5;
-      if (y <= edge) paintIfEmpty(png, x, y, FILL);
+  trimBelow(png, 152, 12);
+  softenBottom(png, 145, 155);
+  const base = cloneLayer("public/avatars/hair/hair_f_01.png");
+  // soft bangs: project crown underside into forehead
+  for (let x = 66; x <= 134; x++) {
+    for (let y = 64; y <= 76; y++) {
+      const [r, g, b, a] = pix(base, x, 58 + Math.floor((y - 64) * 0.4));
+      if (a <= 12) continue;
+      const edge = 72 + Math.sin(((x - 66) / 68) * Math.PI) * 4;
+      if (y > edge) continue;
+      const fade = 1 - (y - 64) / Math.max(1, edge - 64);
+      set(png, x, y, [r, g, b, Math.round(a * Math.max(0.35, fade))]);
     }
   }
-  // keep face open under bangs
-  for (let y = 78; y <= 140; y++) {
+  // ensure eyes stay open
+  for (let y = 78; y <= 135; y++) {
     for (let x = 74; x <= 126; x++) set(png, x, y, CLEAR);
   }
-  // restore side falls from original
-  const src = loadPng("public/avatars/hair/hair_f_01.png");
-  for (let y = 78; y <= 152; y++) {
+  // restore side locks
+  for (let y = 78; y <= 155; y++) {
     for (let x = 0; x < W; x++) {
       if (x > 72 && x < 128) continue;
       const i = (W * y + x) << 2;
-      if (src.data[i + 3] > 10) {
-        png.data[i] = src.data[i];
-        png.data[i + 1] = src.data[i + 1];
-        png.data[i + 2] = src.data[i + 2];
-        png.data[i + 3] = src.data[i + 3];
+      if (base.data[i + 3] > 12) {
+        png.data[i] = base.data[i];
+        png.data[i + 1] = base.data[i + 1];
+        png.data[i + 2] = base.data[i + 2];
+        png.data[i + 3] = base.data[i + 3];
       }
     }
   }
-  trimBelow(png, 150, 12);
-  // tip shading on ends
-  for (let y = 140; y <= 152; y++) {
-    for (let x = 38; x <= 70; x++) if (png.data[((W * y + x) << 2) + 3] > 200) set(png, x, y, MID);
-    for (let x = 130; x <= 162; x++) if (png.data[((W * y + x) << 2) + 3] > 200) set(png, x, y, MID);
-  }
-  // bang strand ticks
-  for (let x = 70; x <= 130; x += 5) {
-    if (png.data[((W * 66 + x) << 2) + 3] > 200) strokeLine(png, x, 62, x, 70, MID, 1);
-  }
+  trimBelow(png, 152, 12);
+  softenBottom(png, 145, 155);
   save(png, "public/avatars/hair/hair_f_05.png");
 }
 
 function hair_f_06_pigtails() {
-  // Inspired by hair_f_03 braid detail, but shorter twin tails
-  const png = cloneLayer("public/avatars/hair/hair_f_01.png");
-  for (let y = 88; y < H; y++) for (let x = 0; x < W; x++) set(png, x, y, CLEAR);
-
-  const src = loadPng("public/avatars/hair/hair_f_01.png");
-  for (let y = 68; y <= 100; y++) {
+  // Shorten the hand-drawn braid style (hair_f_03) — already detailed/polished
+  const png = cloneLayer("public/avatars/hair/hair_f_03.png");
+  // cut length, keep braid texture
+  trimBelow(png, 168, 10);
+  softenBottom(png, 160, 172);
+  // slight inward tuck at tips for a tied look
+  for (let y = 150; y <= 170; y++) {
     for (let x = 0; x < W; x++) {
       const i = (W * y + x) << 2;
-      if (src.data[i + 3] > 10 && (x <= 64 || x >= 136)) {
-        png.data[i] = src.data[i];
-        png.data[i + 1] = src.data[i + 1];
-        png.data[i + 2] = src.data[i + 2];
-        png.data[i + 3] = src.data[i + 3];
+      if (png.data[i + 3] <= 12) continue;
+      // nudge outer pixels inward a bit by clearing far edges
+      if (x < 48 + (y - 150) * 0.15 || x > 152 - (y - 150) * 0.15) {
+        if (x < 55 || x > 145) set(png, x, y, CLEAR);
       }
     }
   }
-
-  function braidTail(cx, topY) {
-    fillPolygon(png, [[cx - 10, topY], [cx + 10, topY], [cx + 12, topY + 20], [cx - 12, topY + 20]], FILL);
-    fillEllipse(png, cx, topY + 40, 13, 22, FILL);
-    fillEllipse(png, cx, topY + 68, 11, 18, FILL);
-    // braid chevrons like f_03
-    for (let y = topY + 8; y < topY + 85; y += 7) {
-      strokePolyline(png, [[cx - 8, y], [cx, y + 3], [cx + 8, y]], DARK, 1.2);
-      strokePolyline(png, [[cx - 6, y + 3], [cx, y + 6], [cx + 6, y + 3]], MID, 1);
-    }
-    // tie
-    fillEllipse(png, cx, topY + 22, 7, 4, DARK);
-    fillEllipse(png, cx, topY + 22, 4, 2, SHADOW);
-  }
-
-  braidTail(50, 78);
-  braidTail(150, 78);
-  // connect to crown
-  fillPolygon(png, [[42, 72], [62, 68], [58, 90], [40, 88]], FILL);
-  fillPolygon(png, [[158, 72], [138, 68], [142, 90], [160, 88]], FILL);
+  // soft ties near mid-braid
+  fillEllipse(png, 52, 120, 6, 3, DARK);
+  fillEllipse(png, 148, 120, 6, 3, DARK);
+  fillEllipse(png, 52, 120, 3, 1.5, SHADOW);
+  fillEllipse(png, 148, 120, 3, 1.5, SHADOW);
   save(png, "public/avatars/hair/hair_f_06.png");
 }
 
