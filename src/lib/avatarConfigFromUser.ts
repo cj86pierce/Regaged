@@ -1,6 +1,14 @@
 import type { AvatarConfig } from "@/components/Avatar";
+import {
+  ACCESSORY_STYLES,
+  BODY_STYLES,
+  EYES_STYLES,
+  HAIR_STYLES,
+  MOUTH_STYLES,
+  SHIRT_STYLES,
+} from "@/lib/avatarStyles";
 
-function oneOf(v: string, allowed: string[], fallback: string) {
+function oneOf(v: string, allowed: readonly string[], fallback: string) {
   return allowed.includes(v) ? v : fallback;
 }
 
@@ -28,12 +36,12 @@ type UserAvatarFields = {
 
 export function avatarConfigFromUser(user: UserAvatarFields): AvatarConfig {
   return {
-    bodyStyle: oneOf(user.bodyStyle, ["body_m", "body_f"], "body_m") as "body_m" | "body_f",
-    hairStyle: oneOf(user.hairStyle, ["hair_m_01", "hair_m_02", "hair_m_03", "hair_f_01", "hair_f_02", "hair_f_03"], "hair_m_01"),
-    eyesStyle: oneOf(user.eyesStyle, ["eyes_01", "eyes_02", "eyes_03", "eyes_04", "eyes_05", "eyes_06"], "eyes_01"),
-    mouthStyle: oneOf(user.mouthStyle, ["mouth_01", "mouth_02", "mouth_03", "mouth_04", "mouth_05", "mouth_06"], "mouth_01"),
-    shirtStyle: oneOf(user.shirtStyle, ["shirt_01", "shirt_02", "shirt_03", "shirt_04", "shirt_05", "shirt_06"], "shirt_01"),
-    accessoryStyle: oneOf(user.accessoryStyle, ["none", "accessory_01"], "none"),
+    bodyStyle: oneOf(user.bodyStyle, BODY_STYLES, "body_m") as "body_m" | "body_f",
+    hairStyle: oneOf(user.hairStyle, HAIR_STYLES, "hair_m_01"),
+    eyesStyle: oneOf(user.eyesStyle, EYES_STYLES, "eyes_01"),
+    mouthStyle: oneOf(user.mouthStyle, MOUTH_STYLES, "mouth_01"),
+    shirtStyle: oneOf(user.shirtStyle, SHIRT_STYLES, "shirt_01"),
+    accessoryStyle: oneOf(user.accessoryStyle, ACCESSORY_STYLES, "none"),
     glassesStyle: oneOf(user.glassesStyle ?? "none", ["none"], "none"),
     scarStyle: oneOf(user.scarStyle ?? "none", ["none"], "none"),
     hairOrnamentStyle: oneOf(user.hairOrnamentStyle ?? "none", ["none"], "none"),

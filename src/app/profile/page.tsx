@@ -8,8 +8,17 @@ import Link from "next/link";
 import type { AvatarConfig } from "@/components/Avatar";
 import { getSlotDesignsForUser, getSlotDesignsForUserIds } from "@/lib/avatarSlotDesigns";
 import { sortProfileGames } from "@/lib/sortProfileGames";
+import { avatarConfigFromUser } from "@/lib/avatarConfigFromUser";
+import {
+  ACCESSORY_STYLES,
+  BODY_STYLES,
+  EYES_STYLES,
+  HAIR_STYLES,
+  MOUTH_STYLES,
+  SHIRT_STYLES,
+} from "@/lib/avatarStyles";
 
-function oneOf(v: string, allowed: string[], fallback: string) {
+function oneOf(v: string, allowed: readonly string[], fallback: string) {
   return allowed.includes(v) ? v : fallback;
 }
 
@@ -160,12 +169,12 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
     isMutual: mutualSet.has(f.friend.id),
     slotDesigns: friendSlotDesigns[f.friend.id] ?? {},
     avatar: {
-      bodyStyle: oneOf(f.friend.bodyStyle, ["body_m", "body_f"], "body_m") as "body_m" | "body_f",
-      hairStyle: oneOf(f.friend.hairStyle, ["hair_m_01","hair_m_02","hair_m_03","hair_f_01","hair_f_02","hair_f_03"], "hair_m_01"),
-      eyesStyle: oneOf(f.friend.eyesStyle, ["eyes_01","eyes_02","eyes_03","eyes_04","eyes_05","eyes_06"], "eyes_01"),
-      mouthStyle: oneOf(f.friend.mouthStyle, ["mouth_01","mouth_02","mouth_03","mouth_04","mouth_05","mouth_06"], "mouth_01"),
-      shirtStyle: oneOf(f.friend.shirtStyle, ["shirt_01","shirt_02","shirt_03","shirt_04","shirt_05","shirt_06"], "shirt_01"),
-      accessoryStyle: oneOf(f.friend.accessoryStyle, ["none","accessory_01"], "none"),
+      bodyStyle: oneOf(f.friend.bodyStyle, BODY_STYLES, "body_m") as "body_m" | "body_f",
+      hairStyle: oneOf(f.friend.hairStyle, HAIR_STYLES, "hair_m_01"),
+      eyesStyle: oneOf(f.friend.eyesStyle, EYES_STYLES, "eyes_01"),
+      mouthStyle: oneOf(f.friend.mouthStyle, MOUTH_STYLES, "mouth_01"),
+      shirtStyle: oneOf(f.friend.shirtStyle, SHIRT_STYLES, "shirt_01"),
+      accessoryStyle: oneOf(f.friend.accessoryStyle, ACCESSORY_STYLES, "none"),
       glassesStyle: "none",
       scarStyle: "none",
       hairOrnamentStyle: "none",
@@ -182,28 +191,16 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
     },
   }));
 
-  const avatar: AvatarConfig = {
-    bodyStyle: oneOf(user.bodyStyle, ["body_m", "body_f"], "body_m") as "body_m" | "body_f",
-    hairStyle: oneOf(user.hairStyle, ["hair_m_01","hair_m_02","hair_m_03","hair_f_01","hair_f_02","hair_f_03"], "hair_m_01"),
-    eyesStyle: oneOf(user.eyesStyle, ["eyes_01","eyes_02","eyes_03","eyes_04","eyes_05","eyes_06"], "eyes_01"),
-    mouthStyle: oneOf(user.mouthStyle, ["mouth_01","mouth_02","mouth_03","mouth_04","mouth_05","mouth_06"], "mouth_01"),
-    shirtStyle: oneOf(user.shirtStyle, ["shirt_01","shirt_02","shirt_03","shirt_04","shirt_05","shirt_06"], "shirt_01"),
-    accessoryStyle: oneOf(user.accessoryStyle, ["none","accessory_01"], "none"),
-    glassesStyle: oneOf(u.glassesStyle ?? "none", ["none"], "none"),
-    scarStyle: oneOf(u.scarStyle ?? "none", ["none"], "none"),
-    hairOrnamentStyle: oneOf(u.hairOrnamentStyle ?? "none", ["none"], "none"),
-
-    bodyColor: user.bodyColor,
-    hairColor: user.hairColor,
-    eyeColor: user.eyeColor,
-    mouthColor: user.mouthColor,
-    shirtColor: user.shirtColor,
-    accessoryColor: user.accessoryColor,
-    backgroundColor: u.backgroundColor ?? "#E8E8E8",
-    glassesColor: u.glassesColor ?? "#111111",
-    scarColor: u.scarColor ?? "#8B4513",
-    hairOrnamentColor: u.hairOrnamentColor ?? "#C0C0C0",
-  };
+  const avatar: AvatarConfig = avatarConfigFromUser({
+    ...user,
+    glassesStyle: u.glassesStyle,
+    scarStyle: u.scarStyle,
+    hairOrnamentStyle: u.hairOrnamentStyle,
+    backgroundColor: u.backgroundColor,
+    glassesColor: u.glassesColor,
+    scarColor: u.scarColor,
+    hairOrnamentColor: u.hairOrnamentColor,
+  });
 
   const data: ProfileTabsData = {
     isOwnProfile: true,

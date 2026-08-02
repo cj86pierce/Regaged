@@ -3,6 +3,15 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Avatar, { AvatarConfig, type SlotDesignType } from "@/components/Avatar";
+import {
+  ACCESSORY_STYLES,
+  BODY_STYLES,
+  EYES_STYLES,
+  HAIR_STYLES,
+  MOUTH_STYLES,
+  SHIRT_STYLES,
+  styleLabel,
+} from "@/lib/avatarStyles";
 
 const palette = [
   "#111111", "#2B1B0E", "#6D4C41", "#B71C1C",
@@ -44,7 +53,7 @@ function StylePicker({
       >
         {options.map((o) => (
           <option key={o} value={o}>
-            {o}
+            {styleLabel(o)}
           </option>
         ))}
       </select>
@@ -254,24 +263,24 @@ export default function AvatarEditor({
             <StylePicker
               label="Body"
               value={cfg.bodyStyle}
-              options={["body_m", "body_f"]}
+              options={[...BODY_STYLES]}
               onChange={(v) => setCfg({ ...cfg, bodyStyle: v as any })}
             />
             <SkinPicker value={cfg.bodyColor} onChange={(v) => setCfg({ ...cfg, bodyColor: v })} />
 
-            <StylePicker label="Shirt" value={cfg.shirtStyle} options={["shirt_01","shirt_02","shirt_03","shirt_04","shirt_05","shirt_06"]} onChange={(v) => setCfg({ ...cfg, shirtStyle: v })} />
+            <StylePicker label="Shirt" value={cfg.shirtStyle} options={[...SHIRT_STYLES]} onChange={(v) => setCfg({ ...cfg, shirtStyle: v })} />
             <ColorWheel label="Shirt color" value={cfg.shirtColor} onChange={(v) => setCfg({ ...cfg, shirtColor: v })} />
 
-            <StylePicker label="Eyes" value={cfg.eyesStyle} options={["eyes_01","eyes_02","eyes_03","eyes_04","eyes_05","eyes_06"]} onChange={(v) => setCfg({ ...cfg, eyesStyle: v })} />
+            <StylePicker label="Eyes" value={cfg.eyesStyle} options={[...EYES_STYLES]} onChange={(v) => setCfg({ ...cfg, eyesStyle: v })} />
             <ColorWheel label="Eye color" value={cfg.eyeColor} onChange={(v) => setCfg({ ...cfg, eyeColor: v })} />
 
-            <StylePicker label="Mouth" value={cfg.mouthStyle} options={["mouth_01","mouth_02","mouth_03","mouth_04","mouth_05","mouth_06"]} onChange={(v) => setCfg({ ...cfg, mouthStyle: v })} />
+            <StylePicker label="Mouth" value={cfg.mouthStyle} options={[...MOUTH_STYLES]} onChange={(v) => setCfg({ ...cfg, mouthStyle: v })} />
             <ColorWheel label="Mouth color" value={cfg.mouthColor} onChange={(v) => setCfg({ ...cfg, mouthColor: v })} />
 
-            <StylePicker label="Hair" value={cfg.hairStyle} options={["hair_m_01","hair_m_02","hair_m_03","hair_f_01","hair_f_02","hair_f_03"]} onChange={(v) => setCfg({ ...cfg, hairStyle: v })} />
+            <StylePicker label="Hair" value={cfg.hairStyle} options={[...HAIR_STYLES]} onChange={(v) => setCfg({ ...cfg, hairStyle: v })} />
             <ColorWheel label="Hair color" value={cfg.hairColor} onChange={(v) => setCfg({ ...cfg, hairColor: v })} />
 
-            <StylePicker label="Accessory" value={cfg.accessoryStyle} options={["none", "accessory_01"]} onChange={(v) => setCfg({ ...cfg, accessoryStyle: v })} />
+            <StylePicker label="Accessory" value={cfg.accessoryStyle} options={[...ACCESSORY_STYLES]} onChange={(v) => setCfg({ ...cfg, accessoryStyle: v })} />
             <ColorWheel label="Accessory color" value={cfg.accessoryColor} onChange={(v) => setCfg({ ...cfg, accessoryColor: v })} />
 
             <div style={{ gridColumn: "1 / -1" }}>
