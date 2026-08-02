@@ -8,11 +8,19 @@ import { PNG } from "pngjs";
 
 const W = 200;
 const H = 230;
+// Tintable grays (lighter = brighter after color tint)
 const FILL = [191, 191, 191, 255];
 const FILL_SHIRT = [181, 181, 181, 255];
+const LIGHT = [220, 220, 220, 255];
+const MID = [140, 140, 140, 255];
+const SHADOW = [100, 100, 100, 255];
 const DARK = [64, 64, 64, 255];
 const WHITE = [255, 255, 255, 255];
 const CLEAR = [0, 0, 0, 0];
+
+function gray(v, a = 255) {
+  return [v, v, v, a];
+}
 
 function blank() {
   const png = new PNG({ width: W, height: H, colorType: 6 });
@@ -178,44 +186,34 @@ function maskToShirt(png, srcRel) {
 // ---------- shirts ----------
 function shirt07_turtleneck() {
   const png = cloneShirtMask("public/avatars/shirts/shirt_04_base.png");
-  // extend collar up the neck (covers skin intentionally)
   for (let y = 140; y <= 154; y++) {
     const t = (154 - y) / 14;
     const half = Math.round(12 + t * 2);
     for (let x = 100 - half; x <= 100 + half; x++) set(png, x, y, FILL_SHIRT);
   }
-  strokeLine(png, 88, 146, 112, 146, DARK, 1.2);
+  // ribbing bands
+  strokeLine(png, 88, 144, 112, 144, MID, 1.2);
+  strokeLine(png, 88, 148, 112, 148, MID, 1.2);
+  strokeLine(png, 90, 152, 110, 152, SHADOW, 1);
   save(png, "public/avatars/shirts/shirt_07_base.png");
 }
 
 function shirt08_hoodie() {
-  // Open-top neckline cutout (like a garment scoop), NOT a closed hole ring
   const png = cloneShirtMask("public/avatars/shirts/shirt_02_base.png");
   openScoop(png, 155, 176, 17);
 
-  // Hood folds on left/right of scoop only
+  // hood folds (slightly darker lining on inner edge)
   fillPolygon(png, [[62, 155], [83, 155], [85, 170], [76, 176], [64, 166]], FILL_SHIRT);
   fillPolygon(png, [[138, 155], [117, 155], [115, 170], [124, 176], [136, 166]], FILL_SHIRT);
+  fillPolygon(png, [[80, 156], [84, 168], [78, 174], [74, 164]], MID);
+  fillPolygon(png, [[120, 156], [116, 168], [122, 174], [126, 164]], MID);
   openScoop(png, 155, 176, 17);
+  strokePolyline(png, [[83, 156], [84, 168], [100, 176], [116, 168], [117, 156]], SHADOW, 1.2);
 
-  // soft inner rim along scoop
-  strokePolyline(png, [[83, 156], [84, 168], [100, 176], [116, 168], [117, 156]], DARK, 1.2);
-
-  // kangaroo pocket as outline, not a solid dark slab
-  strokePolyline(
-    png,
-    [
-      [80, 186],
-      [120, 186],
-      [118, 206],
-      [82, 206],
-      [80, 186],
-    ],
-    DARK,
-    1.6
-  );
-  strokeLine(png, 100, 186, 100, 206, DARK, 1);
-  // drawstrings
+  // kangaroo pocket — mid fill + dark outline
+  fillPolygon(png, [[80, 186], [120, 186], [118, 206], [82, 206]], MID);
+  strokePolyline(png, [[80, 186], [120, 186], [118, 206], [82, 206], [80, 186]], DARK, 1.4);
+  strokeLine(png, 100, 186, 100, 206, SHADOW, 1);
   strokeLine(png, 86, 176, 88, 192, DARK, 1.3);
   strokeLine(png, 114, 176, 112, 192, DARK, 1.3);
   save(png, "public/avatars/shirts/shirt_08_base.png");
@@ -235,49 +233,44 @@ function shirt09_tank() {
 
 function shirt10_stripes() {
   const png = cloneShirtMask("public/avatars/shirts/shirt_02_base.png");
-  for (let y = 168; y < 228; y += 9) {
+  for (let y = 168; y < 228; y += 10) {
     for (let x = 0; x < W; x++) {
-      const i = (W * y + x) << 2;
-      if (png.data[i + 3] > 10) set(png, x, y, DARK);
-      if (png.data[i + 3] > 10 && y + 1 < H) {
-        const j = (W * (y + 1) + x) << 2;
-        if (png.data[j + 3] > 10) set(png, x, y + 1, DARK);
-      }
+      if (png.data[((W * y + x) << 2) + 3] > 10) set(png, x, y, MID);
+      if (y + 1 < H && png.data[((W * (y + 1) + x) << 2) + 3] > 10) set(png, x, y + 1, SHADOW);
     }
   }
   save(png, "public/avatars/shirts/shirt_10_base.png");
 }
 
 function shirt11_vneck() {
-  const png = cloneShirtMask("public/avatars/shirts/shirt_04_base.png");
-  // V cutout from neck into chest
-  fillPolygon(
-    png,
-    [
-      [86, 148],
-      [114, 148],
-      [100, 182],
-    ],
-    CLEAR
-  );
-  strokePolyline(png, [[86, 150], [100, 180], [114, 150]], DARK, 1.4);
+  // Use open-top tee so V isn't a hole punched through a filled collar
+  const png = cloneShirtMask("public/avatars/shirts/shirt_02_base.png");
+  fillPolygon(png, [[84, 155], [116, 155], [100, 186]], CLEAR);
+  // collar edge shading
+  strokePolyline(png, [[84, 156], [100, 184], [116, 156]], SHADOW, 1.6);
+  strokePolyline(png, [[86, 156], [100, 180], [114, 156]], LIGHT, 1);
   save(png, "public/avatars/shirts/shirt_11_base.png");
 }
 
 function shirt12_buttonup() {
   const png = cloneShirtMask("public/avatars/shirts/shirt_04_base.png");
   openScoop(png, 148, 162, 10);
-  // collar flaps
   fillPolygon(png, [[78, 150], [98, 158], [88, 166], [72, 156]], WHITE);
   fillPolygon(png, [[122, 150], [102, 158], [112, 166], [128, 156]], WHITE);
+  // collar underside
+  fillPolygon(png, [[84, 158], [96, 162], [90, 166]], MID);
+  fillPolygon(png, [[116, 158], [104, 162], [110, 166]], MID);
   openScoop(png, 148, 162, 10);
-  // buttons + placket on fabric
-  for (const y of [172, 186, 200, 214]) {
-    const i = (W * y + 100) << 2;
-    if (png.data[i + 3] > 10) fillCircle(png, 100, y, 2.2, DARK);
-  }
+  // placket strip
   for (let y = 164; y <= 228; y++) {
-    if (png.data[((W * y + 100) << 2) + 3] > 10) set(png, 100, y, DARK);
+    if (png.data[((W * y + 100) << 2) + 3] > 10) {
+      set(png, 99, y, MID);
+      set(png, 100, y, LIGHT);
+      set(png, 101, y, MID);
+    }
+  }
+  for (const y of [172, 186, 200, 214]) {
+    if (png.data[((W * y + 100) << 2) + 3] > 10) fillCircle(png, 100, y, 2.2, DARK);
   }
   save(png, "public/avatars/shirts/shirt_12_base.png");
 }
@@ -294,10 +287,11 @@ function openScoop(png, cutTop, cutBottom, cutHalf) {
 function shirt13_polo() {
   const png = cloneShirtMask("public/avatars/shirts/shirt_02_base.png");
   openScoop(png, 155, 168, 12);
-  // collar points
   fillPolygon(png, [[80, 155], [98, 162], [88, 170], [74, 160]], WHITE);
   fillPolygon(png, [[120, 155], [102, 162], [112, 170], [126, 160]], WHITE);
-  // two buttons
+  fillPolygon(png, [[84, 160], [94, 164], [88, 168]], MID);
+  fillPolygon(png, [[116, 160], [106, 164], [112, 168]], MID);
+  openScoop(png, 155, 168, 12);
   fillCircle(png, 100, 172, 2, DARK);
   fillCircle(png, 100, 182, 2, DARK);
   save(png, "public/avatars/shirts/shirt_13_base.png");
@@ -305,7 +299,6 @@ function shirt13_polo() {
 
 function shirt14_starTee() {
   const png = cloneShirtMask("public/avatars/shirts/shirt_02_base.png");
-  // 5-point star on chest
   const cx = 100,
     cy = 188,
     r = 12;
@@ -316,27 +309,41 @@ function shirt14_starTee() {
     const b = a + Math.PI / 5;
     pts.push([cx + Math.cos(b) * (r * 0.42), cy + Math.sin(b) * (r * 0.42)]);
   }
-  fillPolygon(png, pts, DARK);
+  fillPolygon(png, pts, MID);
+  // star outline
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[i];
+    const b = pts[(i + 1) % pts.length];
+    strokeLine(png, a[0], a[1], b[0], b[1], DARK, 1);
+  }
   save(png, "public/avatars/shirts/shirt_14_base.png");
 }
 
 function shirt15_zipJacket() {
   const png = cloneShirtMask("public/avatars/shirts/shirt_04_base.png");
   openScoop(png, 148, 164, 11);
-  // zipper on fabric only
+  // panel shading left/right of zipper
+  for (let y = 168; y <= 228; y++) {
+    for (let x = 70; x <= 96; x++) {
+      if (png.data[((W * y + x) << 2) + 3] > 10 && (x + y) % 7 === 0) set(png, x, y, MID);
+    }
+    for (let x = 104; x <= 130; x++) {
+      if (png.data[((W * y + x) << 2) + 3] > 10 && (x + y) % 7 === 0) set(png, x, y, MID);
+    }
+  }
   for (let y = 164; y <= 228; y++) {
-    const i = (W * y + 100) << 2;
-    if (png.data[i + 3] > 10) {
+    if (png.data[((W * y + 100) << 2) + 3] > 10) {
+      set(png, 99, y, SHADOW);
       set(png, 100, y, DARK);
+      set(png, 101, y, SHADOW);
       if (y % 5 === 0) {
-        if (png.data[((W * y + 98) << 2) + 3] > 10) set(png, 98, y, WHITE);
-        if (png.data[((W * y + 102) << 2) + 3] > 10) set(png, 102, y, WHITE);
+        if (png.data[((W * y + 97) << 2) + 3] > 10) set(png, 97, y, LIGHT);
+        if (png.data[((W * y + 103) << 2) + 3] > 10) set(png, 103, y, LIGHT);
       }
     }
   }
-  // collar tabs hugging scoop
-  fillPolygon(png, [[78, 150], [96, 157], [88, 164], [74, 156]], FILL_SHIRT);
-  fillPolygon(png, [[122, 150], [104, 157], [112, 164], [126, 156]], FILL_SHIRT);
+  fillPolygon(png, [[78, 150], [96, 157], [88, 164], [74, 156]], MID);
+  fillPolygon(png, [[122, 150], [104, 157], [112, 164], [126, 156]], MID);
   openScoop(png, 148, 164, 11);
   save(png, "public/avatars/shirts/shirt_15_base.png");
 }
@@ -344,16 +351,16 @@ function shirt15_zipJacket() {
 function shirt16_overalls() {
   const png = cloneShirtMask("public/avatars/shirts/shirt_03_base.png");
   openScoop(png, 155, 174, 15);
-  // straps
   for (let y = 148; y <= 164; y++) {
-    for (let x = 70; x <= 80; x++) set(png, x, y, FILL_SHIRT);
-    for (let x = 120; x <= 130; x++) set(png, x, y, FILL_SHIRT);
+    for (let x = 70; x <= 80; x++) set(png, x, y, MID);
+    for (let x = 120; x <= 130; x++) set(png, x, y, MID);
   }
   openScoop(png, 155, 174, 15);
-  // bib pocket outline
-  strokePolyline(png, [[84, 176], [116, 176], [114, 196], [86, 196], [84, 176]], DARK, 1.5);
-  fillCircle(png, 75, 158, 2.2, DARK);
-  fillCircle(png, 125, 158, 2.2, DARK);
+  // solid bib pocket with shade
+  fillPolygon(png, [[84, 176], [116, 176], [114, 196], [86, 196]], MID);
+  strokePolyline(png, [[84, 176], [116, 176], [114, 196], [86, 196], [84, 176]], DARK, 1.4);
+  fillCircle(png, 75, 158, 2.4, DARK);
+  fillCircle(png, 125, 158, 2.4, DARK);
   save(png, "public/avatars/shirts/shirt_16_base.png");
 }
 
@@ -445,16 +452,17 @@ function mouth07_grin() {
   const png = blank();
   fillEllipse(png, 100, 124, 16, 8, FILL_SHIRT);
   clearEllipse(png, 100, 120, 16, 7);
-  // teeth bar
   fillRect(png, 90, 122, 110, 126, WHITE);
   strokeLine(png, 88, 122, 112, 122, DARK, 1.2);
+  strokeLine(png, 100, 122, 100, 126, MID, 1);
   save(png, "public/avatars/mouth/mouth_07.png");
 }
 
 function mouth08_o() {
   const png = blank();
   fillEllipse(png, 100, 124, 7, 9, FILL_SHIRT);
-  fillEllipse(png, 100, 124, 4, 5.5, DARK);
+  fillEllipse(png, 100, 124, 5, 6.5, MID);
+  fillEllipse(png, 100, 124, 3.2, 4.2, DARK);
   save(png, "public/avatars/mouth/mouth_08.png");
 }
 
@@ -526,11 +534,6 @@ function cloneLayer(srcRel) {
   return png;
 }
 
-function clearRect(png, x0, y0, x1, y1) {
-  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) set(png, x, y, CLEAR);
-}
-
-/** Keep only pixels above a soft horizontal cut, with slight curve. */
 function trimBelow(png, baseY, curve = 0) {
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
@@ -540,84 +543,74 @@ function trimBelow(png, baseY, curve = 0) {
   }
 }
 
-/** Shift opaque pixels by (dx, dy). */
-function shiftLayer(png, dx, dy) {
-  const src = Buffer.from(png.data);
-  png.data.fill(0);
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      const i = (W * y + x) << 2;
-      if (src[i + 3] <= 10) continue;
-      const nx = x + dx;
-      const ny = y + dy;
-      if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
-      const j = (W * ny + nx) << 2;
-      png.data[j] = src[i];
-      png.data[j + 1] = src[i + 1];
-      png.data[j + 2] = src[i + 2];
-      png.data[j + 3] = src[i + 3];
-    }
-  }
-}
-
 function paintIfEmpty(png, x, y, rgba) {
   x = Math.round(x);
   y = Math.round(y);
   if (x < 0 || y < 0 || x >= W || y >= H) return;
-  const i = (W * y + x) << 2;
-  if (png.data[i + 3] > 10) return;
+  if (png.data[((W * y + x) << 2) + 3] > 10) return;
   set(png, x, y, rgba);
 }
 
-function hair_m_04_spiky() {
-  // Start from short messy — already fits head + fringe + sideburns
-  const png = cloneLayer("public/avatars/hair/hair_m_02.png");
-  // Grow spikes up from the existing crown (connected, not floating triangles)
-  const spikes = [
-    [68, 48, 60, 24],
-    [84, 44, 78, 18],
-    [100, 42, 100, 14],
-    [116, 44, 122, 18],
-    [132, 48, 140, 24],
-  ];
-  for (const [bx, by, tx, ty] of spikes) {
-    // thick triangle rooted in existing hair
-    fillPolygon(png, [[bx - 7, by + 6], [bx + 7, by + 6], [tx, ty]], FILL);
-    // fill bridge so spike merges into crown
-    fillPolygon(png, [[bx - 6, by + 10], [bx + 6, by + 10], [bx, by - 2]], FILL);
+/** Dark strand ticks only on already-opaque hair pixels. */
+function strandDetail(png, x0, y0, x1, y1, step = 4) {
+  for (let y = y0; y <= y1; y += step) {
+    for (let x = x0; x <= x1; x++) {
+      const i = (W * y + x) << 2;
+      if (png.data[i + 3] > 200 && (x + y * 3) % 11 === 0) set(png, x, y, MID);
+    }
   }
+}
+
+function hair_m_04_spiky() {
+  const png = cloneLayer("public/avatars/hair/hair_m_02.png");
+  // irregular clumps rooted in crown (not a perfect crown of triangles)
+  const spikes = [
+    [66, 50, 58, 28, 5],
+    [80, 46, 74, 20, 6],
+    [96, 44, 94, 16, 7],
+    [104, 44, 106, 15, 7],
+    [120, 46, 126, 20, 6],
+    [134, 50, 142, 28, 5],
+  ];
+  for (const [bx, by, tx, ty, half] of spikes) {
+    fillPolygon(png, [[bx - half, by + 8], [bx + half, by + 8], [tx, ty]], FILL);
+    fillPolygon(png, [[bx - half + 1, by + 4], [bx + half - 1, by + 4], [tx, ty + 6]], MID);
+  }
+  strandDetail(png, 50, 44, 150, 74, 3);
   save(png, "public/avatars/hair/hair_m_04.png");
 }
 
 function hair_m_05_buzz() {
-  // Thin even cap from short messy — cleaner than trimming the side-sweep
-  const png = cloneLayer("public/avatars/hair/hair_m_02.png");
-  // keep only upper dome + tiny sideburns
+  // Smooth scalp cap following head curve (from m_01)
+  const png = cloneLayer("public/avatars/hair/hair_m_01.png");
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
-      const i = (W * y + x) << 2;
-      if (png.data[i + 3] <= 10) continue;
-      const keepSide = (x <= 56 || x >= 144) && y <= 88;
-      const keepTop = y <= 70;
-      if (!(keepTop || keepSide)) set(png, x, y, CLEAR);
+      if (png.data[((W * y + x) << 2) + 3] <= 10) continue;
+      // keep only upper dome; curved bottom ~y66-70
+      const rim = 66 + Math.abs(x - 100) * 0.04;
+      if (y > rim) set(png, x, y, CLEAR);
     }
   }
-  // clean hard rim under the buzz (no random speckles)
-  for (let y = 71; y < H; y++) {
-    for (let x = 58; x <= 142; x++) set(png, x, y, CLEAR);
+  // subtle scalp texture
+  for (let y = 48; y <= 64; y += 2) {
+    for (let x = 60; x <= 140; x += 3) {
+      if (png.data[((W * y + x) << 2) + 3] > 200) set(png, x, y, MID);
+    }
   }
   save(png, "public/avatars/hair/hair_m_05.png");
 }
 
 function hair_m_06_pompadour() {
-  // Tall front volume on short messy base — keep original fringe/sideburns
   const png = cloneLayer("public/avatars/hair/hair_m_02.png");
   const base = loadPng("public/avatars/hair/hair_m_02.png");
-  // pompadour mound on top
-  fillEllipse(png, 100, 40, 24, 16, FILL);
-  fillEllipse(png, 92, 46, 22, 14, FILL);
-  fillEllipse(png, 100, 50, 30, 12, FILL);
-  // restore original face window / fringe exactly (don't let mound cover face)
+  // tall swept mound
+  fillEllipse(png, 96, 38, 22, 16, FILL);
+  fillEllipse(png, 88, 44, 20, 14, FILL);
+  fillEllipse(png, 100, 48, 28, 12, FILL);
+  // highlight + shadow for volume
+  fillEllipse(png, 90, 36, 10, 8, LIGHT);
+  fillEllipse(png, 108, 48, 12, 6, MID);
+  // restore original fringe/face window below y70
   for (let y = 70; y < H; y++) {
     for (let x = 0; x < W; x++) {
       const i = (W * y + x) << 2;
@@ -627,52 +620,45 @@ function hair_m_06_pompadour() {
       png.data[i + 3] = base.data[i + 3];
     }
   }
+  strandDetail(png, 70, 28, 130, 68, 3);
   save(png, "public/avatars/hair/hair_m_06.png");
 }
 
 function hair_f_04_bun() {
-  // Long straight base, shorten + add bun
   const png = cloneLayer("public/avatars/hair/hair_f_01.png");
-  trimBelow(png, 138, 6);
-  // bun sitting on crown, connected
-  fillCircle(png, 100, 34, 14, FILL);
-  fillEllipse(png, 100, 44, 16, 8, FILL);
-  // soft connection into parting
-  fillEllipse(png, 100, 48, 12, 6, FILL);
-  // tiny part mark on bun base
-  strokeLine(png, 100, 42, 100, 52, DARK, 1);
+  trimBelow(png, 142, 8);
+  // connected bun with shading rings
+  fillCircle(png, 100, 36, 15, FILL);
+  fillEllipse(png, 100, 46, 17, 9, FILL);
+  fillCircle(png, 100, 34, 9, LIGHT);
+  fillEllipse(png, 100, 42, 12, 5, MID);
+  strokeLine(png, 100, 44, 100, 56, DARK, 1);
+  strandDetail(png, 40, 50, 70, 140, 5);
+  strandDetail(png, 130, 50, 160, 140, 5);
   save(png, "public/avatars/hair/hair_f_04.png");
 }
 
 function hair_f_05_bob() {
-  // Chin-length bob from long straight
   const png = cloneLayer("public/avatars/hair/hair_f_01.png");
-  trimBelow(png, 148, 10);
-  // bangs fringe across forehead (keep face open below)
-  for (let x = 62; x <= 138; x++) {
-    for (let y = 62; y <= 78; y++) {
-      const edge = 70 + Math.sin(((x - 62) / 76) * Math.PI) * 4;
+  trimBelow(png, 150, 12);
+  // bangs across forehead
+  for (let x = 64; x <= 136; x++) {
+    for (let y = 60; y <= 76; y++) {
+      const edge = 68 + Math.sin(((x - 64) / 72) * Math.PI) * 5;
       if (y <= edge) paintIfEmpty(png, x, y, FILL);
     }
   }
-  // open eyes area under bangs
-  for (let y = 78; y <= 130; y++) {
-    for (let x = 70; x <= 130; x++) {
-      // leave side falls; clear center face
-      if (x >= 72 && x <= 128) {
-        const i = (W * y + x) << 2;
-        // only clear if this was bangs overflow / face — sides of f_01 are ~38-60 and 145-166
-        if (x >= 74 && x <= 126) set(png, x, y, CLEAR);
-      }
-    }
+  // keep face open under bangs
+  for (let y = 78; y <= 140; y++) {
+    for (let x = 74; x <= 126; x++) set(png, x, y, CLEAR);
   }
-  // restore side falls that got cleared (clone sides from original)
+  // restore side falls from original
   const src = loadPng("public/avatars/hair/hair_f_01.png");
-  for (let y = 78; y <= 148; y++) {
+  for (let y = 78; y <= 152; y++) {
     for (let x = 0; x < W; x++) {
-      if (x > 70 && x < 130) continue;
+      if (x > 72 && x < 128) continue;
       const i = (W * y + x) << 2;
-      if (src.data[i + 3] > 10 && y <= 148 + Math.sin(((x - 40) / 120) * Math.PI) * 10) {
+      if (src.data[i + 3] > 10) {
         png.data[i] = src.data[i];
         png.data[i + 1] = src.data[i + 1];
         png.data[i + 2] = src.data[i + 2];
@@ -680,25 +666,29 @@ function hair_f_05_bob() {
       }
     }
   }
-  trimBelow(png, 148, 10);
+  trimBelow(png, 150, 12);
+  // tip shading on ends
+  for (let y = 140; y <= 152; y++) {
+    for (let x = 38; x <= 70; x++) if (png.data[((W * y + x) << 2) + 3] > 200) set(png, x, y, MID);
+    for (let x = 130; x <= 162; x++) if (png.data[((W * y + x) << 2) + 3] > 200) set(png, x, y, MID);
+  }
+  // bang strand ticks
+  for (let x = 70; x <= 130; x += 5) {
+    if (png.data[((W * 66 + x) << 2) + 3] > 200) strokeLine(png, x, 62, x, 70, MID, 1);
+  }
   save(png, "public/avatars/hair/hair_f_05.png");
 }
 
 function hair_f_06_pigtails() {
-  // Crown from long straight, replace hanging hair with pigtails
+  // Inspired by hair_f_03 braid detail, but shorter twin tails
   const png = cloneLayer("public/avatars/hair/hair_f_01.png");
-  // remove long falls below temples
-  for (let y = 90; y < H; y++) {
-    for (let x = 0; x < W; x++) set(png, x, y, CLEAR);
-  }
-  // keep a bit more crown/side at ear level
+  for (let y = 88; y < H; y++) for (let x = 0; x < W; x++) set(png, x, y, CLEAR);
+
   const src = loadPng("public/avatars/hair/hair_f_01.png");
-  for (let y = 70; y <= 100; y++) {
+  for (let y = 68; y <= 100; y++) {
     for (let x = 0; x < W; x++) {
       const i = (W * y + x) << 2;
-      if (src.data[i + 3] <= 10) continue;
-      // only outer sides
-      if (x <= 62 || x >= 138) {
+      if (src.data[i + 3] > 10 && (x <= 64 || x >= 136)) {
         png.data[i] = src.data[i];
         png.data[i + 1] = src.data[i + 1];
         png.data[i + 2] = src.data[i + 2];
@@ -706,115 +696,135 @@ function hair_f_06_pigtails() {
       }
     }
   }
-  // connected pigtail masses from temples
-  fillEllipse(png, 52, 95, 14, 18, FILL);
-  fillEllipse(png, 148, 95, 14, 18, FILL);
-  fillEllipse(png, 48, 125, 15, 26, FILL);
-  fillEllipse(png, 152, 125, 15, 26, FILL);
-  // hair ties
-  fillEllipse(png, 52, 108, 6, 4, DARK);
-  fillEllipse(png, 148, 108, 6, 4, DARK);
-  // bridge ties into crown
-  fillPolygon(png, [[44, 78], [60, 72], [58, 95], [42, 92]], FILL);
-  fillPolygon(png, [[156, 78], [140, 72], [142, 95], [158, 92]], FILL);
+
+  function braidTail(cx, topY) {
+    fillPolygon(png, [[cx - 10, topY], [cx + 10, topY], [cx + 12, topY + 20], [cx - 12, topY + 20]], FILL);
+    fillEllipse(png, cx, topY + 40, 13, 22, FILL);
+    fillEllipse(png, cx, topY + 68, 11, 18, FILL);
+    // braid chevrons like f_03
+    for (let y = topY + 8; y < topY + 85; y += 7) {
+      strokePolyline(png, [[cx - 8, y], [cx, y + 3], [cx + 8, y]], DARK, 1.2);
+      strokePolyline(png, [[cx - 6, y + 3], [cx, y + 6], [cx + 6, y + 3]], MID, 1);
+    }
+    // tie
+    fillEllipse(png, cx, topY + 22, 7, 4, DARK);
+    fillEllipse(png, cx, topY + 22, 4, 2, SHADOW);
+  }
+
+  braidTail(50, 78);
+  braidTail(150, 78);
+  // connect to crown
+  fillPolygon(png, [[42, 72], [62, 68], [58, 90], [40, 88]], FILL);
+  fillPolygon(png, [[158, 72], [138, 68], [142, 90], [160, 88]], FILL);
   save(png, "public/avatars/hair/hair_f_06.png");
 }
 
 // ---------- accessories ----------
 function accessory02_necklace() {
   const png = blank();
-  // chain arc under chin
-  for (let a = Math.PI * 0.15; a <= Math.PI * 0.85; a += 0.02) {
-    const x = 100 + Math.cos(a) * 28;
-    const y = 138 + Math.sin(a) * 22;
-    fillCircle(png, x, y, 1.6, FILL);
+  for (let a = Math.PI * 0.18; a <= Math.PI * 0.82; a += 0.018) {
+    const x = 100 + Math.cos(a) * 26;
+    const y = 140 + Math.sin(a) * 20;
+    fillCircle(png, x, y, 1.8, FILL);
+    if (Math.floor(a * 40) % 2 === 0) fillCircle(png, x, y, 1.2, LIGHT);
   }
-  // pendant
-  fillPolygon(png, [[100, 155], [108, 168], [100, 178], [92, 168]], FILL);
-  strokePolyline(png, [[100, 155], [108, 168], [100, 178], [92, 168], [100, 155]], DARK, 1);
+  fillPolygon(png, [[100, 156], [108, 168], [100, 178], [92, 168]], MID);
+  strokePolyline(png, [[100, 156], [108, 168], [100, 178], [92, 168], [100, 156]], DARK, 1.2);
+  fillCircle(png, 100, 162, 2, LIGHT);
   save(png, "public/avatars/accessories/accessory_02.png");
 }
 
 function accessory03_headphones() {
   const png = blank();
-  // headband
-  for (let a = Math.PI; a <= Math.PI * 2; a += 0.015) {
-    const x = 100 + Math.cos(a) * 54;
-    const y = 90 + Math.sin(a) * 48;
-    if (y < 95) fillCircle(png, x, y, 3.2, FILL);
+  // band over crown — sit on head (y~45-70), not floating too high
+  for (let a = Math.PI * 1.05; a <= Math.PI * 1.95; a += 0.012) {
+    const x = 100 + Math.cos(a) * 52;
+    const y = 88 + Math.sin(a) * 42;
+    if (y <= 78) {
+      fillCircle(png, x, y, 3.4, FILL);
+      fillCircle(png, x, y - 1, 1.6, LIGHT);
+    }
   }
-  // ear cups
-  fillEllipse(png, 48, 95, 12, 16, FILL);
-  fillEllipse(png, 152, 95, 12, 16, FILL);
-  fillEllipse(png, 48, 95, 7, 10, DARK);
-  fillEllipse(png, 152, 95, 7, 10, DARK);
+  // ear cups at temple height
+  fillEllipse(png, 50, 92, 11, 15, FILL);
+  fillEllipse(png, 150, 92, 11, 15, FILL);
+  fillEllipse(png, 50, 92, 7, 10, MID);
+  fillEllipse(png, 150, 92, 7, 10, MID);
+  fillEllipse(png, 50, 92, 4, 6, DARK);
+  fillEllipse(png, 150, 92, 4, 6, DARK);
   save(png, "public/avatars/accessories/accessory_03.png");
 }
 
 function accessory04_bowtie() {
   const png = blank();
-  fillPolygon(png, [[78, 152], [98, 158], [78, 164]], FILL);
-  fillPolygon(png, [[122, 152], [102, 158], [122, 164]], FILL);
-  fillRect(png, 96, 154, 104, 162, DARK);
+  fillPolygon(png, [[76, 150], [98, 157], [76, 164]], FILL);
+  fillPolygon(png, [[124, 150], [102, 157], [124, 164]], FILL);
+  fillPolygon(png, [[80, 152], [94, 157], [80, 162]], MID);
+  fillPolygon(png, [[120, 152], [106, 157], [120, 162]], MID);
+  fillRect(png, 96, 154, 104, 161, DARK);
+  fillRect(png, 98, 156, 102, 159, SHADOW);
   save(png, "public/avatars/accessories/accessory_04.png");
 }
 
 function accessory05_earrings() {
   const png = blank();
-  // left earring
-  fillCircle(png, 48, 110, 3.5, FILL);
-  fillCircle(png, 48, 118, 2.2, FILL);
-  strokeLine(png, 48, 113, 48, 116, DARK, 1);
-  // right earring
-  fillCircle(png, 152, 110, 3.5, FILL);
-  fillCircle(png, 152, 118, 2.2, FILL);
-  strokeLine(png, 152, 113, 152, 116, DARK, 1);
+  for (const cx of [48, 152]) {
+    fillCircle(png, cx, 108, 3.8, FILL);
+    fillCircle(png, cx, 108, 1.8, LIGHT);
+    fillCircle(png, cx, 118, 2.6, MID);
+    strokeLine(png, cx, 111, cx, 116, DARK, 1);
+  }
   save(png, "public/avatars/accessories/accessory_05.png");
 }
 
 function accessory06_scarf() {
   const png = blank();
-  // thin wrap under chin / on neck
-  for (let a = Math.PI * 0.2; a <= Math.PI * 0.8; a += 0.015) {
-    const x = 100 + Math.cos(a) * 26;
-    const y = 142 + Math.sin(a) * 16;
-    fillCircle(png, x, y, 3.2, FILL);
+  // thick wrap on neck (below chin ~y140-158)
+  fillEllipse(png, 100, 150, 32, 14, FILL);
+  fillEllipse(png, 100, 148, 28, 8, MID);
+  // clear upper so it doesn't cover face — open top wrap
+  for (let y = 130; y < 145; y++) {
+    for (let x = 70; x <= 130; x++) {
+      if (y < 142) set(png, x, y, CLEAR);
+    }
   }
-  // hanging ends
-  fillPolygon(png, [[90, 154], [100, 156], [97, 188], [86, 184]], FILL);
-  fillPolygon(png, [[110, 154], [100, 156], [107, 192], [118, 186]], FILL);
-  strokeLine(png, 92, 168, 94, 182, DARK, 1);
-  strokeLine(png, 110, 170, 112, 186, DARK, 1);
+  // hanging ends with stripe detail
+  fillPolygon(png, [[88, 154], [102, 156], [98, 198], [84, 192]], FILL);
+  fillPolygon(png, [[112, 154], [100, 156], [108, 200], [122, 194]], FILL);
+  fillPolygon(png, [[90, 160], [98, 162], [96, 190], [88, 186]], MID);
+  fillPolygon(png, [[110, 160], [102, 162], [108, 192], [116, 188]], MID);
+  strokeLine(png, 92, 170, 94, 188, DARK, 1);
+  strokeLine(png, 112, 172, 114, 190, DARK, 1);
   save(png, "public/avatars/accessories/accessory_06.png");
 }
 
 function accessory07_choker() {
   const png = blank();
-  for (let a = Math.PI * 0.25; a <= Math.PI * 0.75; a += 0.02) {
-    const x = 100 + Math.cos(a) * 18;
-    const y = 144 + Math.sin(a) * 10;
-    fillCircle(png, x, y, 2.2, FILL);
+  // solid band on neck
+  for (let a = Math.PI * 0.22; a <= Math.PI * 0.78; a += 0.012) {
+    const x = 100 + Math.cos(a) * 20;
+    const y = 146 + Math.sin(a) * 11;
+    fillCircle(png, x, y, 3.0, FILL);
+    fillCircle(png, x, y + 1, 1.4, MID);
   }
-  fillCircle(png, 100, 152, 2.4, DARK);
+  fillCircle(png, 100, 154, 3.2, DARK);
+  fillCircle(png, 100, 154, 1.4, LIGHT);
   save(png, "public/avatars/accessories/accessory_07.png");
 }
 
 function accessory08_cap() {
-  // sits on head like short hair crown + forward brim
   const png = blank();
-  fillEllipse(png, 100, 56, 44, 20, FILL);
-  // flat bottom of crown
-  for (let y = 68; y <= 74; y++) {
-    for (let x = 56; x <= 144; x++) {
-      const dx = (x - 100) / 44;
-      if (dx * dx <= 1) set(png, x, y, FILL);
-    }
+  // crown dome on head
+  fillEllipse(png, 100, 54, 42, 20, FILL);
+  fillEllipse(png, 100, 48, 28, 12, LIGHT);
+  // brim as a solid oval in front (no harsh bar wipe)
+  fillEllipse(png, 118, 72, 28, 8, MID);
+  fillEllipse(png, 118, 70, 24, 5, FILL);
+  // seam under crown
+  for (let x = 62; x <= 138; x++) {
+    if (png.data[((W * 70 + x) << 2) + 3] > 10) set(png, x, 70, SHADOW);
   }
-  // brim forward/right
-  fillEllipse(png, 122, 74, 30, 7, FILL);
-  strokeLine(png, 62, 72, 148, 74, DARK, 1.3);
-  // tiny button on top
-  fillCircle(png, 100, 42, 2.5, DARK);
+  fillCircle(png, 100, 40, 2.8, DARK);
   save(png, "public/avatars/accessories/accessory_08.png");
 }
 
