@@ -45,18 +45,19 @@ export async function finalizeCastingGame(gameId: string) {
     },
   });
 
-  // FAQ final day: activity/checkmarks, challenge scores, and keys
+  // Final day: keys decide winners, then challenge score, then activity
   const ranked = [...actives].sort((a, b) => {
-    const ac = checks(a.plusCount ?? 0, a.minusCount ?? 0);
-    const bc = checks(b.plusCount ?? 0, b.minusCount ?? 0);
-    if (bc !== ac) return bc - ac;
+    const ak = a.keys ?? 0,
+      bk = b.keys ?? 0;
+    if (bk !== ak) return bk - ak;
 
     const as = a.castingDayMiniGameScore ?? 0;
     const bs = b.castingDayMiniGameScore ?? 0;
     if (bs !== as) return bs - as;
 
-    const ak = a.keys ?? 0, bk = b.keys ?? 0;
-    if (bk !== ak) return bk - ak;
+    const ac = checks(a.plusCount ?? 0, a.minusCount ?? 0);
+    const bc = checks(b.plusCount ?? 0, b.minusCount ?? 0);
+    if (bc !== ac) return bc - ac;
 
     return (b.chatCount ?? 0) - (a.chatCount ?? 0);
   });

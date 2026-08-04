@@ -65,11 +65,12 @@ export default function CastingSidebar(props: {
         <div style={{ fontWeight: 1000, marginBottom: 8 }}>Read this</div>
         <div style={{ fontSize: 12, opacity: 0.8, lineHeight: 1.35 }}>
           <b>Castings</b> runs in 12-hour days.<br />
-          <b>Keys protect you from nomination</b> — collect them from drops.<br />
-          Among players with equal keys, low mini-game score and low checks make you more likely to be nominated.<br />
+          <b>Nominations:</b> lowest challenge score, then lowest activity (checks).<br />
+          <b>Keys</b> matter most at the end — final 5 ranks by <b>keys → challenge → checks</b>.<br />
+          Play the daily Competition for your best challenge score (retries keep your best).<br />
           Public drops appear in chat (center slot = reward).<br />
           Every 3000 checks = private care package (see above).<br />
-          At final 7 there are only 2 nominees. Final 5 is ranked by <b>checks → challenge → keys</b>.
+          At final 7 there are only 2 nominees.
         </div>
       </div>
 

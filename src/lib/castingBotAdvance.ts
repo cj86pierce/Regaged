@@ -8,6 +8,23 @@ import { resolveCastingEviction } from "./castingVotes";
 import { performBotActions } from "./botActions";
 import { finalizeCastingGame } from "./castingEngine";
 import { BOT_DAY_MS } from "./castingDayLength";
+import { pickMinigameForDay } from "./minigamePicker";
+import { sampleBotChallengeScore } from "./minigames/registry";
+
+async function assignBotChallengeScores(gameId: string, dayNumber: number) {
+  const minigameId = pickMinigameForDay(gameId, dayNumber);
+  const actives = await prisma.gamePlayer.findMany({
+    where: { gameId, status: "ACTIVE" },
+    select: { userId: true, castingDayMiniGameScore: true },
+  });
+  for (const p of actives) {
+    if ((p.castingDayMiniGameScore ?? 0) > 0) continue;
+    await prisma.gamePlayer.update({
+      where: { gameId_userId: { gameId, userId: p.userId } },
+      data: { castingDayMiniGameScore: sampleBotChallengeScore(minigameId) },
+    });
+  }
+}
 
 export async function advanceCastingBotIfDue(gameId: string, options?: { forceDue?: boolean }) {
   const forceDue = options?.forceDue === true;
@@ -72,6 +89,7 @@ export async function advanceCastingBotIfDue(gameId: string, options?: { forceDu
         return { ok: true, fixed: "nominees_exist_moved_to_vote" as const };
       }
 
+      await assignBotChallengeScores(gameId, dayNum);
       await resolveCastingNominations(gameId);
       return { ok: true, advanced: "noms" as const };
     }

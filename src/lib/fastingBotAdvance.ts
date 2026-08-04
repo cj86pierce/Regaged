@@ -63,6 +63,9 @@ export async function advanceFastingBotIfDue(gameId: string) {
           try { await assignFrookiesHoh(gameId, { random: false, skipLock: true }); } catch {}
         }
         if (!game.povUserId) {
+          const { pickMinigameForDay } = await import("@/lib/minigamePicker");
+          const { sampleBotChallengeScore } = await import("@/lib/minigames/registry");
+          const minigameId = pickMinigameForDay(gameId, game.roundNumber ?? 1);
           const actives = await prisma.gamePlayer.findMany({
             where: { gameId, status: "ACTIVE" },
             select: { userId: true },
@@ -70,7 +73,7 @@ export async function advanceFastingBotIfDue(gameId: string) {
           for (const p of actives) {
             await prisma.gamePlayer.update({
               where: { gameId_userId: { gameId, userId: p.userId } },
-              data: { castingDayMiniGameScore: Math.floor(Math.random() * 101) },
+              data: { castingDayMiniGameScore: sampleBotChallengeScore(minigameId) },
             });
           }
           try { await assignFrookiesPov(gameId, { skipLock: true }); } catch {}

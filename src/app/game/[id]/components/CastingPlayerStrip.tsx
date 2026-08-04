@@ -176,7 +176,7 @@ export default function CastingPlayerStrip(props: {
           )}
 
           <div style={{ marginTop: 12, fontSize: 11, opacity: 0.65, lineHeight: 1.35 }}>
-            Castings: keys win. Ties: checks → health.
+            Nominations: low challenge score + low checks. Finals: keys decide.
           </div>
 
           <Link

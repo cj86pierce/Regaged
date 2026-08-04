@@ -1,12 +1,14 @@
 /**
- * Picks a minigame for the given Castings day.
+ * Picks a minigame for the given Castings/Frookies day.
  * Deterministic: same game + day = same minigame for everyone.
  */
 
-export const MINIGAME_IDS = ["matching", "match3"] as const;
-export type MinigameId = (typeof MINIGAME_IDS)[number];
+import { MINIGAME_IDS, type MinigameId, getMinigameDef } from "@/lib/minigames/registry";
 
-/** Simple hash for gameId + dayNumber. Returns 0..len-1 */
+export { MINIGAME_IDS, getMinigameDef };
+export type { MinigameId };
+
+/** Simple hash for gameId + dayNumber. */
 function hashToIndex(seed: string): number {
   let h = 0;
   for (let i = 0; i < seed.length; i++) {
@@ -19,4 +21,8 @@ export function pickMinigameForDay(gameId: string, dayNumber: number): MinigameI
   const seed = `${gameId}:${dayNumber}`;
   const idx = hashToIndex(seed) % MINIGAME_IDS.length;
   return MINIGAME_IDS[idx];
+}
+
+export function minigameDisplayName(id: MinigameId): string {
+  return getMinigameDef(id).name;
 }

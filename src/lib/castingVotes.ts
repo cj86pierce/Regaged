@@ -3,7 +3,7 @@
  *
  * Day 1: competition/activity only — no algorithmic eviction.
  * Day 2+: evict the nominee with the highest vote points (1 per day).
- * When ≤5 remain, finalize by activity/checks, challenge score, and keys (FAQ).
+ * When ≤5 remain, finalize by keys, then challenge score, then activity.
  *
  * After eviction, advance into the next day's ROUND_NOMINATE window and do NOT
  * immediately pick nominees — that would skip the voting window for the next day.

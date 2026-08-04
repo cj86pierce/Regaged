@@ -3,9 +3,39 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { pickMinigameForDay } from "@/lib/minigamePicker";
+import { getMinigameDef, pickMinigameForDay, type MinigameId } from "@/lib/minigamePicker";
 import EmojiMatchingGame from "../components/minigames/EmojiMatchingGame";
 import EmojiMatch3Game from "../components/minigames/EmojiMatch3Game";
+import RhythmGame from "../components/minigames/RhythmGame";
+import DealOrNoDealGame from "../components/minigames/DealOrNoDealGame";
+import SimonGame from "../components/minigames/SimonGame";
+import ReactionGame from "../components/minigames/ReactionGame";
+import MathRushGame from "../components/minigames/MathRushGame";
+import DodgeGame from "../components/minigames/DodgeGame";
+import type { MinigameProps } from "../components/minigames/types";
+
+function renderMinigame(id: MinigameId, props: MinigameProps) {
+  switch (id) {
+    case "matching":
+      return <EmojiMatchingGame {...props} />;
+    case "match3":
+      return <EmojiMatch3Game {...props} />;
+    case "rhythm":
+      return <RhythmGame {...props} />;
+    case "deal":
+      return <DealOrNoDealGame {...props} />;
+    case "simon":
+      return <SimonGame {...props} />;
+    case "reaction":
+      return <ReactionGame {...props} />;
+    case "mathrush":
+      return <MathRushGame {...props} />;
+    case "dodge":
+      return <DodgeGame {...props} />;
+    default:
+      return null;
+  }
+}
 
 export default function ChallengePage() {
   const params = useParams();
@@ -42,14 +72,12 @@ export default function ChallengePage() {
     load().catch((e) => setError(e.message));
   }, [gameId]);
 
-  const isCasting =
-    data?.gameType === "CASTING" || data?.gameType === "CASTING_BOT";
-  const isFrookies =
-    data?.gameType === "FROOKIES" || data?.gameType === "FROOKIES_BOT";
+  const isCasting = data?.gameType === "CASTING" || data?.gameType === "CASTING_BOT";
+  const isFrookies = data?.gameType === "FROOKIES" || data?.gameType === "FROOKIES_BOT";
   const hasMinigame = isCasting || isFrookies;
-  const canPlay =
-    data?.state === "ROUND_VOTE" || data?.state === "ROUND_NOMINATE";
+  const canPlay = data?.state === "ROUND_VOTE" || data?.state === "ROUND_NOMINATE";
   const minigame = data ? pickMinigameForDay(gameId, data.roundNumber) : null;
+  const def = minigame ? getMinigameDef(minigame) : null;
 
   if (error)
     return (
@@ -60,12 +88,9 @@ export default function ChallengePage() {
     );
 
   return (
-    <main style={{ padding: 16, maxWidth: 500, margin: "0 auto" }}>
+    <main style={{ padding: 16, maxWidth: 520, margin: "0 auto" }}>
       <div style={{ marginBottom: 16 }}>
-        <Link
-          href={`/game/${gameId}`}
-          style={{ fontWeight: 800, textDecoration: "underline" }}
-        >
+        <Link href={`/game/${gameId}`} style={{ fontWeight: 800, textDecoration: "underline" }}>
           ← Back to game
         </Link>
       </div>
@@ -78,32 +103,28 @@ export default function ChallengePage() {
 
       {hasMinigame && !canPlay && data && (
         <div className="theme-sidebar-panel" style={{ padding: 16 }}>
-          <p>Challenges are available during voting or nomination phases.</p>
+          <p>Challenges are available during nomination or vote phases.</p>
         </div>
       )}
 
-      {hasMinigame && canPlay && data && minigame && (
+      {hasMinigame && canPlay && data && minigame && def && (
         <>
-          <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 8 }}>
-            {isFrookies ? "Round" : "Day"} {data.roundNumber} competition: {minigame === "matching" ? "Match the emojis" : "Match 3"}
-            {isFrookies && " — highest score wins POV."}
+          <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 10, lineHeight: 1.45 }}>
+            <div style={{ fontWeight: 900, marginBottom: 4 }}>
+              {isFrookies ? "Round" : "Day"} {data.roundNumber}: {def.name}
+            </div>
+            {isFrookies
+              ? "Highest challenge score wins POV. You keep your best score if you retry."
+              : "Low challenge score + low activity puts you at risk of nomination. Keys matter for final placements."}
           </div>
-          {minigame === "matching" && (
-            <EmojiMatchingGame
-              gameId={gameId}
-              meUserId={data.meUserId}
-              myScore={data.myScore}
-              onSubmitScore={load}
-            />
-          )}
-          {minigame === "match3" && (
-            <EmojiMatch3Game
-              gameId={gameId}
-              meUserId={data.meUserId}
-              myScore={data.myScore}
-              onSubmitScore={load}
-            />
-          )}
+          {renderMinigame(minigame, {
+            gameId,
+            meUserId: data.meUserId,
+            myScore: data.myScore,
+            onSubmitScore: () => {
+              void load();
+            },
+          })}
         </>
       )}
 

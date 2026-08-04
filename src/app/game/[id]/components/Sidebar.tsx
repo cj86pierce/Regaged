@@ -161,7 +161,7 @@ export default function Sidebar(props: {
         <div style={box}>
           <div style={{ fontWeight: 1000, marginBottom: 6 }}>Competition</div>
           <div style={{ fontSize: 12, marginBottom: 8 }}>
-            Highest score wins POV. Play the same minigames as Castings.
+            Highest challenge score wins POV. Retries keep your best.
           </div>
           <Link
             href={`/game/${gameId}/challenge`}

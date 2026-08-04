@@ -1,11 +1,10 @@
 /**
  * Resolve ROUND_NOMINATE for Casting day 2+.
  *
- * Per Tengaged FAQ:
- * - Nominees decided by activity/checkmarks, challenge score, and keys
- * - Keys are the primary protection (more keys = safer)
- * - Normal days: 3 nominees; at final 7 (≤7 active): 2 nominees
- * - Final ranking day begins at 5 remaining (handled in castingVotes / finalize)
+ * Nominees from challenge score + activity (net checks).
+ * Keys are NOT used for nomination risk — they matter for final placements.
+ * Normal days: 3 nominees; at final 7 (≤7 active): 2 nominees
+ * Final ranking day begins at 5 remaining (handled in castingVotes / finalize)
  */
 import { prisma } from "@/lib/prisma";
 import { getSystemUserId } from "@/lib/systemUser";
@@ -28,19 +27,16 @@ function pickNominees(
     castingDayMiniGameScore: number;
     plusCount: number | null;
     minusCount: number | null;
-    keys: number | null;
   }[],
   count: number
 ): string[] {
   const withChecks = rows.map((r) => ({
     ...r,
-    keys: r.keys ?? 0,
     checks: netChecks(r.plusCount, r.minusCount),
     rnd: Math.random(),
   }));
-  // Ascending keys (fewest keys most vulnerable), then low challenge score, then low checks
+  // Most vulnerable: lowest challenge score, then lowest activity (checks)
   const sorted = [...withChecks].sort((a, b) => {
-    if (a.keys !== b.keys) return a.keys - b.keys;
     if (a.castingDayMiniGameScore !== b.castingDayMiniGameScore)
       return a.castingDayMiniGameScore - b.castingDayMiniGameScore;
     if (a.checks !== b.checks) return a.checks - b.checks;

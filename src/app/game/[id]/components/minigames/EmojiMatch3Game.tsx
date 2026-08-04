@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
+import MinigameShell, { PlayButton } from "./MinigameShell";
+import { submitMinigameScore, type MinigameProps } from "./types";
 
 const EMOJIS = ["🍎", "🍊", "🍋", "🍇", "🍓", "🍑"];
 const ROWS = 6;
@@ -8,33 +10,30 @@ const COLS = 6;
 const MOVES = 15;
 
 function randomEmoji() {
-  return EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
+  return EMOJIS[Math.floor(Math.random() * EMOJIS.length)]!;
 }
 
-/** Match-3 style. Swap adjacent to make 3+. Score = total cleared (higher = better). */
-export default function EmojiMatch3Game(props: {
-  gameId: string;
-  meUserId: string | null;
-  myScore: number;
-  onSubmitScore: () => void;
-}) {
+/** Match-3. Invalid swaps revert and do not consume a move. */
+export default function EmojiMatch3Game(props: MinigameProps) {
   const { gameId, meUserId, myScore, onSubmitScore } = props;
   const [grid, setGrid] = useState<string[][]>([]);
   const [selected, setSelected] = useState<[number, number] | null>(null);
   const [movesLeft, setMovesLeft] = useState(MOVES);
-  const [score, setScore] = useState(0);
+  const [clearedTotal, setClearedTotal] = useState(0);
+  const [cascadesTotal, setCascadesTotal] = useState(0);
   const [phase, setPhase] = useState<"idle" | "play" | "done">("idle");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const gridRef = useRef<string[][]>([]);
+  const [result, setResult] = useState<{ challengeScore: number; improved: boolean } | null>(null);
+  const statsRef = useRef({ cleared: 0, cascades: 0, leftover: 0 });
 
   const fillCell = useCallback((r: number, c: number, g: string[][]) => {
     let e: string;
     do {
       e = randomEmoji();
     } while (
-      (r >= 2 && g[r - 1][c] === e && g[r - 2][c] === e) ||
-      (c >= 2 && g[r][c - 1] === e && g[r][c - 2] === e)
+      (r >= 2 && g[r - 1]![c] === e && g[r - 2]![c] === e) ||
+      (c >= 2 && g[r]![c - 1] === e && g[r]![c - 2] === e)
     );
     return e;
   }, []);
@@ -44,7 +43,7 @@ export default function EmojiMatch3Game(props: {
     for (let r = 0; r < ROWS; r++) {
       g[r] = [];
       for (let c = 0; c < COLS; c++) {
-        g[r][c] = fillCell(r, c, g);
+        g[r]![c] = fillCell(r, c, g);
       }
     }
     return g;
@@ -54,14 +53,13 @@ export default function EmojiMatch3Game(props: {
     const matches = new Set<string>();
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
-        const e = g[r][c];
+        const e = g[r]![c];
         if (!e) continue;
-        const key = (x: number, y: number) => `${x},${y}`;
-        if (r >= 2 && g[r - 1][c] === e && g[r - 2][c] === e) {
-          matches.add(key(r, c)).add(key(r - 1, c)).add(key(r - 2, c));
+        if (r >= 2 && g[r - 1]![c] === e && g[r - 2]![c] === e) {
+          matches.add(`${r},${c}`).add(`${r - 1},${c}`).add(`${r - 2},${c}`);
         }
-        if (c >= 2 && g[r][c - 1] === e && g[r][c - 2] === e) {
-          matches.add(key(r, c)).add(key(r, c - 1)).add(key(r, c - 2));
+        if (c >= 2 && g[r]![c - 1] === e && g[r]![c - 2] === e) {
+          matches.add(`${r},${c}`).add(`${r},${c - 1}`).add(`${r},${c - 2}`);
         }
       }
     }
@@ -73,34 +71,39 @@ export default function EmojiMatch3Game(props: {
     for (let c = 0; c < COLS; c++) {
       let write = ROWS - 1;
       for (let r = ROWS - 1; r >= 0; r--) {
-        if (next[r][c]) {
-          next[write][c] = next[r][c];
-          if (write !== r) next[r][c] = "";
+        if (next[r]![c]) {
+          next[write]![c] = next[r]![c]!;
+          if (write !== r) next[r]![c] = "";
           write--;
         }
       }
       while (write >= 0) {
-        next[write][c] = randomEmoji();
+        next[write]![c] = randomEmoji();
         write--;
       }
     }
     return next;
   }, []);
 
-  const processMatches = useCallback((g: string[][]) => {
-    let total = 0;
-    let current = g;
-    let m = findMatches(current);
-    while (m.size > 0) {
-      total += m.size;
-      const next = current.map((row, r) =>
-        row.map((cell, c) => (m.has(`${r},${c}`) ? "" : cell))
-      );
-      current = collapse(next);
-      m = findMatches(current);
-    }
-    return { grid: current, cleared: total };
-  }, [findMatches, collapse]);
+  const processMatches = useCallback(
+    (g: string[][]) => {
+      let total = 0;
+      let cascades = 0;
+      let current = g;
+      let m = findMatches(current);
+      while (m.size > 0) {
+        cascades += 1;
+        total += m.size;
+        const next = current.map((row, r) =>
+          row.map((cell, c) => (m.has(`${r},${c}`) ? "" : cell))
+        );
+        current = collapse(next);
+        m = findMatches(current);
+      }
+      return { grid: current, cleared: total, cascades };
+    },
+    [findMatches, collapse]
+  );
 
   const start = useCallback(() => {
     if (!meUserId) return;
@@ -112,118 +115,106 @@ export default function EmojiMatch3Game(props: {
       g2 = r.grid;
       cleared = r.cleared;
     }
-    gridRef.current = g2;
     setGrid(g2);
     setSelected(null);
     setMovesLeft(MOVES);
-    setScore(0);
+    setClearedTotal(0);
+    setCascadesTotal(0);
+    statsRef.current = { cleared: 0, cascades: 0, leftover: 0 };
     setPhase("play");
+    setResult(null);
+    setError(null);
   }, [meUserId, initGrid, processMatches]);
 
   const cellClick = useCallback(
     (r: number, c: number) => {
       if (phase !== "play" || !grid[r]?.[c]) return;
-      if (selected) {
-        const [sr, sc] = selected;
-        const adj =
-          (Math.abs(r - sr) === 1 && c === sc) || (Math.abs(c - sc) === 1 && r === sr);
-        if (!adj) {
-          setSelected([r, c]);
-          return;
-        }
-        const g = grid.map((row) => [...row]);
-        [g[r][c], g[sr][sc]] = [g[sr][sc], g[r][c]];
-        const { grid: next, cleared } = processMatches(g);
-        setGrid(next);
-        gridRef.current = next;
-        setSelected(null);
-        setMovesLeft((m) => m - 1);
-        setScore((s) => s + cleared);
-        if (cleared === 0) {
-          setGrid(g);
-          gridRef.current = g;
-        }
-      } else {
+      if (!selected) {
         setSelected([r, c]);
+        return;
       }
+      const [sr, sc] = selected;
+      const adj =
+        (Math.abs(r - sr) === 1 && c === sc) || (Math.abs(c - sc) === 1 && r === sr);
+      if (!adj) {
+        setSelected([r, c]);
+        return;
+      }
+
+      const swapped = grid.map((row) => [...row]);
+      const tmp = swapped[r]![c]!;
+      swapped[r]![c] = swapped[sr]![sc]!;
+      swapped[sr]![sc] = tmp;
+
+      const { grid: next, cleared, cascades } = processMatches(swapped);
+      setSelected(null);
+
+      // Invalid swap: revert board and do NOT consume a move
+      if (cleared === 0) return;
+
+      setGrid(next);
+      setMovesLeft((m) => m - 1);
+      setClearedTotal((s) => s + cleared);
+      setCascadesTotal((s) => s + cascades);
+      statsRef.current.cleared += cleared;
+      statsRef.current.cascades += cascades;
     },
     [grid, phase, selected, processMatches]
   );
+
+  useEffect(() => {
+    if (phase === "play" && movesLeft <= 0) {
+      statsRef.current.leftover = 0;
+      setPhase("done");
+    }
+  }, [phase, movesLeft]);
 
   const submitScore = useCallback(async () => {
     if (!meUserId || phase !== "done") return;
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/game/${gameId}/casting/mini-game`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ score }),
+      const out = await submitMinigameScore({
+        gameId,
+        minigameId: "match3",
+        raw: {
+          cleared: statsRef.current.cleared,
+          cascades: statsRef.current.cascades,
+          leftoverMoves: Math.max(0, movesLeft),
+        },
       });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.error ?? "Failed to submit");
+      setResult(out);
       onSubmitScore();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Submit failed");
     } finally {
       setBusy(false);
     }
-  }, [gameId, meUserId, phase, score, onSubmitScore]);
-
-  useEffect(() => {
-    if (phase === "play" && movesLeft <= 0) setPhase("done");
-  }, [phase, movesLeft]);
+  }, [gameId, meUserId, phase, movesLeft, onSubmitScore]);
 
   if (!meUserId) {
     return (
-      <div className="theme-sidebar-panel" style={{ borderRadius: 12, padding: 12 }}>
-        <div style={{ fontWeight: 1000, marginBottom: 8 }}>Match 3</div>
+      <MinigameShell title="Candy Match" blurb="Log in to play." myScore={myScore}>
         <div style={{ fontSize: 12, opacity: 0.7 }}>Log in to play.</div>
-      </div>
+      </MinigameShell>
     );
   }
 
   return (
-    <div className="theme-sidebar-panel" style={{ borderRadius: 12, padding: 12 }}>
-      <div style={{ fontWeight: 1000, marginBottom: 8 }}>Match 3</div>
-      <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 10 }}>
-        Swap adjacent emojis to make 3+ in a row. More matches = better score.
-      </div>
-
-      {phase === "idle" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <div style={{ fontSize: 12 }}>
-            Your score: <b>{myScore > 0 ? myScore : "—"}</b>
-          </div>
-          <button
-            onClick={start}
-            style={{
-              padding: "10px 14px",
-              borderRadius: 10,
-              border: "1px solid var(--border)",
-              background: "var(--accent-bg)",
-              fontWeight: 1000,
-              cursor: "pointer",
-            }}
-          >
-            Play
-          </button>
-        </div>
-      )}
+    <MinigameShell
+      title="Candy Match"
+      blurb="Swap adjacent emojis to make 3+. Bad swaps don't cost a move."
+      myScore={myScore}
+    >
+      {phase === "idle" && <PlayButton onClick={start} />}
 
       {phase === "play" && grid.length > 0 && (
         <>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 12 }}>
             <span>Moves: {movesLeft}</span>
-            <span>Score: {score}</span>
+            <span>Cleared: {clearedTotal}</span>
           </div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: `repeat(${COLS}, 1fr)`,
-              gap: 4,
-            }}
-          >
+          <div style={{ display: "grid", gridTemplateColumns: `repeat(${COLS}, 1fr)`, gap: 4 }}>
             {grid.map((row, r) =>
               row.map((cell, c) => {
                 const sel = selected && selected[0] === r && selected[1] === c;
@@ -246,31 +237,28 @@ export default function EmojiMatch3Game(props: {
               })
             )}
           </div>
+          <div style={{ fontSize: 11, opacity: 0.65, marginTop: 6 }}>Cascades: {cascadesTotal}</div>
         </>
       )}
 
       {phase === "done" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <div style={{ fontSize: 14, fontWeight: 800 }}>
-            Final score: {score}
+            Cleared {clearedTotal} · {cascadesTotal} cascades
           </div>
+          {result && (
+            <div style={{ fontSize: 12 }}>
+              Score: <b>{result.challengeScore.toLocaleString()}</b>
+              {result.improved ? " (new best!)" : " (kept previous best)"}
+            </div>
+          )}
           {error && <div style={{ color: "var(--text-error)", fontSize: 12 }}>{error}</div>}
-          <button
-            onClick={submitScore}
-            disabled={busy}
-            style={{
-              padding: "10px 14px",
-              borderRadius: 10,
-              border: "1px solid var(--border)",
-              background: "var(--accent-bg)",
-              fontWeight: 1000,
-              cursor: busy ? "not-allowed" : "pointer",
-            }}
-          >
-            {busy ? "Submitting…" : "Submit score"}
-          </button>
+          {!result && (
+            <PlayButton onClick={submitScore} label={busy ? "Submitting…" : "Submit score"} disabled={busy} />
+          )}
+          {result && <PlayButton onClick={start} label="Play again" />}
         </div>
       )}
-    </div>
+    </MinigameShell>
   );
 }

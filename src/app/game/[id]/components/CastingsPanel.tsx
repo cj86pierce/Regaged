@@ -20,7 +20,7 @@ export default function CastingsPanel(props: {
           )}
         </div>
         <div style={{ marginTop: 10, fontSize: 12, opacity: 0.75, lineHeight: 1.35 }}>
-          Keys decide the winner. Ties: checks → health.
+          Nominations: low challenge + low checks. Finals: keys → challenge → checks.
         </div>
       </div>
 
