@@ -8,6 +8,10 @@ import { maybeSpawnCastingsDrops } from "@/lib/castingsDrops";
 import { applyCastingsPeriodicDecay } from "@/lib/castingsPeriodicDecay";
 import { createAuctionsFromDesigns } from "@/lib/createAuctionsFromDesigns";
 import { resolveEndedAuctions } from "@/lib/resolveAuctions";
+import { tryStartSurvivorGame } from "@/lib/survivor/start";
+import { advanceSurvivorIfDue } from "@/lib/survivor/advance";
+import { fillGameWithBots } from "@/lib/botUsers";
+import { SURVIVOR_MAX } from "@/lib/survivor/timing";
 
 export type TickResult =
   | { skipped: true; reason: "locked" }
@@ -47,7 +51,7 @@ export async function runTick(): Promise<TickResult> {
     // -----------------------
     const enrollingBots = await prisma.game.findMany({
       where: {
-        gameType: { in: ["FASTING_BOT", "CASTING_BOT", "FROOKIES_BOT", "ROOKIES_BOT"] },
+        gameType: { in: ["FASTING_BOT", "CASTING_BOT", "FROOKIES_BOT", "ROOKIES_BOT", "SURVIVOR_BOT"] },
         state: "ENROLLING",
       },
       select: { id: true, gameType: true },
@@ -57,7 +61,10 @@ export async function runTick(): Promise<TickResult> {
       try {
         if (g.gameType === "FASTING_BOT") await tryStartFastingBotGame(g.id);
         else if (g.gameType === "FROOKIES_BOT" || g.gameType === "ROOKIES_BOT") await tryStartFastingStyleBotGame(g.id, g.gameType);
-        else await tryStartCastingBotGame(g.id);
+        else if (g.gameType === "SURVIVOR_BOT") {
+          await fillGameWithBots(g.id, SURVIVOR_MAX);
+          await tryStartSurvivorGame(g.id, "SURVIVOR_BOT");
+        } else await tryStartCastingBotGame(g.id);
       } catch {}
     }
 
@@ -192,11 +199,39 @@ export async function runTick(): Promise<TickResult> {
       console.error("CASTING_BOT periodic decay failed", { err: String(e) });
     }
 
+    // -----------------------
+    // SURVIVOR / SURVIVOR_BOT
+    // -----------------------
+    const survivorDue = await prisma.game.findMany({
+      where: {
+        gameType: { in: ["SURVIVOR", "SURVIVOR_BOT"] },
+        state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] },
+        OR: [
+          { stateEndsAt: { not: null, lte: now } },
+          { stateEndsAt: null },
+        ],
+      },
+      select: { id: true },
+      take: 30,
+    });
+    let survivorAdvanced = 0;
+    for (const g of survivorDue) {
+      try {
+        const r = await advanceSurvivorIfDue(g.id);
+        if ((r as { advanced?: boolean; fixed?: boolean }).advanced || (r as { fixed?: boolean }).fixed) {
+          survivorAdvanced++;
+        }
+      } catch (e) {
+        console.error("SURVIVOR advance failed", { gameId: g.id, err: String(e) });
+      }
+    }
+
     const result: Record<string, unknown> = {
       fasting: { due: fastingDue.length, advanced: fastingAdvanced },
       fastingBot: { due: fastingBotDue.length, advanced: fastingBotAdvanced },
       castingBot: { due: castingBotDue.length, advanced: castingBotAdvanced },
       casting: { due: castingDue.length, advanced: castingAdvanced },
+      survivor: { due: survivorDue.length, advanced: survivorAdvanced },
     };
 
     // Auctions don't need to run every 15s — throttle to every 5 minutes.

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-const PINK_BUTTON = "linear-gradient(#f8bbd9, #f48fb1)";
+const GREEN_BUTTON = "linear-gradient(#a5d6a7, #66bb6a)";
 
 export default function EnrollRookiesBotPage() {
   const [busy, setBusy] = useState(false);
@@ -41,8 +41,8 @@ export default function EnrollRookiesBotPage() {
           padding: "12px 14px",
           borderRadius: 12,
           border: "1px solid rgba(0,0,0,0.14)",
-          background: PINK_BUTTON,
-          color: "#5a2a3a",
+          background: GREEN_BUTTON,
+          color: "#1b3d1f",
           fontWeight: 1000,
           cursor: busy ? "not-allowed" : "pointer",
         }}

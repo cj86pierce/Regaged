@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import Avatar, { AvatarConfig, type SlotDesignType } from "@/components/Avatar";
-import HofBadge from "@/components/HofBadge";
+import StatusBadges from "@/components/StatusBadges";
 import { formatLastSeen } from "@/lib/lastSeenLabel";
+import { renderBioContent } from "@/lib/renderBio";
 
 export type ProfileGameBubble = {
   gameId: string;
@@ -23,6 +24,11 @@ export type ProfileTabsData = {
   karma: number;
   /** 1-based karma Hall of Fame rank; badge shown if ≤ 500 */
   hofRank?: number | null;
+  isOwner?: boolean;
+  isWarned?: boolean;
+  isBanned?: boolean;
+  /** Own profile: show verify email CTA when unset */
+  emailVerified?: boolean;
   tMoney: number;
   pMoney: number;
   colorName: string;
@@ -331,8 +337,10 @@ function StatLine({ label, value, suffixText, isCurrency }: { label: string; val
 
 function gameBubbleColor(gameType: string): string {
   const t = gameType.toUpperCase();
-  if (t === "SURVIVOR") return "var(--game-bubble-survivor)";
-  if (t === "FROOKIES" || t === "ROOKIES" || t === "FROOKIES_BOT" || t === "ROOKIES_BOT") return "var(--game-bubble-frookies)";
+  if (t === "SURVIVOR" || t === "SURVIVOR_BOT" || t === "ROOKIES" || t === "ROOKIES_BOT") {
+    return "var(--game-bubble-survivor)";
+  }
+  if (t === "FROOKIES" || t === "FROOKIES_BOT") return "var(--game-bubble-frookies)";
   return "var(--game-bubble-fasting)";
 }
 
@@ -421,7 +429,13 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
         <Card title="Profile">
           <div className="profileCardInner" style={{ display: "grid", gridTemplateColumns: "220px 1fr 110px", gap: 14, alignItems: "start" }}>
             <div style={{ display: "grid", placeItems: "start" }}>
-              <Avatar config={data.avatar} width={190} slotDesigns={data.slotDesigns} />
+              {data.isOwnProfile ? (
+                <Link href="/profile/avatar" title="Edit avatar" style={{ display: "inline-block" }}>
+                  <Avatar config={data.avatar} width={190} slotDesigns={data.slotDesigns} />
+                </Link>
+              ) : (
+                <Avatar config={data.avatar} width={190} slotDesigns={data.slotDesigns} />
+              )}
             </div>
 
             <div>
@@ -433,7 +447,13 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
                     style={{ fontSize: 38, lineHeight: 1, display: "flex", alignItems: "center", flexWrap: "wrap", gap: 2 }}
                   >
                     {data.username}
-                    <HofBadge rank={data.hofRank} size="md" />
+                    <StatusBadges
+                      isOwner={data.isOwner}
+                      isWarned={data.isWarned}
+                      isBanned={data.isBanned}
+                      hofRank={data.hofRank}
+                      size="md"
+                    />
                   </div>
 
                   {/* bar is in the right column, but the background bar spans full width */}
@@ -532,7 +552,11 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
               </div>
             ) : (
               <div style={{ marginTop: 10, whiteSpace: "pre-wrap", fontSize: 13, lineHeight: 1.35 }}>
-                {data.bio?.trim().length ? data.bio : <span style={{ opacity: 0.6 }}>No bio yet.</span>}
+                {data.bio?.trim().length ? (
+                  renderBioContent(data.bio)
+                ) : (
+                  <span style={{ opacity: 0.6 }}>No bio yet.</span>
+                )}
               </div>
             )}
           </div>
@@ -626,16 +650,19 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
                 Enroll now ▶
               </Link>
 
-              {data.isOwnProfile && (
-  <Link href="/profile/edit" className="theme-btn-secondary" style={{ display: "block", textAlign: "center" }}>
-    Edit Profile
-  </Link>
-)}
+              {data.isOwnProfile && !data.emailVerified && (
+                <Link
+                  href="/profile/edit#email"
+                  className="theme-btn-primary"
+                  style={{ display: "block", textAlign: "center", background: "#b91c1c", borderColor: "#991b1b" }}
+                >
+                  Verify email
+                </Link>
+              )}
 
-
               {data.isOwnProfile && (
-                <Link href="/profile/avatar" className="theme-btn-secondary" style={{ display: "block", textAlign: "center" }}>
-                  Customize Avatar
+                <Link href="/profile/edit" className="theme-btn-secondary" style={{ display: "block", textAlign: "center" }}>
+                  Edit Profile
                 </Link>
               )}
             </div>

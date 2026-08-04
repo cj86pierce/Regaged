@@ -4,6 +4,8 @@ import { getCurrentUserIdFromHeaders } from "@/lib/getCurrentUserId";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import EditProfileClient from "./ui/EditProfileClient";
+import { avatarConfigFromUser } from "@/lib/avatarConfigFromUser";
+import { getSlotDesignsForUser } from "@/lib/avatarSlotDesigns";
 
 export default async function EditProfilePage() {
   const userId = await getCurrentUserIdFromHeaders();
@@ -20,7 +22,32 @@ export default async function EditProfilePage() {
 
   const me = await prisma.user.findUnique({
     where: { id: userId },
-    select: { bio: true, email: true, emailVerifiedAt: true },
+    select: {
+      bio: true,
+      email: true,
+      emailVerifiedAt: true,
+      username: true,
+      usernameChangedAt: true,
+      bodyStyle: true,
+      hairStyle: true,
+      eyesStyle: true,
+      mouthStyle: true,
+      shirtStyle: true,
+      accessoryStyle: true,
+      glassesStyle: true,
+      scarStyle: true,
+      hairOrnamentStyle: true,
+      bodyColor: true,
+      hairColor: true,
+      eyeColor: true,
+      mouthColor: true,
+      shirtColor: true,
+      accessoryColor: true,
+      backgroundColor: true,
+      glassesColor: true,
+      scarColor: true,
+      hairOrnamentColor: true,
+    },
   });
 
   if (!me) {
@@ -32,11 +59,18 @@ export default async function EditProfilePage() {
     );
   }
 
+  const slotDesigns = await getSlotDesignsForUser(userId);
+  const avatar = avatarConfigFromUser(me);
+
   return (
     <EditProfileClient
       initialBio={me.bio ?? ""}
       email={me.email ?? ""}
       emailVerifiedAt={me.emailVerifiedAt ? me.emailVerifiedAt.toISOString() : null}
+      username={me.username}
+      usernameChangedAt={me.usernameChangedAt ? me.usernameChangedAt.toISOString() : null}
+      avatar={avatar}
+      slotDesigns={slotDesigns}
     />
   );
 }

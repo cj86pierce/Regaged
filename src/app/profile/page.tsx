@@ -52,6 +52,10 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
       tMoney: true,
       pMoney: true,
       bio: true, // ✅
+      isOwner: true,
+      warnedAt: true,
+      bannedAt: true,
+      emailVerifiedAt: true,
 
       createdAt: true,
       lastSeenAt: true,
@@ -211,6 +215,10 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
     joinedAt: (user.createdAt && typeof user.createdAt.toISOString === "function" ? user.createdAt.toISOString() : new Date().toISOString()),
     karma: user.karma,
     hofRank,
+    isOwner: user.isOwner || user.username.toLowerCase() === "siege",
+    isWarned: !!user.warnedAt,
+    isBanned: !!user.bannedAt,
+    emailVerified: !!user.emailVerifiedAt,
     tMoney: user.tMoney,
     pMoney: user.pMoney,
     bio: user.bio ?? "", // ✅

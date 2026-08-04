@@ -32,6 +32,15 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       hohUserId: true,
       povSavedUserId: true,
       frookiesPhase: true,
+      survivorPhase: true,
+      survivorMerged: true,
+      losingTribe: true,
+      tribeAFood: true,
+      tribeAWater: true,
+      tribeAFire: true,
+      tribeBFood: true,
+      tribeBWater: true,
+      tribeBFire: true,
     },
   });
 
@@ -102,7 +111,9 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     game.gameType === "FROOKIES" ||
     game.gameType === "ROOKIES" ||
     game.gameType === "FROOKIES_BOT" ||
-    game.gameType === "ROOKIES_BOT";
+    game.gameType === "ROOKIES_BOT" ||
+    game.gameType === "SURVIVOR" ||
+    game.gameType === "SURVIVOR_BOT";
   if (meUserId && isActiveGame) {
     const touchKey = `${gameId}:${meUserId}`;
     const last = presenceTouchAt.get(touchKey) ?? 0;
@@ -160,7 +171,12 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
           current: activeCount,
           needed: Math.max(
             0,
-            (game.gameType === "CASTING" || game.gameType === "CASTING_BOT" ? 20 : 15) - activeCount
+            (game.gameType === "CASTING" ||
+            game.gameType === "CASTING_BOT" ||
+            game.gameType === "SURVIVOR" ||
+            game.gameType === "SURVIVOR_BOT"
+              ? 20
+              : 15) - activeCount
           ),
         }
       : null;
@@ -355,6 +371,17 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
             : undefined
           : game.povSavedUserId ?? undefined,
       frookiesPhase: game.frookiesPhase ?? undefined,
+      survivorPhase: game.survivorPhase ?? undefined,
+      survivorMerged: game.survivorMerged ?? false,
+      losingTribe: game.losingTribe ?? undefined,
+      survivorSupplies: {
+        tribeAFood: game.tribeAFood,
+        tribeAWater: game.tribeAWater,
+        tribeAFire: game.tribeAFire,
+        tribeBFood: game.tribeBFood,
+        tribeBWater: game.tribeBWater,
+        tribeBFire: game.tribeBFire,
+      },
     },
 
     nomineeCUserId: nomineeC ?? undefined,
@@ -396,6 +423,11 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         castingDayMiniGameScore: (game.gameType === "CASTING" || game.gameType === "CASTING_BOT" || game.gameType === "FROOKIES" || game.gameType === "FROOKIES_BOT")
           ? (p.castingDayMiniGameScore ?? 0)
           : undefined,
+        tribe: (p as { tribe?: string | null }).tribe ?? null,
+        food: (p as { food?: number }).food ?? 5,
+        water: (p as { water?: number }).water ?? 5,
+        hasImmunity: (p as { hasImmunity?: boolean }).hasImmunity ?? false,
+        challengeScore: (p as { challengeScore?: number }).challengeScore ?? 0,
 
         isNominee: isCastingNominee || isFastingNominee,
 

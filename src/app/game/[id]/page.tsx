@@ -10,6 +10,8 @@ import Tabs from "./components/Tabs";
 import PmPanel from "./components/PmPanel";
 import type { AvatarConfig } from "@/components/Avatar";
 import CastingSidebar from "./components/CastingSidebar";
+import RookiesBetPanel from "./components/RookiesBetPanel";
+import SurvivorPanel from "./components/SurvivorPanel";
 
 type Player = {
   userId: string;
@@ -22,6 +24,11 @@ type Player = {
   health: number;
   keys: number;
   castingDayMiniGameScore?: number;
+  tribe?: string | null;
+  food?: number;
+  water?: number;
+  hasImmunity?: boolean;
+  challengeScore?: number;
   avatar: AvatarConfig;
   slotDesigns?: Partial<Record<import("@/components/Avatar").SlotDesignType, string>>;
 };
@@ -44,7 +51,29 @@ type GameState = {
   ok: boolean;
   meUserId: string | null;
   myNomLocked: boolean | null;
-  game: { id: string; number: number; gameType: string; state: string; roundNumber: number; povUserId: string | null; hohUserId?: string | null; povSavedUserId?: string | null; frookiesPhase?: string | null; stateEndsAt: string | null };
+  game: {
+    id: string;
+    number: number;
+    gameType: string;
+    state: string;
+    roundNumber: number;
+    povUserId: string | null;
+    hohUserId?: string | null;
+    povSavedUserId?: string | null;
+    frookiesPhase?: string | null;
+    stateEndsAt: string | null;
+    survivorPhase?: string | null;
+    survivorMerged?: boolean;
+    losingTribe?: string | null;
+    survivorSupplies?: {
+      tribeAFood: number;
+      tribeAWater: number;
+      tribeAFire: boolean;
+      tribeBFood: number;
+      tribeBWater: number;
+      tribeBFire: boolean;
+    };
+  };
   lobby: { current: number; needed: number } | null;
   voteInfo: { myVoteTargetUserId?: string | null; myRankings?: Record<string, number> } | null;
   nomineeCUserId?: string;
@@ -138,7 +167,16 @@ export default function GamePage({ params }: { params: { id: string } }) {
     if (!res.ok) throw new Error(json?.error ?? "Failed to load game");
     setData(json);
 
-    if (json.game.gameType === "FASTING" || json.game.gameType === "FASTING_BOT" || json.game.gameType === "FROOKIES" || json.game.gameType === "ROOKIES" || json.game.gameType === "FROOKIES_BOT" || json.game.gameType === "ROOKIES_BOT") {
+    if (
+      json.game.gameType === "FASTING" ||
+      json.game.gameType === "FASTING_BOT" ||
+      json.game.gameType === "FROOKIES" ||
+      json.game.gameType === "ROOKIES" ||
+      json.game.gameType === "FROOKIES_BOT" ||
+      json.game.gameType === "ROOKIES_BOT" ||
+      json.game.gameType === "SURVIVOR" ||
+      json.game.gameType === "SURVIVOR_BOT"
+    ) {
       if (json.game.state !== "ROUND_NOMINATE") setNomSelected([]);
       if (json.game.state !== "ROUND_VOTE") setEvictSelected(null);
       if (json.myNomLocked) setNomSelected([]);
@@ -337,7 +375,10 @@ export default function GamePage({ params }: { params: { id: string } }) {
 
   const isCasting =
     data.game.gameType === "CASTING" || data.game.gameType === "CASTING_BOT";
-  const maxPlayers = isCasting ? 20 : 15;
+  const isSurvivor =
+    data.game.gameType === "SURVIVOR" || data.game.gameType === "SURVIVOR_BOT";
+  const isRookiesLive = data.game.gameType === "ROOKIES" || data.game.gameType === "ROOKIES_BOT";
+  const maxPlayers = isCasting || isSurvivor ? 20 : 15;
 
   const myNomLockedIn = data.myNomLocked === true;
   const myVoteLockedIn = data.voteInfo?.myVoteTargetUserId ?? null;
@@ -480,6 +521,20 @@ export default function GamePage({ params }: { params: { id: string } }) {
           )}
         </div>
 
+        {isRookiesLive && <RookiesBetPanel gameId={gameId} />}
+        {isSurvivor && (
+          <SurvivorPanel
+            gameId={gameId}
+            phase={data.game.survivorPhase}
+            losingTribe={data.game.losingTribe}
+            merged={!!data.game.survivorMerged}
+            meUserId={data.meUserId}
+            players={data.players}
+            supplies={data.game.survivorSupplies ?? null}
+            onRefresh={() => load({ bust: true }).catch((e) => setError(e.message))}
+          />
+        )}
+
         {isCasting ? (
   <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
   <CastingSidebar
@@ -497,6 +552,33 @@ export default function GamePage({ params }: { params: { id: string } }) {
     meUserId={data.meUserId}
   />
   </div>
+) : isSurvivor ? (
+  <Sidebar
+    gameState={data.game.state === "COMPLETED" ? "COMPLETED" : "ENROLLING"}
+    roundNumber={data.game.roundNumber}
+    nomSelected={[]}
+    canConfirmNoms={false}
+    onConfirmNoms={async () => {}}
+    myNomLockedIn={false}
+    evictSelected={null}
+    canConfirmVote={false}
+    onConfirmVote={async () => {}}
+    myVoteLockedIn={null}
+    myRankingsLocked={false}
+    messages={data.messages}
+    gameId={gameId}
+    gameType={data.game.gameType}
+    meUserId={data.meUserId}
+    povUserId={null}
+    players={data.players.map((p) => ({
+      userId: p.userId,
+      username: p.username,
+      status: p.status,
+      isNominee: false,
+    }))}
+    rookiesNominees={[]}
+    onReload={() => load().catch((e) => setError(e.message))}
+  />
 ) : (
   <Sidebar
     gameState={data.game.state}

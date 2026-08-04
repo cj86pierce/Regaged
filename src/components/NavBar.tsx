@@ -6,14 +6,19 @@ import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { useTheme } from "@/app/ThemeProvider";
 
-type SteamMe = { userId: string; username: string } | null;
+type SteamMe = { userId: string; username: string; isOwner?: boolean } | null;
 
 export default function NavBar() {
   const { theme, setTheme } = useTheme();
   const { data: session, status } = useSession();
   const [steamMe, setSteamMe] = useState<SteamMe>(null);
   const [dmUnread, setDmUnread] = useState(0);
+  const [isOwnerFlag, setIsOwnerFlag] = useState(false);
   const loggedIn = !!session?.user || !!steamMe;
+  const showOwner =
+    isOwnerFlag ||
+    !!(session?.user as { isOwner?: boolean } | undefined)?.isOwner ||
+    !!steamMe?.isOwner;
 
   const pathname = usePathname();
   useEffect(() => {
@@ -24,12 +29,17 @@ export default function NavBar() {
       .catch(() => {});
   }, [loggedIn, pathname]);
 
-  // When not using NextAuth session (e.g. Steam client with cookie), check /api/me/session
+  // Session check (Steam cookie or refresh isOwner for NextAuth)
   useEffect(() => {
-    if (session?.user) return;
     fetch("/api/me/session", { credentials: "include" })
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => d && setSteamMe({ userId: d.userId, username: d.username }))
+      .then((d) => {
+        if (!d) return;
+        setIsOwnerFlag(!!d.isOwner);
+        if (!session?.user) {
+          setSteamMe({ userId: d.userId, username: d.username, isOwner: !!d.isOwner });
+        }
+      })
       .catch(() => {});
   }, [session?.user]);
 
@@ -65,6 +75,11 @@ export default function NavBar() {
           <Link href="/games" className="navLink">Games</Link>
           <Link href="/enroll" className="navLink">Enroll</Link>
           <Link href="/hof" className="navLink">HOF</Link>
+          {showOwner ? (
+            <Link href="/owner" className="navLink" style={{ fontWeight: 800 }}>
+              Owner
+            </Link>
+          ) : null}
           <Link href="/blogs" className="navLink">Blogs</Link>
           <Link href="/designs" className="navLink">Designs</Link>
           <Link href="/shop" className="navLink">Shop</Link>

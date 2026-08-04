@@ -311,4 +311,9 @@ export async function finishFastingGame(gameId: string, gameType?: string) {
       });
     }
   }
+
+  if (gameType === "ROOKIES") {
+    const { settleRookiesBets } = await import("@/lib/rookiesBets");
+    await settleRookiesBets(gameId);
+  }
 }

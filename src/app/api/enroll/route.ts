@@ -7,11 +7,36 @@ import { tryStartCastingsGame } from "@/lib/gameEngineCastings";
 import { tryStartFastingBotGame, tryStartFastingStyleBotGame } from "@/lib/gameEngineBot";
 import { tryStartCastingBotGame } from "@/lib/gameEngineBot";
 import { fillGameWithBots } from "@/lib/botUsers";
+import { tryStartSurvivorGame } from "@/lib/survivor/start";
+import { SURVIVOR_MAX } from "@/lib/survivor/timing";
 
 const FASTING_MAX = 15;
 const CASTING_MAX = 20;
 
-type GameType = "FASTING" | "CASTING" | "FASTING_BOT" | "CASTING_BOT" | "FROOKIES" | "ROOKIES" | "FROOKIES_BOT" | "ROOKIES_BOT";
+type GameType =
+  | "FASTING"
+  | "CASTING"
+  | "FASTING_BOT"
+  | "CASTING_BOT"
+  | "FROOKIES"
+  | "ROOKIES"
+  | "FROOKIES_BOT"
+  | "ROOKIES_BOT"
+  | "SURVIVOR"
+  | "SURVIVOR_BOT";
+
+const ALL_TYPES: GameType[] = [
+  "FASTING",
+  "CASTING",
+  "FASTING_BOT",
+  "CASTING_BOT",
+  "FROOKIES",
+  "ROOKIES",
+  "FROOKIES_BOT",
+  "ROOKIES_BOT",
+  "SURVIVOR",
+  "SURVIVOR_BOT",
+];
 
 export async function POST(req: Request) {
   const userId = await getCurrentUserId(req);
@@ -27,24 +52,29 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   const gameType = (body?.gameType ?? "FASTING") as GameType;
 
-  if (gameType !== "FASTING" && gameType !== "CASTING" && gameType !== "FASTING_BOT" && gameType !== "CASTING_BOT" && gameType !== "FROOKIES" && gameType !== "ROOKIES" && gameType !== "FROOKIES_BOT" && gameType !== "ROOKIES_BOT") {
+  if (!ALL_TYPES.includes(gameType)) {
     return NextResponse.json({ error: "Invalid gameType" }, { status: 400 });
   }
 
-  // FROOKIES: Card Required = Yellow, Entrance = T$10
-  if (gameType === "FROOKIES") {
+  // FROOKIES / SURVIVOR: Yellow + T$10
+  if (gameType === "FROOKIES" || gameType === "SURVIVOR") {
     const yellow = await prisma.colorLevel.findUnique({ where: { name: "Yellow" }, select: { id: true } });
-    const meForFrookies = await prisma.user.findUnique({
+    const me = await prisma.user.findUnique({
       where: { id: userId },
       select: { tMoney: true, equippedColorId: true },
     });
-    if (!yellow || meForFrookies?.equippedColorId !== yellow.id) {
+    if (!yellow || me?.equippedColorId !== yellow.id) {
       return NextResponse.json(
-        { error: "Yellow card required. Equip Yellow in Shop → Colors to play Frookies." },
+        {
+          error:
+            gameType === "SURVIVOR"
+              ? "Yellow card required. Equip Yellow in Shop → Colors to play Survivor."
+              : "Yellow card required. Equip Yellow in Shop → Colors to play Frookies.",
+        },
         { status: 403 }
       );
     }
-    if ((meForFrookies?.tMoney ?? 0) < 10) {
+    if ((me?.tMoney ?? 0) < 10) {
       return NextResponse.json(
         { error: "Entrance fee is T$10. You need more T$ to join." },
         { status: 403 }
@@ -52,7 +82,7 @@ export async function POST(req: Request) {
     }
   }
 
-  // ROOKIES: Card Required = Yellow, Entrance = T$15
+  // ROOKIES: Yellow + T$15
   if (gameType === "ROOKIES") {
     const yellow = await prisma.colorLevel.findUnique({ where: { name: "Yellow" }, select: { id: true } });
     const meForRookies = await prisma.user.findUnique({
@@ -73,9 +103,13 @@ export async function POST(req: Request) {
     }
   }
 
-  const MAX = gameType === "CASTING" || gameType === "CASTING_BOT" ? CASTING_MAX : FASTING_MAX;
+  const MAX =
+    gameType === "CASTING" || gameType === "CASTING_BOT"
+      ? CASTING_MAX
+      : gameType === "SURVIVOR" || gameType === "SURVIVOR_BOT"
+        ? SURVIVOR_MAX
+        : FASTING_MAX;
 
-  // ✅ Only redirect if already ACTIVE in THIS requested gameType
   const alreadySameType = await prisma.gamePlayer.findFirst({
     where: {
       userId,
@@ -90,7 +124,6 @@ export async function POST(req: Request) {
 
   if (alreadySameType) return NextResponse.json({ ok: true, gameId: alreadySameType.gameId });
 
-  // Find or create lobby for this gameType
   let lobby = await prisma.game.findFirst({
     where: { gameType, state: "ENROLLING" },
     orderBy: { createdAt: "asc" },
@@ -104,18 +137,20 @@ export async function POST(req: Request) {
     });
   }
 
-  // For bot modes: when human joins, immediately fill with bots and start
-  const isBotMode = gameType === "FASTING_BOT" || gameType === "CASTING_BOT" || gameType === "FROOKIES_BOT" || gameType === "ROOKIES_BOT";
+  const isBotMode =
+    gameType === "FASTING_BOT" ||
+    gameType === "CASTING_BOT" ||
+    gameType === "FROOKIES_BOT" ||
+    gameType === "ROOKIES_BOT" ||
+    gameType === "SURVIVOR_BOT";
 
-  // Join lobby if not already
   const existing = await prisma.gamePlayer.findUnique({
     where: { gameId_userId: { gameId: lobby.id, userId } },
     select: { id: true },
   });
 
   if (!existing) {
-    // FROOKIES: deduct entrance fee T$10
-    if (gameType === "FROOKIES") {
+    if (gameType === "FROOKIES" || gameType === "SURVIVOR") {
       const updated = await prisma.user.updateMany({
         where: { id: userId, tMoney: { gte: 10 } },
         data: { tMoney: { decrement: 10 } },
@@ -124,7 +159,6 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Not enough T$. Entrance fee is T$10." }, { status: 403 });
       }
     }
-    // ROOKIES: deduct entrance fee T$15
     if (gameType === "ROOKIES") {
       const updated = await prisma.user.updateMany({
         where: { id: userId, tMoney: { gte: 15 } },
@@ -151,7 +185,6 @@ export async function POST(req: Request) {
     });
   }
 
-  // Start if full (or for bot modes, fill with bots then start)
   if (isBotMode) {
     await fillGameWithBots(lobby.id, MAX);
   }
@@ -166,6 +199,8 @@ export async function POST(req: Request) {
     await tryStartFastingBotGame(lobby.id);
   } else if (gameType === "FROOKIES_BOT" || gameType === "ROOKIES_BOT") {
     await tryStartFastingStyleBotGame(lobby.id, gameType);
+  } else if (gameType === "SURVIVOR" || gameType === "SURVIVOR_BOT") {
+    await tryStartSurvivorGame(lobby.id, gameType);
   } else {
     await tryStartCastingBotGame(lobby.id);
   }

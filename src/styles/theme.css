@@ -68,6 +68,7 @@
   --game-bubble-fasting: #a9cfe8;
   --game-bubble-frookies: #f48fb1;
   --game-bubble-survivor: #66bb6a;
+  --game-bubble-rookies: #66bb6a;
 }
 
 /* Dark: dark red & black */
@@ -142,6 +143,7 @@
   --game-bubble-fasting: #2a4a6a;
   --game-bubble-frookies: #6a3a4a;
   --game-bubble-survivor: #1a4a2a;
+  --game-bubble-rookies: #1a4a2a;
 }
 
 .theme-body {

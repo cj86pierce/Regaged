@@ -1,9 +1,11 @@
-export const dynamic = "force-dynamic";
-
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import GamesHubClient from "./GamesHubClient";
 
-export default async function GamesPage() {
+/**
+ * GET /api/games/feed
+ * Light payload for Games hub: active games, past games, recent public chat.
+ */
+export async function GET() {
   const [active, past, chatRaw] = await Promise.all([
     prisma.game.findMany({
       where: { state: { not: "COMPLETED" } },
@@ -41,30 +43,22 @@ export default async function GamesPage() {
     }),
   ]);
 
-  const initial = {
+  const chat = chatRaw.map((m) => ({
+    id: m.id,
+    body: m.body,
+    createdAt: m.createdAt.toISOString(),
+    gameId: m.gameId,
+    gameNumber: m.game.number,
+    gameType: m.game.gameType,
+    username: m.user.username,
+  }));
+
+  return NextResponse.json({
     active,
     past: past.map((g) => ({
       ...g,
       completedAt: g.completedAt?.toISOString() ?? null,
     })),
-    chat: chatRaw.map((m) => ({
-      id: m.id,
-      body: m.body,
-      createdAt: m.createdAt.toISOString(),
-      gameId: m.gameId,
-      gameNumber: m.game.number,
-      gameType: m.game.gameType,
-      username: m.user.username,
-    })),
-  };
-
-  return (
-    <main style={{ padding: 12 }} className="gamesPage">
-      <h1 style={{ marginTop: 0, color: "var(--brand)" }}>Games</h1>
-      <div style={{ marginBottom: 12, fontSize: 12, opacity: 0.75 }}>
-        Anyone can spectate. Only players in a game can act.
-      </div>
-      <GamesHubClient initial={initial} />
-    </main>
-  );
+    chat,
+  });
 }

@@ -4,24 +4,33 @@ import Link from "next/link";
 
 const PINK_ACCENT = "#f48fb1";
 const PINK_BUTTON = "linear-gradient(#f8bbd9, #f48fb1)";
+const GREEN_ACCENT = "#66bb6a";
+const GREEN_BUTTON = "linear-gradient(#a5d6a7, #66bb6a)";
 
 function GameCard({
   title,
   desc,
   href,
-  pink,
+  accent,
 }: {
   title: string;
   desc: string;
   href: string;
-  pink?: boolean;
+  accent?: "pink" | "green";
 }) {
+  const isPink = accent === "pink";
+  const isGreen = accent === "green";
+  const headerBg = isPink ? PINK_ACCENT : isGreen ? GREEN_ACCENT : "var(--accent-bg)";
+  const titleColor = isPink ? "#5a2a3a" : isGreen ? "#1b3d1f" : "var(--brand)";
+  const linkColor = isPink ? "#8b3a52" : isGreen ? "#2e7d32" : "var(--link-color)";
+  const btnBg = isPink ? PINK_BUTTON : isGreen ? GREEN_BUTTON : "var(--bg-btn-disabled)";
+
   return (
     <Link href={href} className="enrollCard">
       <div
         style={{
           minHeight: 72,
-          background: pink ? PINK_ACCENT : "var(--accent-bg)",
+          background: headerBg,
           margin: -18,
           marginBottom: 14,
           padding: 16,
@@ -30,7 +39,7 @@ function GameCard({
           justifyContent: "center",
         }}
       >
-        <span style={{ fontWeight: 1000, fontSize: 17, color: pink ? "#5a2a3a" : "var(--brand)" }}>{title}</span>
+        <span style={{ fontWeight: 1000, fontSize: 17, color: titleColor }}>{title}</span>
       </div>
       <div style={{ fontWeight: 1000, fontSize: 15 }}>{title}</div>
       <div style={{ marginTop: 6, fontSize: 12, opacity: 0.8, lineHeight: 1.4 }}>{desc}</div>
@@ -38,10 +47,10 @@ function GameCard({
         style={{
           marginTop: 12,
           fontWeight: 1000,
-          color: pink ? "#8b3a52" : "var(--link-color)",
+          color: linkColor,
           padding: "10px 12px",
           borderRadius: 4,
-          background: pink ? PINK_BUTTON : "var(--bg-btn-disabled)",
+          background: btnBg,
           border: "1px solid var(--border)",
           display: "block",
           textAlign: "center",
@@ -60,7 +69,7 @@ export default function EnrollHub() {
         Enroll
       </h1>
       <div className="theme-text-muted" style={{ fontSize: 13, marginBottom: 16, lineHeight: 1.4 }}>
-        Pick a mode. Free: Fastings & Castings. Yellow + fee: Frookies & Rookies. Bot rooms use the same rules with ~2 minute phases and bots filling seats.
+        Pick a mode. Free: Fastings & Castings. Yellow + fee: Frookies, Rookies & Survivor. Bot rooms use the same rules with ~2 minute phases and bots filling seats.
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
@@ -81,16 +90,23 @@ export default function EnrollHub() {
               title="Frookies"
               desc="T$10 entry. HOH + POV. Jury (9th–3rd) picks the winner."
               href="/enroll/frookies"
-              pink
+              accent="pink"
             />
             <GameCard
               title="Rookies"
               desc="T$15 entry. Week-long. Ranking votes + secret POV."
               href="/enroll/rookies"
-              pink
+              accent="green"
             />
-            <GameCard title="Frookies (Bot)" desc="Same Frookies rules, ~2 min phases. Bots fill seats." href="/enroll/frookies-bot" pink />
-            <GameCard title="Rookies (Bot)" desc="Same Rookies rules, ~2 min days. Bots fill seats." href="/enroll/rookies-bot" pink />
+            <GameCard
+              title="Survivor"
+              desc="T$10 entry. 20 castaways, 2 tribes, challenges, tribal council."
+              href="/enroll/survivor"
+              accent="green"
+            />
+            <GameCard title="Frookies (Bot)" desc="Same Frookies rules, ~2 min phases. Bots fill seats." href="/enroll/frookies-bot" accent="pink" />
+            <GameCard title="Rookies (Bot)" desc="Same Rookies rules, ~2 min days. Bots fill seats." href="/enroll/rookies-bot" accent="green" />
+            <GameCard title="Survivor (Bot)" desc="Same Survivor rules, ~2 min days. Bots fill seats." href="/enroll/survivor-bot" accent="green" />
           </div>
         </section>
       </div>

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { signJwt } from "@/lib/jwt";
 import bcrypt from "bcryptjs";
+import { getClientIpFromHeaders } from "@/lib/clientIp";
+import { enforceLoginGuards } from "@/lib/authLoginGuards";
 
 const STEAM_WEB_API_KEY = process.env.STEAM_WEB_API_KEY;
 const STEAM_APP_ID = process.env.STEAM_APP_ID || "480"; // Spacewar for dev; replace with your App ID
@@ -56,7 +58,14 @@ export async function POST(req: Request) {
 
   let user = await prisma.user.findUnique({
     where: { steamId: steamIdStr },
-    select: { id: true, username: true },
+    select: {
+      id: true,
+      username: true,
+      usernameLower: true,
+      isOwner: true,
+      lockedLoginIp: true,
+      bannedAt: true,
+    },
   });
 
   if (!user) {
@@ -92,10 +101,32 @@ export async function POST(req: Request) {
         steamId: steamIdStr,
         emailVerifiedAt: new Date(), // Steam users skip email verification
       },
-      select: { id: true, username: true },
+      select: {
+        id: true,
+        username: true,
+        usernameLower: true,
+        isOwner: true,
+        lockedLoginIp: true,
+        bannedAt: true,
+      },
     });
   }
 
-  const token = await signJwt({ userId: user.id });
-  return NextResponse.json({ token, userId: user.id, username: user.username });
+  const clientIp = getClientIpFromHeaders(req.headers);
+  const guard = await enforceLoginGuards(
+    {
+      id: user.id,
+      usernameLower: user.usernameLower,
+      isOwner: user.isOwner,
+      lockedLoginIp: user.lockedLoginIp,
+      bannedAt: user.bannedAt,
+    },
+    clientIp
+  );
+  if (!guard.ok) {
+    return NextResponse.json({ error: guard.reason }, { status: 403 });
+  }
+
+  const token = await signJwt({ userId: guard.userId });
+  return NextResponse.json({ token, userId: guard.userId, username: guard.username });
 }

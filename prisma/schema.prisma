@@ -17,6 +17,8 @@ enum GameType {
   ROOKIES
   FROOKIES_BOT
   ROOKIES_BOT
+  SURVIVOR
+  SURVIVOR_BOT
 }
 
 enum GameState {
@@ -130,6 +132,14 @@ model User {
   phoneVerifiedAt DateTime?
 
   bio String @default("")
+
+  // Owner / moderation
+  isOwner       Boolean   @default(false)
+  lockedLoginIp String?
+  bannedAt      DateTime?
+  banReason     String?
+  warnedAt      DateTime?
+  usernameChangedAt DateTime?
 
   // AVATAR
   bodyStyle      String @default("body_m")
@@ -492,7 +502,38 @@ model Game {
   castingDays             CastingDayResult[]
   castingVotes            CastingVote[]
 
+  // Survivor
+  survivorPhase           String? // TRIBE_CHALLENGE | IMMUNITY | TRIBAL_COUNCIL | MERGE | INDIVIDUAL_CHALLENGE | INDIVIDUAL_IMMUNITY | VOTE
+  tribeAFood              Int     @default(10)
+  tribeAWater             Int     @default(10)
+  tribeAFire              Boolean @default(true)
+  tribeBFood              Int     @default(10)
+  tribeBWater             Int     @default(10)
+  tribeBFire              Boolean @default(true)
+  survivorMerged          Boolean @default(false)
+  losingTribe             String? // A | B during tribal
+
+  rookiesBets             RookiesBet[]
+
   @@index([state, stateEndsAt])
+}
+
+model RookiesBet {
+  id           String    @id @default(cuid())
+  gameId       String
+  betterUserId String
+  targetUserId String
+  amount       Int
+  paidOutAt    DateTime?
+  payoutAmount Int?
+
+  createdAt DateTime @default(now())
+
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@unique([gameId, betterUserId])
+  @@index([gameId])
+  @@index([betterUserId])
 }
 
 model GamePlayer {
@@ -530,6 +571,14 @@ model GamePlayer {
   castingLastDecayAt       DateTime?
   castingHealthGainedToday Int       @default(0)
   castingHealthTickedAt    DateTime?
+
+  // Survivor
+  tribe                String? // A | B | MERGED
+  food                 Int     @default(5)
+  water                Int     @default(5)
+  hasImmunity          Boolean @default(false)
+  sittingOut           Boolean @default(false)
+  challengeScore       Int     @default(0)
 
   @@unique([gameId, userId])
   @@unique([gameId, seatIndex])
