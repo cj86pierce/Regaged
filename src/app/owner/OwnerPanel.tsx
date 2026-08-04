@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type OwnerUser = {
   id: string;
@@ -16,6 +16,25 @@ type OwnerUser = {
   lockedLoginIp: string | null;
 };
 
+type OnlineRow = {
+  id: string;
+  username: string;
+  lastSeenAt: string;
+  karma: number;
+  tMoney: number;
+  pMoney: number;
+  isOwner: boolean;
+  warned: boolean;
+  banned: boolean;
+};
+
+function secondsAgo(iso: string): string {
+  const s = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60);
+  return `${m}m ago`;
+}
+
 export default function OwnerPanel() {
   const [username, setUsername] = useState("");
   const [user, setUser] = useState<OwnerUser | null>(null);
@@ -28,13 +47,46 @@ export default function OwnerPanel() {
   const [newUsername, setNewUsername] = useState("");
   const [banReason, setBanReason] = useState("");
 
-  async function call(action: string, extra: Record<string, unknown> = {}) {
+  const [online, setOnline] = useState<OnlineRow[]>([]);
+  const [onlineErr, setOnlineErr] = useState<string | null>(null);
+
+  const loadOnline = useCallback(async () => {
+    if (typeof document !== "undefined" && document.hidden) return;
+    try {
+      const res = await fetch("/api/owner/online", { credentials: "include", cache: "no-store" });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setOnlineErr(json?.error ?? "Failed to load online");
+        return;
+      }
+      setOnlineErr(null);
+      setOnline(json.online ?? []);
+    } catch {
+      setOnlineErr("Failed to load online");
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadOnline();
+    const id = window.setInterval(() => void loadOnline(), 15000);
+    const onVis = () => {
+      if (!document.hidden) void loadOnline();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [loadOnline]);
+
+  async function call(action: string, extra: Record<string, unknown> = {}, nameOverride?: string) {
     setBusy(true);
     setMsg(null);
+    const name = (nameOverride ?? username.trim() || user?.username || "").trim();
     const res = await fetch("/api/owner/user", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ username: username.trim() || user?.username, action, ...extra }),
+      body: JSON.stringify({ username: name, action, ...extra }),
     });
     const json = await res.json().catch(() => ({}));
     setBusy(false);
@@ -55,6 +107,66 @@ export default function OwnerPanel() {
 
   return (
     <div style={{ display: "grid", gap: 16 }}>
+      <section
+        style={{
+          border: "1px solid var(--border)",
+          borderRadius: 6,
+          padding: 14,
+          background: "var(--bg-card)",
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, marginBottom: 10 }}>
+          <div style={{ fontWeight: 900 }}>
+            Online now{" "}
+            <span style={{ fontWeight: 700, color: "var(--text-muted)" }}>({online.length})</span>
+          </div>
+          <button type="button" onClick={() => void loadOnline()} style={{ fontSize: 12 }}>
+            Refresh
+          </button>
+        </div>
+        <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 8 }}>
+          Active in the last 5 minutes. Click a name to look them up.
+        </div>
+        {onlineErr ? <div style={{ color: "var(--text-error)", fontSize: 13 }}>{onlineErr}</div> : null}
+        {!onlineErr && !online.length ? (
+          <div style={{ fontSize: 13, opacity: 0.7 }}>No one online right now.</div>
+        ) : null}
+        <div style={{ display: "grid", gap: 4, maxHeight: 280, overflow: "auto" }}>
+          {online.map((o) => (
+            <button
+              key={o.id}
+              type="button"
+              onClick={() => {
+                setUsername(o.username);
+                void call("lookup", {}, o.username);
+              }}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                gap: 10,
+                textAlign: "left",
+                padding: "6px 8px",
+                borderRadius: 4,
+                border: "1px solid var(--border)",
+                background: "var(--bg-input)",
+                cursor: "pointer",
+                font: "inherit",
+              }}
+            >
+              <span style={{ fontWeight: 800 }}>
+                {o.username}
+                {o.isOwner ? " · Owner" : ""}
+                {o.warned ? " · Warned" : ""}
+                {o.banned ? " · Banned" : ""}
+              </span>
+              <span style={{ fontSize: 12, color: "var(--text-muted)", flexShrink: 0 }}>
+                {secondsAgo(o.lastSeenAt)} · {o.karma}k · T${o.tMoney}
+              </span>
+            </button>
+          ))}
+        </div>
+      </section>
+
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
         <input
           value={username}
