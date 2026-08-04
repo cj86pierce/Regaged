@@ -341,6 +341,10 @@ function gameBubbleColor(gameType: string): string {
   if (t === "FROOKIES" || t === "FROOKIES_BOT" || t === "ROOKIES" || t === "ROOKIES_BOT") {
     return "var(--game-bubble-frookies)";
   }
+  if (t === "HUNGER" || t === "HUNGER_GAMES" || t === "HUNGER_BOT") return "var(--game-bubble-hunger)";
+  if (t === "DUEL" || t === "DUEL_BOT") return "var(--game-bubble-duel)";
+  if (t === "CHALLENGE" || t === "CHALLENGE_BOT") return "var(--game-bubble-challenge)";
+  if (t === "STARS" || t === "STARS_BOT") return "var(--game-bubble-stars)";
   return "var(--game-bubble-fasting)";
 }
 

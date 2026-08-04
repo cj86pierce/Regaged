@@ -2,39 +2,80 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 
-const BLUE_ACCENT = "#a9cfe8";
-const BLUE_BUTTON = "linear-gradient(#d6eaf6, #a9cfe8)";
-const PINK_ACCENT = "#f48fb1";
-const PINK_BUTTON = "linear-gradient(#f8bbd9, #f48fb1)";
-const GREEN_ACCENT = "#66bb6a";
-const GREEN_BUTTON = "linear-gradient(#a5d6a7, #66bb6a)";
+type Accent = "blue" | "pink" | "green" | "blackGold" | "black" | "blackSilver" | "goldNavy";
+
+const ACCENTS: Record<
+  Accent,
+  { headerBg: string; titleColor: string; linkColor: string; btnBg: string }
+> = {
+  blue: {
+    headerBg: "#a9cfe8",
+    titleColor: "#0b2b66",
+    linkColor: "#0b5ed7",
+    btnBg: "linear-gradient(#d6eaf6, #a9cfe8)",
+  },
+  pink: {
+    headerBg: "#f48fb1",
+    titleColor: "#5a2a3a",
+    linkColor: "#8b3a52",
+    btnBg: "linear-gradient(#f8bbd9, #f48fb1)",
+  },
+  green: {
+    headerBg: "#66bb6a",
+    titleColor: "#1b3d1f",
+    linkColor: "#2e7d32",
+    btnBg: "linear-gradient(#a5d6a7, #66bb6a)",
+  },
+  // Hunger Games
+  blackGold: {
+    headerBg: "linear-gradient(135deg, #111 0%, #1a1a1a 55%, #c9a227 160%)",
+    titleColor: "#f0d78c",
+    linkColor: "#c9a227",
+    btnBg: "linear-gradient(#2a2a2a, #111)",
+  },
+  // Duel
+  black: {
+    headerBg: "#111111",
+    titleColor: "#f5f5f5",
+    linkColor: "#e0e0e0",
+    btnBg: "linear-gradient(#2a2a2a, #111)",
+  },
+  // Challenge
+  blackSilver: {
+    headerBg: "linear-gradient(135deg, #111 0%, #1a1a1a 50%, #c0c0c0 160%)",
+    titleColor: "#e8e8e8",
+    linkColor: "#b0b0b0",
+    btnBg: "linear-gradient(#3a3a3a, #1a1a1a)",
+  },
+  // Stars
+  goldNavy: {
+    headerBg: "linear-gradient(135deg, #0a1628 0%, #13294b 55%, #c9a227 160%)",
+    titleColor: "#f0d78c",
+    linkColor: "#c9a227",
+    btnBg: "linear-gradient(#1a3358, #0a1628)",
+  },
+};
 
 function GameCard({
   title,
   desc,
   href,
   accent,
+  soon,
 }: {
   title: string;
   desc: string;
-  href: string;
-  accent: "blue" | "pink" | "green";
+  href?: string;
+  accent: Accent;
+  soon?: boolean;
 }) {
-  const headerBg =
-    accent === "pink" ? PINK_ACCENT : accent === "green" ? GREEN_ACCENT : BLUE_ACCENT;
-  const titleColor =
-    accent === "pink" ? "#5a2a3a" : accent === "green" ? "#1b3d1f" : "#0b2b66";
-  const linkColor =
-    accent === "pink" ? "#8b3a52" : accent === "green" ? "#2e7d32" : "#0b5ed7";
-  const btnBg =
-    accent === "pink" ? PINK_BUTTON : accent === "green" ? GREEN_BUTTON : BLUE_BUTTON;
-
-  return (
-    <Link href={href} className="enrollCard">
+  const a = ACCENTS[accent];
+  const inner = (
+    <>
       <div
         style={{
           minHeight: 72,
-          background: headerBg,
+          background: a.headerBg,
           margin: -18,
           marginBottom: 14,
           padding: 16,
@@ -43,24 +84,38 @@ function GameCard({
           justifyContent: "center",
         }}
       >
-        <span style={{ fontWeight: 1000, fontSize: 17, color: titleColor }}>{title}</span>
+        <span style={{ fontWeight: 1000, fontSize: 17, color: a.titleColor }}>{title}</span>
       </div>
       <div style={{ marginTop: 0, fontSize: 12, opacity: 0.85, lineHeight: 1.4 }}>{desc}</div>
       <div
         style={{
           marginTop: 12,
           fontWeight: 1000,
-          color: linkColor,
+          color: a.linkColor,
           padding: "10px 12px",
           borderRadius: 4,
-          background: btnBg,
+          background: a.btnBg,
           border: "1px solid var(--border)",
           display: "block",
           textAlign: "center",
         }}
       >
-        Open ▶
+        {soon ? "Coming soon" : "Open ▶"}
       </div>
+    </>
+  );
+
+  if (soon || !href) {
+    return (
+      <div className="enrollCard" style={{ opacity: 0.95, cursor: "default" }}>
+        {inner}
+      </div>
+    );
+  }
+
+  return (
+    <Link href={href} className="enrollCard">
+      {inner}
     </Link>
   );
 }
@@ -120,6 +175,36 @@ export default function EnrollHub() {
               desc="Same Survivor rules, ~2 min days. Bots fill seats."
               href="/enroll/survivor-bot"
               accent="green"
+            />
+          </div>
+        </section>
+
+        <section>
+          <div style={{ fontWeight: 1000, fontSize: 13, marginBottom: 10, opacity: 0.85 }}>Coming later</div>
+          <div className="enrollGrid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 14 }}>
+            <GameCard
+              title="Hunger Games"
+              desc="Black & gold. Arena competition — coming soon."
+              accent="blackGold"
+              soon
+            />
+            <GameCard
+              title="Duel"
+              desc="Black. One-on-one showdown — coming soon."
+              accent="black"
+              soon
+            />
+            <GameCard
+              title="Challenge"
+              desc="Black & silver. Head-to-head challenges — coming soon."
+              accent="blackSilver"
+              soon
+            />
+            <GameCard
+              title="Stars"
+              desc="Gold & navy. Celebrity / spectate mode — coming soon."
+              accent="goldNavy"
+              soon
             />
           </div>
         </section>

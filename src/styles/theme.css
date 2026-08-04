@@ -67,8 +67,15 @@
   --chat-username: #222;
   --game-bubble-fasting: #a9cfe8;
   --game-bubble-frookies: #f48fb1;
+  --game-bubble-rookies: #f48fb1;
   --game-bubble-survivor: #66bb6a;
-  --game-bubble-rookies: #66bb6a;
+  --game-bubble-hunger: #111111;
+  --game-bubble-hunger-accent: #c9a227;
+  --game-bubble-duel: #111111;
+  --game-bubble-challenge: #2a2a2a;
+  --game-bubble-challenge-accent: #c0c0c0;
+  --game-bubble-stars: #13294b;
+  --game-bubble-stars-accent: #c9a227;
 }
 
 /* Dark: dark red & black */
@@ -142,8 +149,15 @@
   --chat-username: #e8e0e0;
   --game-bubble-fasting: #2a4a6a;
   --game-bubble-frookies: #6a3a4a;
+  --game-bubble-rookies: #6a3a4a;
   --game-bubble-survivor: #1a4a2a;
-  --game-bubble-rookies: #1a4a2a;
+  --game-bubble-hunger: #0a0a0a;
+  --game-bubble-hunger-accent: #c9a227;
+  --game-bubble-duel: #0a0a0a;
+  --game-bubble-challenge: #1a1a1a;
+  --game-bubble-challenge-accent: #a8a8a8;
+  --game-bubble-stars: #0a1628;
+  --game-bubble-stars-accent: #c9a227;
 }
 
 .theme-body {

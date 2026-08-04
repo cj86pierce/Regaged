@@ -52,18 +52,21 @@ export default function GamesHubClient(props: { initial: Feed }) {
 
   return (
     <div style={{ display: "grid", gap: 14 }}>
-      {/* Stars stub */}
+      {/* Stars stub — gold & navy */}
       <section
-        className="theme-sidebar-panel"
         style={{
-          padding: 12,
+          padding: 14,
           borderRadius: 12,
-          border: "1px solid var(--border)",
-          minHeight: 56,
+          minHeight: 64,
+          background: "linear-gradient(135deg, #0a1628 0%, #13294b 55%, #1a3358 100%)",
+          border: "1px solid #c9a227",
+          boxShadow: "inset 0 0 0 1px rgba(201,162,39,0.25)",
         }}
       >
-        <div style={{ fontWeight: 1000, color: "var(--brand)" }}>Stars</div>
-        <div style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>Coming soon</div>
+        <div style={{ fontWeight: 1000, color: "#f0d78c", letterSpacing: 0.2 }}>Stars</div>
+        <div style={{ fontSize: 12, color: "rgba(240,215,140,0.75)", marginTop: 4 }}>
+          Gold & navy · Coming soon
+        </div>
       </section>
 
       <div
