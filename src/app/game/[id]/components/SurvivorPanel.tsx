@@ -40,7 +40,22 @@ export default function SurvivorPanel(props: {
   const me = props.players.find((p) => p.userId === props.meUserId);
   const phase = props.phase ?? "";
   const isChallenge = phase === "TRIBE_CHALLENGE" || phase === "INDIVIDUAL_CHALLENGE";
-  const isVote = phase === "TRIBAL_COUNCIL" || phase === "VOTE";
+  const atTribalCouncil = phase === "TRIBAL_COUNCIL";
+  const atMergeVote = phase === "VOTE";
+  const onLosingTribe =
+    !!me &&
+    me.status === "ACTIVE" &&
+    (me.tribe === "A" || me.tribe === "B") &&
+    me.tribe === props.losingTribe;
+  // Only the losing tribe sees Tribal Council vote UI; merge votes are for everyone.
+  const showVoteUi =
+    me?.status === "ACTIVE" &&
+    ((atTribalCouncil && onLosingTribe) || (atMergeVote && !!props.merged));
+  const safeDuringTribal =
+    atTribalCouncil &&
+    me?.status === "ACTIVE" &&
+    (me.tribe === "A" || me.tribe === "B") &&
+    me.tribe !== props.losingTribe;
   const minigameId = pickMinigameForDay(props.gameId, props.roundNumber || 1);
   const minigameDef = getMinigameDef(minigameId);
 
@@ -87,7 +102,7 @@ export default function SurvivorPanel(props: {
       <div style={{ fontWeight: 1000, color: "#2e7d32", marginBottom: 6 }}>Survivor</div>
       <div style={{ fontSize: 12, marginBottom: 8 }}>
         Phase: <strong>{phase.replace(/_/g, " ") || "—"}</strong>
-        {props.losingTribe ? ` · Losing tribe ${props.losingTribe}` : ""}
+        {showVoteUi && props.losingTribe ? ` · Your tribe is at Tribal Council` : ""}
         {props.merged ? " · Merged" : ""}
       </div>
 
@@ -145,7 +160,13 @@ export default function SurvivorPanel(props: {
         </div>
       )}
 
-      {isVote && me?.status === "ACTIVE" && (
+      {safeDuringTribal && (
+        <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 8 }}>
+          Your tribe won immunity. Sit tight while the other tribe goes to Tribal Council.
+        </div>
+      )}
+
+      {showVoteUi && (
         <div style={{ display: "grid", gap: 6 }}>
           <div style={{ fontSize: 12, fontWeight: 800 }}>Vote someone out</div>
           {voteTargets.map((t) => (
