@@ -3,7 +3,6 @@ import { Suspense } from "react";
 import { Providers } from "@/app/providers";
 import NavBar from "@/components/NavBar";
 import RightRailClient from "@/components/RightRailClient";
-import CronPinger from "@/components/CronPinger";
 import OnlineCount from "@/components/OnlineCount";
 import { ThemeInitScript } from "@/app/theme-init";
 import { getCurrentUserIdFromHeaders } from "@/lib/getCurrentUserId";
@@ -26,20 +25,14 @@ export const viewport = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const userId = await getCurrentUserIdFromHeaders();
-  if (userId) {
-    try {
-      await touchUser(userId);
-    } catch {
-      // Presence is best-effort; never block the app shell if it fails.
-    }
-  }
+  // Presence is best-effort — never delay the shell waiting on a DB write.
+  if (userId) void touchUser(userId).catch(() => {});
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="theme-body">
         <ThemeInitScript />
         <Providers>
           <OnlineCount />
-          <CronPinger />
           <NavBar />
 
           {/* Floating rail - Suspense so page content loads first */}

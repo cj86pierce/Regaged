@@ -31,7 +31,7 @@ function GameBtn({ href, label, sub }: { href: string; label: string; sub: strin
   );
 }
 
-const POLL_MS = 5000;
+const POLL_MS = 30_000;
 
 export default function RightRailClient() {
   const [games, setGames] = useState<Game[] | null>(null);
@@ -50,9 +50,20 @@ export default function RightRailClient() {
   }
 
   useEffect(() => {
-    fetchGames();
-    const t = setInterval(fetchGames, POLL_MS);
-    return () => clearInterval(t);
+    function tick() {
+      if (typeof document !== "undefined" && document.hidden) return;
+      void fetchGames();
+    }
+    function onVisible() {
+      if (!document.hidden) void fetchGames();
+    }
+    tick();
+    const t = setInterval(tick, POLL_MS);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, []);
 
   if (games === null) {

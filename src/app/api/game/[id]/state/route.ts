@@ -6,6 +6,9 @@ import { getCurrentUserId } from "@/lib/getCurrentUserId";
 import { touchUser } from "@/lib/touchUser";
 import { getSlotDesignsForUserIds, type SlotDesignsMap } from "@/lib/avatarSlotDesigns";
 
+const presenceTouchAt = new Map<string, number>();
+const PRESENCE_TOUCH_EVERY_MS = 60_000;
+
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   const gameId = params.id;
 
@@ -101,13 +104,19 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     game.gameType === "FROOKIES_BOT" ||
     game.gameType === "ROOKIES_BOT";
   if (meUserId && isActiveGame) {
-    void prisma.gamePlayer
-      .updateMany({
-        where: { gameId, userId: meUserId, status: "ACTIVE" },
-        data: { lastActiveAt: new Date() },
-      })
-      .then(() => touchUser(meUserId))
-      .catch(() => {});
+    const touchKey = `${gameId}:${meUserId}`;
+    const last = presenceTouchAt.get(touchKey) ?? 0;
+    const nowMs = Date.now();
+    if (nowMs - last >= PRESENCE_TOUCH_EVERY_MS) {
+      presenceTouchAt.set(touchKey, nowMs);
+      void prisma.gamePlayer
+        .updateMany({
+          where: { gameId, userId: meUserId, status: "ACTIVE" },
+          data: { lastActiveAt: new Date() },
+        })
+        .then(() => touchUser(meUserId))
+        .catch(() => {});
+    }
   }
 
   const [playersRaw, totalCount, messagesRaw] = await Promise.all([

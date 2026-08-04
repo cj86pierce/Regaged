@@ -18,7 +18,11 @@ const TICK_LOCK_STALE_MS = 5 * 60 * 1000;
 declare global {
   // eslint-disable-next-line no-var
   var __regagedTickLock: { startedAt: number } | undefined;
+  // eslint-disable-next-line no-var
+  var __regagedLastAuctionTickAt: number | undefined;
 }
+
+const AUCTION_EVERY_MS = 5 * 60 * 1000;
 
 /**
  * Run the main game tick: advance fasting/casting rounds, bot games, auctions, etc.
@@ -195,17 +199,22 @@ export async function runTick(): Promise<TickResult> {
       casting: { due: castingDue.length, advanced: castingAdvanced },
     };
 
-    try {
-      const { created } = await createAuctionsFromDesigns();
-      if (created > 0) result.auctionsCreated = created;
-    } catch (e) {
-      console.error("Auction creation failed", { err: String(e) });
-    }
-    try {
-      const { resolved } = await resolveEndedAuctions();
-      if (resolved > 0) result.auctionsResolved = resolved;
-    } catch (e) {
-      console.error("Auction resolution failed", { err: String(e) });
+    // Auctions don't need to run every 15s — throttle to every 5 minutes.
+    const lastAuctionAt = globalThis.__regagedLastAuctionTickAt ?? 0;
+    if (Date.now() - lastAuctionAt >= AUCTION_EVERY_MS) {
+      globalThis.__regagedLastAuctionTickAt = Date.now();
+      try {
+        const { created } = await createAuctionsFromDesigns();
+        if (created > 0) result.auctionsCreated = created;
+      } catch (e) {
+        console.error("Auction creation failed", { err: String(e) });
+      }
+      try {
+        const { resolved } = await resolveEndedAuctions();
+        if (resolved > 0) result.auctionsResolved = resolved;
+      } catch (e) {
+        console.error("Auction resolution failed", { err: String(e) });
+      }
     }
 
     return result;

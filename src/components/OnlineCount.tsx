@@ -25,8 +25,13 @@ export default function OnlineCount() {
       if (!document.hidden) touchAndFetchCount();
     }
 
-    touchAndFetchCount();
-    const t = setInterval(touchAndFetchCount, POLL_MS);
+    function tick() {
+      if (document.hidden) return;
+      void touchAndFetchCount();
+    }
+
+    tick();
+    const t = setInterval(tick, POLL_MS);
     window.addEventListener("focus", touchAndFetchCount);
     document.addEventListener("visibilitychange", onVisibilityChange);
     return () => {

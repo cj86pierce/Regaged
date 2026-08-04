@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { AVATAR_ASSET_VERSION } from "@/lib/avatarStyles";
 
 function assetUrl(path: string | null): string | null {
@@ -44,6 +44,13 @@ export type SlotDesignType =
   | "SCAR"
   | "HAIR_ORNAMENT"
   | "GLASSES";
+
+function avatarPropsKey(
+  config: AvatarConfig,
+  slotDesigns?: Partial<Record<SlotDesignType, string>>
+) {
+  return JSON.stringify({ config, slotDesigns: slotDesigns ?? null });
+}
 
 const DEFAULTS = {
   bodyColor: "#F1C27D",
@@ -187,7 +194,7 @@ function useTint(src: string | null, color: string | null) {
   return out;
 }
 
-export default function Avatar({
+function AvatarInner({
   config,
   width = 200,
   grayscale = false,
@@ -202,6 +209,7 @@ export default function Avatar({
   const h = Math.round(width * ASPECT);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [ready, setReady] = useState(false);
+  const configKey = avatarPropsKey(config, slotDesigns);
 
   const safe = useMemo(
     () => ({
@@ -224,7 +232,9 @@ export default function Avatar({
       scarStyle: config.scarStyle ?? DEFAULTS.scarStyle,
       hairOrnamentStyle: config.hairOrnamentStyle ?? DEFAULTS.hairOrnamentStyle,
     }),
-    [config]
+    // configKey captures config + slotDesigns content (object identity changes every poll)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [configKey]
   );
 
   const bodySrc = assetUrl(`/avatars/body/${safe.bodyStyle}.png`)!;
@@ -379,3 +389,13 @@ export default function Avatar({
     </div>
   );
 }
+
+const Avatar = memo(AvatarInner, (prev, next) => {
+  return (
+    prev.width === next.width &&
+    prev.grayscale === next.grayscale &&
+    avatarPropsKey(prev.config, prev.slotDesigns) === avatarPropsKey(next.config, next.slotDesigns)
+  );
+});
+
+export default Avatar;

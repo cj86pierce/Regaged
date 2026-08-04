@@ -76,6 +76,45 @@ function fmtHMS(totalSeconds: number) {
   return `${hh}:${mm}:${ss}`;
 }
 
+/** Isolated 1s clock so the rest of the game page doesn't re-render every second. */
+function PhaseTimer(props: {
+  stateEndsAt: string | null;
+  enabled: boolean;
+  onExpired: () => void;
+}) {
+  const [now, setNow] = useState(() => Date.now());
+  const lastZeroRef = useRef<string | null>(null);
+  const onExpiredRef = useRef(props.onExpired);
+  onExpiredRef.current = props.onExpired;
+
+  useEffect(() => {
+    if (!props.enabled || !props.stateEndsAt) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [props.enabled, props.stateEndsAt]);
+
+  const timeLeft = useMemo(() => {
+    if (!props.stateEndsAt) return null;
+    return Math.max(0, Math.ceil((new Date(props.stateEndsAt).getTime() - now) / 1000));
+  }, [props.stateEndsAt, now]);
+
+  useEffect(() => {
+    if (!props.enabled || !props.stateEndsAt || timeLeft !== 0) return;
+    if (lastZeroRef.current === props.stateEndsAt) return;
+    lastZeroRef.current = props.stateEndsAt;
+    onExpiredRef.current();
+  }, [props.enabled, props.stateEndsAt, timeLeft]);
+
+  if (timeLeft === null) return null;
+  return (
+    <span>
+      Ends in <b>{fmtHMS(timeLeft)}</b>
+    </span>
+  );
+}
+
+const POLL_MS = 5000;
+
 export default function GamePage({ params }: { params: { id: string } }) {
   const gameId = params.id;
 
@@ -91,13 +130,6 @@ export default function GamePage({ params }: { params: { id: string } }) {
 
   const [sending, setSending] = useState(false);
   const [reactingIds, setReactingIds] = useState<Record<string, boolean>>({});
-  const lastZeroTickRef = useRef<string | null>(null);
-
-  const [now, setNow] = useState<number>(() => Date.now());
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, []);
 
   async function load(opts?: { bust?: boolean }) {
     const q = `page=${page}&pageSize=25${opts?.bust ? `&_=${Date.now()}` : ""}`;
@@ -117,11 +149,20 @@ export default function GamePage({ params }: { params: { id: string } }) {
     }
   }
 
-  const pollInterval = 2000;
   useEffect(() => {
-    load().catch((e) => setError(e.message));
-    const poll = setInterval(() => load().catch(() => {}), pollInterval);
-    return () => clearInterval(poll);
+    let cancelled = false;
+    function tick() {
+      if (document.hidden) return;
+      load().catch((e) => {
+        if (!cancelled) setError(e.message);
+      });
+    }
+    tick();
+    const poll = setInterval(tick, POLL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(poll);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameId, page]);
 
@@ -141,27 +182,14 @@ export default function GamePage({ params }: { params: { id: string } }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameId, page]);
 
-  const timeLeft = useMemo(() => {
-    if (!data?.game.stateEndsAt) return null;
-    const end = new Date(data.game.stateEndsAt).getTime();
-    const ms = end - now;
-    return Math.max(0, Math.ceil(ms / 1000));
-  }, [data?.game.stateEndsAt, now]);
-
-  useEffect(() => {
-    const endKey = data?.game.stateEndsAt;
-    if (!data || !endKey || timeLeft !== 0) return;
-    if (data.game.state === "ENROLLING" || data.game.state === "COMPLETED") return;
-    if (lastZeroTickRef.current === endKey) return;
-
-    lastZeroTickRef.current = endKey;
+  function onPhaseExpired() {
+    if (!data || data.game.state === "ENROLLING" || data.game.state === "COMPLETED") return;
     (async () => {
       await fetch("/api/cron/tick", { method: "POST", credentials: "include" }).catch(() => null);
       await load({ bust: true }).catch(() => null);
       setTimeout(() => load({ bust: true }).catch(() => null), 750);
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data?.game.state, data?.game.stateEndsAt, timeLeft]);
+  }
 
   async function sendChat() {
     if (sending) return;
@@ -351,12 +379,14 @@ export default function GamePage({ params }: { params: { id: string } }) {
               <span>
                 <b>{data.game.state.replace(/_/g, " ")}</b>
               </span>
-              {timeLeft !== null && (
+              {data.game.stateEndsAt && (
                 <>
                   <span>·</span>
-                  <span>
-                    Ends in <b>{fmtHMS(timeLeft)}</b>
-                  </span>
+                  <PhaseTimer
+                    stateEndsAt={data.game.stateEndsAt}
+                    enabled={data.game.state !== "ENROLLING" && data.game.state !== "COMPLETED"}
+                    onExpired={onPhaseExpired}
+                  />
                 </>
               )}
             </>
