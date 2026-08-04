@@ -2,17 +2,10 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/getCurrentUserId";
 import { checkBlockedContent } from "@/lib/contentFilter";
+import { isEmailVerified } from "@/lib/emailVerification";
 
 function bad(msg: string, status = 400) {
   return NextResponse.json({ error: msg }, { status });
-}
-
-async function requireEmailVerified(userId: string) {
-  const me = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { emailVerifiedAt: true },
-  });
-  return !!me?.emailVerifiedAt;
 }
 
 /** GET: list conversations (users I've DMed with, with latest message) */
@@ -20,7 +13,7 @@ export async function GET(req: Request) {
   const meUserId = await getCurrentUserId(req);
   if (!meUserId) return bad("Unauthorized", 401);
 
-  const okEmail = await requireEmailVerified(meUserId);
+  const okEmail = await isEmailVerified(meUserId);
   if (!okEmail) return NextResponse.json({ error: "Email verification required", redirect: "/profile/edit" }, { status: 403 });
 
   const all = await prisma.directMessage.findMany({
@@ -71,7 +64,7 @@ export async function POST(req: Request) {
   const meUserId = await getCurrentUserId(req);
   if (!meUserId) return bad("Unauthorized", 401);
 
-  const okEmail = await requireEmailVerified(meUserId);
+  const okEmail = await isEmailVerified(meUserId);
   if (!okEmail) return NextResponse.json({ error: "Email verification required", redirect: "/profile/edit" }, { status: 403 });
 
   const body = await req.json().catch(() => null);

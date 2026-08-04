@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUserId } from "@/lib/getCurrentUserId";
 import { prisma } from "@/lib/prisma";
+import { isEmailVerified } from "@/lib/emailVerification";
 import { tryStartFastingGame, tryStartFastingStyleGame } from "@/lib/gameEngine";
 import { tryStartCastingsGame } from "@/lib/gameEngineCastings";
 import { tryStartFastingBotGame, tryStartFastingStyleBotGame } from "@/lib/gameEngineBot";
@@ -16,16 +17,7 @@ export async function POST(req: Request) {
   const userId = await getCurrentUserId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // ✅ fetch verification status (used unless bypass flag is set)
-  const me = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { emailVerifiedAt: true },
-  });
-
-  // ✅ env flag to temporarily disable email gate
-  const emailCheckDisabled = process.env.EMAIL_VERIFY_DISABLED === "1";
-
-  if (!emailCheckDisabled && !me?.emailVerifiedAt) {
+  if (!(await isEmailVerified(userId))) {
     return NextResponse.json(
       { error: "Email verification required", redirect: "/profile/edit" },
       { status: 403 }

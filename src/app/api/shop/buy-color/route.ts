@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
 import { getCurrentUserId } from "@/lib/getCurrentUserId";
 import { prisma } from "@/lib/prisma";
+import { isEmailVerified } from "@/lib/emailVerification";
 
 export async function POST(req: Request) {
   const userId = await getCurrentUserId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const me = await prisma.user.findUnique({ where: { id: userId }, select: { emailVerifiedAt: true } });
-if (!me?.emailVerifiedAt) return NextResponse.json({ error: "Email verification required", redirect: "/profile/edit" }, { status: 403 });
+  if (!(await isEmailVerified(userId))) {
+    return NextResponse.json({ error: "Email verification required", redirect: "/profile/edit" }, { status: 403 });
+  }
 
 
   const body = await req.json().catch(() => null);

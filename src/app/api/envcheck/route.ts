@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { isEmailVerifyDisabled } from "@/lib/emailVerification";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,6 @@ export async function GET() {
     has_SENDGRID_API_KEY: !!process.env.SENDGRID_API_KEY,
     has_EMAIL_FROM: !!process.env.EMAIL_FROM,
     EMAIL_FROM: process.env.EMAIL_FROM ?? null,
-    EMAIL_VERIFY_DISABLED: process.env.EMAIL_VERIFY_DISABLED === "1",
+    EMAIL_VERIFY_DISABLED: isEmailVerifyDisabled(),
   });
 }
