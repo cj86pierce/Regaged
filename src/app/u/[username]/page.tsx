@@ -9,6 +9,7 @@ import type { AvatarConfig } from "@/components/Avatar";
 import { getSlotDesignsForUser, getSlotDesignsForUserIds } from "@/lib/avatarSlotDesigns";
 import { sortProfileGames } from "@/lib/sortProfileGames";
 import { avatarConfigFromUser } from "@/lib/avatarConfigFromUser";
+import { getKarmaRank } from "@/lib/hof";
 import {
   ACCESSORY_STYLES,
   BODY_STYLES,
@@ -204,11 +205,14 @@ export default async function PublicProfilePage({
 
   const slotDesigns = await getSlotDesignsForUser(user.id);
 
+  const hofRank = await getKarmaRank(user.id);
+
   const data: ProfileTabsData = {
     isOwnProfile: false,
     username: user.username,
     joinedAt: user.createdAt.toISOString(),
     karma: user.karma,
+    hofRank,
     tMoney: user.tMoney,
     pMoney: user.pMoney,
     bio: user.bio ?? "",

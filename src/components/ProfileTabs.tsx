@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import Avatar, { AvatarConfig, type SlotDesignType } from "@/components/Avatar";
+import HofBadge from "@/components/HofBadge";
 import { formatLastSeen } from "@/lib/lastSeenLabel";
 
 export type ProfileGameBubble = {
@@ -20,6 +21,8 @@ export type ProfileTabsData = {
   username: string;
   joinedAt: string;
   karma: number;
+  /** 1-based karma Hall of Fame rank; badge shown if ≤ 500 */
+  hofRank?: number | null;
   tMoney: number;
   pMoney: number;
   colorName: string;
@@ -425,8 +428,12 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
               {/* ✅ Wrap name + bar so bar spans under swatch too */}
               <div style={{ position: "relative" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
-                  <div className="profileUsername theme-username" style={{ fontSize: 38, lineHeight: 1 }}>
+                  <div
+                    className="profileUsername theme-username"
+                    style={{ fontSize: 38, lineHeight: 1, display: "flex", alignItems: "center", flexWrap: "wrap", gap: 2 }}
+                  >
                     {data.username}
+                    <HofBadge rank={data.hofRank} size="md" />
                   </div>
 
                   {/* bar is in the right column, but the background bar spans full width */}

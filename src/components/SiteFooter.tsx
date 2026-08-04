@@ -6,6 +6,7 @@ const ROW1: { href: string; label: string }[] = [
   { href: "#tos", label: "TOS" },
   { href: "#privacy", label: "Privacy" },
   { href: "#faq", label: "F.A.Q." },
+  { href: "/hof", label: "HOF" },
   { href: "/minigames", label: "Minigames" },
 ];
 

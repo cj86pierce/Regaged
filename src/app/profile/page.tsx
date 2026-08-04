@@ -9,6 +9,7 @@ import type { AvatarConfig } from "@/components/Avatar";
 import { getSlotDesignsForUser, getSlotDesignsForUserIds } from "@/lib/avatarSlotDesigns";
 import { sortProfileGames } from "@/lib/sortProfileGames";
 import { avatarConfigFromUser } from "@/lib/avatarConfigFromUser";
+import { getKarmaRank } from "@/lib/hof";
 import {
   ACCESSORY_STYLES,
   BODY_STYLES,
@@ -202,11 +203,14 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
     hairOrnamentColor: u.hairOrnamentColor,
   });
 
+  const hofRank = await getKarmaRank(userId);
+
   const data: ProfileTabsData = {
     isOwnProfile: true,
     username: user.username,
     joinedAt: (user.createdAt && typeof user.createdAt.toISOString === "function" ? user.createdAt.toISOString() : new Date().toISOString()),
     karma: user.karma,
+    hofRank,
     tMoney: user.tMoney,
     pMoney: user.pMoney,
     bio: user.bio ?? "", // ✅

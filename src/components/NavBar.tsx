@@ -64,6 +64,7 @@ export default function NavBar() {
           </Link>
           <Link href="/games" className="navLink">Games</Link>
           <Link href="/enroll" className="navLink">Enroll</Link>
+          <Link href="/hof" className="navLink">HOF</Link>
           <Link href="/blogs" className="navLink">Blogs</Link>
           <Link href="/designs" className="navLink">Designs</Link>
           <Link href="/shop" className="navLink">Shop</Link>
