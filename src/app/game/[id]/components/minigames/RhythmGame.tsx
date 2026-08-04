@@ -174,7 +174,7 @@ export default function RhythmGame(props: MinigameProps) {
         },
       });
       setResult(out);
-      onSubmitScore();
+      onSubmitScore(out.challengeScore);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Submit failed");
     } finally {

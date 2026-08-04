@@ -4,6 +4,7 @@ import { Providers } from "@/app/providers";
 import NavBar from "@/components/NavBar";
 import RightRailClient from "@/components/RightRailClient";
 import OnlineCount from "@/components/OnlineCount";
+import SiteFooter from "@/components/SiteFooter";
 import { ThemeInitScript } from "@/app/theme-init";
 import { getCurrentUserIdFromHeaders } from "@/lib/getCurrentUserId";
 import { touchUser } from "@/lib/touchUser";
@@ -45,6 +46,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <div className="mainContent">
             <div style={{ maxWidth: 1120, margin: "0 auto", minWidth: 0 }}>{children}</div>
           </div>
+
+          <SiteFooter />
         </Providers>
       </body>
     </html>

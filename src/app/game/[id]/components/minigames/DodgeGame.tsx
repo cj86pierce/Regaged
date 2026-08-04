@@ -125,7 +125,7 @@ export default function DodgeGame(props: MinigameProps) {
         raw: { survivedMs, nearMisses: nearRef.current },
       });
       setResult(out);
-      onSubmitScore();
+      onSubmitScore(out.challengeScore);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Submit failed");
     } finally {

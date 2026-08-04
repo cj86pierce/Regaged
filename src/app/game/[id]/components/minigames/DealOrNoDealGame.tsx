@@ -137,7 +137,7 @@ export default function DealOrNoDealGame(props: MinigameProps) {
         raw: { finalCash, roundsPlayed: rounds, beatBanker },
       });
       setResult(out);
-      onSubmitScore();
+      onSubmitScore(out.challengeScore);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Submit failed");
     } finally {

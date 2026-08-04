@@ -101,7 +101,7 @@ export default function EmojiMatchingGame(props: MinigameProps) {
         raw: { timeMs: timeMsRef.current, moves },
       });
       setResult(out);
-      onSubmitScore();
+      onSubmitScore(out.challengeScore);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Submit failed");
     } finally {

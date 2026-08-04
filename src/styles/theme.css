@@ -443,3 +443,55 @@ html:not([data-theme]) .theme-username {
 .game-page-content .theme-chat-msg-sys {
   color: var(--text-game);
 }
+
+/* Site footer (Tengaged-style link rows) */
+.siteFooter {
+  margin-top: 48px;
+  padding: 28px 16px 40px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+
+.siteFooterInner {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.siteFooterRow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 4px 0;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.siteFooterLinkWrap {
+  display: inline-flex;
+  align-items: center;
+}
+
+.siteFooterDot {
+  margin: 0 8px;
+  opacity: 0.55;
+}
+
+.siteFooterLink {
+  color: var(--brand, #2563eb);
+  text-decoration: underline;
+  font-weight: 700;
+}
+
+.siteFooterLink:hover {
+  opacity: 0.85;
+}
+
+.siteFooterDisclaimer {
+  margin: 16px auto 0;
+  max-width: 640px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-muted, #555);
+  opacity: 0.9;
+}
