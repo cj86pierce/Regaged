@@ -172,8 +172,12 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     });
     if (camp) Object.assign(game, camp);
   }
+  // Tribal + merge stages both use two tribe screens (A/B). Never one 20-wide "merged camp".
   const tribeLobbies =
-    isSurvivor && !game.survivorMerged && game.state !== "ENROLLING" && game.state !== "COMPLETED";
+    isSurvivor &&
+    !game.survivorMerged &&
+    game.state !== "ENROLLING" &&
+    game.state !== "COMPLETED";
 
   const requestedTribe = (url.searchParams.get("tribe") ?? "").toUpperCase();
   let myTribe: string | null =

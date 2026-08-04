@@ -443,8 +443,8 @@ export default function GamePage({ params }: { params: { id: string } }) {
       ? "Tribe A lobby"
       : tribeLobbies && viewTribe === "B"
         ? "Tribe B lobby"
-        : isSurvivor && data.game.survivorMerged
-          ? "Merged camp"
+        : isSurvivor && data.game.survivorIsMerge
+          ? "Merge lobby"
           : null;
 
   return (
@@ -557,7 +557,13 @@ export default function GamePage({ params }: { params: { id: string } }) {
       ) : (
         <PlayerStrip
           players={lobbyPlayers}
-          columns={tribeLobbies ? 10 : isSurvivor ? 20 : 15}
+          columns={
+            tribeLobbies || (isSurvivor && data.game.survivorIsMerge)
+              ? 10
+              : isSurvivor
+                ? 20
+                : 15
+          }
           povUserId={data.game.povUserId}
           hohUserId={data.game.hohUserId}
           gameType={data.game.gameType}

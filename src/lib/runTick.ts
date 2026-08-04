@@ -10,6 +10,7 @@ import { createAuctionsFromDesigns } from "@/lib/createAuctionsFromDesigns";
 import { resolveEndedAuctions } from "@/lib/resolveAuctions";
 import { tryStartSurvivorGame } from "@/lib/survivor/start";
 import { advanceSurvivorIfDue } from "@/lib/survivor/advance";
+import { healBadSurvivorMerges } from "@/lib/survivor/repair";
 import { fillGameWithBots } from "@/lib/botUsers";
 import { SURVIVOR_MAX } from "@/lib/survivor/timing";
 
@@ -208,6 +209,12 @@ export async function runTick(): Promise<TickResult> {
     // -----------------------
     // SURVIVOR / SURVIVOR_BOT
     // -----------------------
+    try {
+      await healBadSurvivorMerges();
+    } catch (e) {
+      console.error("Survivor merge heal failed", { err: String(e) });
+    }
+
     const survivorDue = await prisma.game.findMany({
       where: {
         gameType: { in: ["SURVIVOR", "SURVIVOR_BOT"] },

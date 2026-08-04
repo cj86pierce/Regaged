@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getSystemUserId } from "@/lib/systemUser";
 import { tryStartSurvivorGame } from "@/lib/survivor/start";
-import { SURVIVOR_MAX } from "@/lib/survivor/timing";
+import { SURVIVOR_MAX, SURVIVOR_MERGE_MAX } from "@/lib/survivor/timing";
 
 const FIRST_PLACE = { karma: 50, tMoney: 40 };
 
@@ -104,7 +104,9 @@ export async function finishTribalAndSpawnMerge(
   if (isBot) return finishBotTribalAtMerge(tribalGameId);
 
   const systemUserId = await getSystemUserId();
-  const actives = await closeTribalWithMergePlaces(tribalGameId);
+  const activesAll = await closeTribalWithMergePlaces(tribalGameId);
+  // Only the merge cast (≤10) move into the new lobby — never a 20-wide camp.
+  const actives = activesAll.slice(0, SURVIVOR_MERGE_MAX);
 
   for (const a of actives) {
     await prisma.user.update({

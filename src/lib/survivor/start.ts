@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getSystemUserId } from "@/lib/systemUser";
 import { initCampOnStart, personalMetersFromHealth } from "@/lib/survivor/camp";
 import { assignEqualSitOuts } from "@/lib/survivor/sitOuts";
-import { SURVIVOR_MAX, survivorPhaseMs } from "@/lib/survivor/timing";
+import { SURVIVOR_MAX, SURVIVOR_MERGE_MAX, survivorPhaseMs } from "@/lib/survivor/timing";
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -24,8 +24,12 @@ export async function tryStartSurvivorGame(gameId: string, gameType: "SURVIVOR" 
   const count = await prisma.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
 
   if (game.survivorIsMerge) {
-    // Merge lobbies are auto-filled (not public). Start once survivors are seated (usually 10).
-    if (count < 2) return { ok: true as const, skipped: true as const };
+    // Merge = only the ≤10 advancers. Never pad with bots / late joiners.
+    if (count > SURVIVOR_MERGE_MAX) {
+      await trimActivePlayers(gameId, SURVIVOR_MERGE_MAX);
+    }
+    const seated = await prisma.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
+    if (seated < 2) return { ok: true as const, skipped: true as const };
     return startMergeSurvivor(gameId, gameType);
   }
 
@@ -53,12 +57,15 @@ async function trimActivePlayers(gameId: string, max: number) {
 }
 
 async function startMergeSurvivor(gameId: string, gameType: "SURVIVOR" | "SURVIVOR_BOT") {
+  // Hard cap: merge lobby is only the advancers (≤10), then shuffle into two tribe screens.
+  await trimActivePlayers(gameId, SURVIVOR_MERGE_MAX);
   const players = await prisma.gamePlayer.findMany({
     where: { gameId, status: "ACTIVE" },
     select: { userId: true },
+    orderBy: { joinedAt: "asc" },
   });
-  const shuffled = shuffle(players.map((p) => p.userId));
-  // Always two tribe lobbies — split evenly (e.g. 5+5).
+  const shuffled = shuffle(players.map((p) => p.userId).slice(0, SURVIVOR_MERGE_MAX));
+  // Two tribe lobbies (e.g. 5 + 5) — never one 20-wide merged strip.
   const mid = Math.ceil(shuffled.length / 2);
   const tribeA = shuffled.slice(0, mid);
   const tribeB = shuffled.slice(mid);
