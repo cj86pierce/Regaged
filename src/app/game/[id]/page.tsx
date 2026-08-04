@@ -585,103 +585,118 @@ export default function GamePage({ params }: { params: { id: string } }) {
           )}
         </div>
 
-        {isRookiesLive && <RookiesBetPanel gameId={gameId} />}
-        {isSurvivor && (
-          <SurvivorPanel
-            gameId={gameId}
-            phase={data.game.survivorPhase}
-            losingTribe={data.game.losingTribe}
-            merged={!!data.game.survivorMerged}
-            meUserId={data.meUserId}
-            players={data.players}
-            supplies={data.game.survivorSupplies ?? null}
-            onRefresh={() => load({ bust: true }).catch((e) => setError(e.message))}
-          />
-        )}
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, minHeight: 0 }}>
+          {isRookiesLive && <RookiesBetPanel gameId={gameId} />}
+          {isSurvivor && (
+            <SurvivorPanel
+              gameId={gameId}
+              phase={data.game.survivorPhase}
+              losingTribe={data.game.losingTribe}
+              merged={!!data.game.survivorMerged}
+              meUserId={data.meUserId}
+              players={data.players}
+              supplies={data.game.survivorSupplies ?? null}
+              onRefresh={() => load({ bust: true }).catch((e) => setError(e.message))}
+            />
+          )}
 
-        {isCasting ? (
-  <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
-  <CastingSidebar
-    gameId={gameId}
-    state={data.game.state}
-    dayNumber={data.game.roundNumber}
-    nominees={(data.casting?.nominees ?? []).map((id) => {
-      const p = data.players.find((x) => x.userId === id);
-      return { userId: id, username: p?.username ?? id };
-    })}
-    onSavedVotes={load}
-    messages={data.messages}
-    carePackages={data.carePackages ?? []}
-    onReload={load}
-    meUserId={data.meUserId}
-  />
-  </div>
-) : isSurvivor ? (
-  <Sidebar
-    gameState={data.game.state === "COMPLETED" ? "COMPLETED" : "ENROLLING"}
-    roundNumber={data.game.roundNumber}
-    nomSelected={[]}
-    canConfirmNoms={false}
-    onConfirmNoms={async () => {}}
-    myNomLockedIn={false}
-    evictSelected={null}
-    canConfirmVote={false}
-    onConfirmVote={async () => {}}
-    myVoteLockedIn={null}
-    myRankingsLocked={false}
-    messages={data.messages}
-    gameId={gameId}
-    gameType={data.game.gameType}
-    meUserId={data.meUserId}
-    povUserId={null}
-    players={lobbyPlayers.map((p) => ({
-      userId: p.userId,
-      username: p.username,
-      status: p.status,
-      isNominee: false,
-    }))}
-    rookiesNominees={[]}
-    onReload={() => load().catch((e) => setError(e.message))}
-  />
-) : (
-  <Sidebar
-    gameState={data.game.state}
-    roundNumber={data.game.roundNumber}
-    nomSelected={nomSelected}
-    canConfirmNoms={
-      !isCasting &&
-      data.game.state === "ROUND_NOMINATE" &&
-      !myNomLockedIn &&
-      (((data.game.gameType === "FROOKIES" || data.game.gameType === "FROOKIES_BOT") && data.game.frookiesPhase === "HOH_RENOM")
-        ? nomSelected.length === 1 && data.game.hohUserId === data.meUserId
-        : nomSelected.length === 2 &&
-          ((data.game.gameType === "FROOKIES" || data.game.gameType === "FROOKIES_BOT" || data.game.gameType === "ROOKIES" || data.game.gameType === "ROOKIES_BOT")
-            ? data.game.hohUserId === data.meUserId
-            : true))
-    }
-    onConfirmNoms={confirmNoms}
-    myNomLockedIn={myNomLockedIn}
-    evictSelected={evictSelected}
-    canConfirmVote={!isCasting && data.game.state === "ROUND_VOTE" && !myVoteLockedIn && !!evictSelected}
-    onConfirmVote={confirmVote}
-    myVoteLockedIn={myVoteLockedIn}
-    myRankingsLocked={!!data.voteInfo?.myRankings && Object.keys(data.voteInfo.myRankings).length > 0}
-    messages={data.messages}
-    gameId={gameId}
-    gameType={data.game.gameType}
-    meUserId={data.meUserId}
-    povUserId={data.game.povUserId}
-    hohUserId={data.game.hohUserId}
-    povSavedUserId={data.game.povSavedUserId}
-    frookiesPhase={data.game.frookiesPhase}
-    players={data.players.map((p) => ({ userId: p.userId, username: p.username, status: p.status, isNominee: p.isNominee }))}
-    rookiesNominees={data.players.filter((p) => p.isNominee).map((p) => ({ userId: p.userId, username: p.username }))}
-    onPovSave={submitPovSave}
-    onReload={() => load().catch((e) => setError(e.message))}
-    jury={data.jury}
-    onJuryVote={submitJuryVote}
-  />
-)}
+          {isCasting ? (
+            <CastingSidebar
+              gameId={gameId}
+              state={data.game.state}
+              dayNumber={data.game.roundNumber}
+              nominees={(data.casting?.nominees ?? []).map((id) => {
+                const p = data.players.find((x) => x.userId === id);
+                return { userId: id, username: p?.username ?? id };
+              })}
+              onSavedVotes={load}
+              messages={data.messages}
+              carePackages={data.carePackages ?? []}
+              onReload={load}
+              meUserId={data.meUserId}
+            />
+          ) : isSurvivor ? (
+            <Sidebar
+              gameState={data.game.state === "COMPLETED" ? "COMPLETED" : "ENROLLING"}
+              roundNumber={data.game.roundNumber}
+              nomSelected={[]}
+              canConfirmNoms={false}
+              onConfirmNoms={async () => {}}
+              myNomLockedIn={false}
+              evictSelected={null}
+              canConfirmVote={false}
+              onConfirmVote={async () => {}}
+              myVoteLockedIn={null}
+              myRankingsLocked={false}
+              messages={data.messages}
+              gameId={gameId}
+              gameType={data.game.gameType}
+              meUserId={data.meUserId}
+              povUserId={null}
+              players={lobbyPlayers.map((p) => ({
+                userId: p.userId,
+                username: p.username,
+                status: p.status,
+                isNominee: false,
+              }))}
+              rookiesNominees={[]}
+              onReload={() => load().catch((e) => setError(e.message))}
+            />
+          ) : (
+            <Sidebar
+              gameState={data.game.state}
+              roundNumber={data.game.roundNumber}
+              nomSelected={nomSelected}
+              canConfirmNoms={
+                !isCasting &&
+                data.game.state === "ROUND_NOMINATE" &&
+                !myNomLockedIn &&
+                (((data.game.gameType === "FROOKIES" || data.game.gameType === "FROOKIES_BOT") &&
+                  data.game.frookiesPhase === "HOH_RENOM")
+                  ? nomSelected.length === 1 && data.game.hohUserId === data.meUserId
+                  : nomSelected.length === 2 &&
+                    (data.game.gameType === "FROOKIES" ||
+                    data.game.gameType === "FROOKIES_BOT" ||
+                    data.game.gameType === "ROOKIES" ||
+                    data.game.gameType === "ROOKIES_BOT"
+                      ? data.game.hohUserId === data.meUserId
+                      : true))
+              }
+              onConfirmNoms={confirmNoms}
+              myNomLockedIn={myNomLockedIn}
+              evictSelected={evictSelected}
+              canConfirmVote={
+                !isCasting && data.game.state === "ROUND_VOTE" && !myVoteLockedIn && !!evictSelected
+              }
+              onConfirmVote={confirmVote}
+              myVoteLockedIn={myVoteLockedIn}
+              myRankingsLocked={
+                !!data.voteInfo?.myRankings && Object.keys(data.voteInfo.myRankings).length > 0
+              }
+              messages={data.messages}
+              gameId={gameId}
+              gameType={data.game.gameType}
+              meUserId={data.meUserId}
+              povUserId={data.game.povUserId}
+              hohUserId={data.game.hohUserId}
+              povSavedUserId={data.game.povSavedUserId}
+              frookiesPhase={data.game.frookiesPhase}
+              players={data.players.map((p) => ({
+                userId: p.userId,
+                username: p.username,
+                status: p.status,
+                isNominee: p.isNominee,
+              }))}
+              rookiesNominees={data.players
+                .filter((p) => p.isNominee)
+                .map((p) => ({ userId: p.userId, username: p.username }))}
+              onPovSave={submitPovSave}
+              onReload={() => load().catch((e) => setError(e.message))}
+              jury={data.jury}
+              onJuryVote={submitJuryVote}
+            />
+          )}
+        </div>
       </div>
     </div>
   );
