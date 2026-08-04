@@ -130,6 +130,45 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     }
   }
 
+  const myGp =
+    meUserId
+      ? await prisma.gamePlayer.findUnique({
+          where: { gameId_userId: { gameId, userId: meUserId } },
+          select: { tribe: true, status: true },
+        })
+      : null;
+
+  const isSurvivor = game.gameType === "SURVIVOR" || game.gameType === "SURVIVOR_BOT";
+  const tribeLobbies =
+    isSurvivor && !game.survivorMerged && game.state !== "ENROLLING" && game.state !== "COMPLETED";
+
+  const requestedTribe = (url.searchParams.get("tribe") ?? "").toUpperCase();
+  let myTribe: string | null =
+    myGp?.tribe === "A" || myGp?.tribe === "B" || myGp?.tribe === "MERGED" ? myGp.tribe : null;
+
+  // Players are locked to their tribe lobby; spectators pick A/B via ?tribe=
+  let viewTribe: string | null = null;
+  if (tribeLobbies) {
+    if (myTribe === "A" || myTribe === "B") {
+      viewTribe = myTribe;
+    } else if (requestedTribe === "A" || requestedTribe === "B") {
+      viewTribe = requestedTribe;
+    } else {
+      viewTribe = "A";
+    }
+  } else if (isSurvivor && game.survivorMerged) {
+    viewTribe = "MERGED";
+  }
+
+  const messageWhere =
+    tribeLobbies && (viewTribe === "A" || viewTribe === "B")
+      ? {
+          gameId,
+          channel: "PUBLIC" as const,
+          OR: [{ tribe: viewTribe }, { tribe: null }],
+        }
+      : { gameId, channel: "PUBLIC" as const };
+
   const [playersRaw, totalCount, messagesRaw] = await Promise.all([
     prisma.gamePlayer.findMany({
       where: { gameId },
@@ -154,9 +193,9 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       },
       orderBy: { joinedAt: "asc" },
     }),
-    prisma.gameMessage.count({ where: { gameId, channel: "PUBLIC" } }),
+    prisma.gameMessage.count({ where: messageWhere }),
     prisma.gameMessage.findMany({
-      where: { gameId, channel: "PUBLIC" },
+      where: messageWhere,
       orderBy: { createdAt: "desc" },
       skip,
       take: pageSize,
@@ -383,6 +422,11 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         tribeBFire: game.tribeBFire,
       },
     },
+
+    // Survivor tribe lobbies
+    myTribe,
+    viewTribe,
+    tribeLobbies,
 
     nomineeCUserId: nomineeC ?? undefined,
     nomineeDUserId: nomineeD ?? undefined,

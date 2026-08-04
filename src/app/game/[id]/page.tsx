@@ -95,6 +95,9 @@ type GameState = {
     voteCount: number;
     jurorCount: number;
   } | null;
+  myTribe?: string | null;
+  viewTribe?: string | null;
+  tribeLobbies?: boolean;
 };
 
 function fmtHMS(totalSeconds: number) {
@@ -159,9 +162,12 @@ export default function GamePage({ params }: { params: { id: string } }) {
 
   const [sending, setSending] = useState(false);
   const [reactingIds, setReactingIds] = useState<Record<string, boolean>>({});
+  /** Spectators only: which tribe lobby to watch (A/B). Players are locked server-side. */
+  const [spectateTribe, setSpectateTribe] = useState<"A" | "B">("A");
 
-  async function load(opts?: { bust?: boolean }) {
-    const q = `page=${page}&pageSize=25${opts?.bust ? `&_=${Date.now()}` : ""}`;
+  async function load(opts?: { bust?: boolean; tribe?: "A" | "B" }) {
+    const tribe = opts?.tribe ?? spectateTribe;
+    const q = `page=${page}&pageSize=25&tribe=${tribe}${opts?.bust ? `&_=${Date.now()}` : ""}`;
     const res = await fetch(`/api/game/${gameId}/state?${q}`, { cache: "no-store" });
     const json = await res.json();
     if (!res.ok) throw new Error(json?.error ?? "Failed to load game");
@@ -385,12 +391,36 @@ export default function GamePage({ params }: { params: { id: string } }) {
 
   const meStats = data.meUserId ? data.players.find((p) => p.userId === data.meUserId) ?? null : null;
 
+  const tribeLobbies = !!data.tribeLobbies;
+  const viewTribe = data.viewTribe ?? null;
+  const myTribe = data.myTribe ?? null;
+  const isSpectator = isSurvivor && !myTribe && data.game.state !== "ENROLLING";
+
+  const lobbyPlayers =
+    tribeLobbies && (viewTribe === "A" || viewTribe === "B")
+      ? data.players.filter((p) => p.tribe === viewTribe)
+      : data.players;
+
+  const lobbyLabel =
+    tribeLobbies && viewTribe === "A"
+      ? "Tribe A lobby"
+      : tribeLobbies && viewTribe === "B"
+        ? "Tribe B lobby"
+        : isSurvivor && data.game.survivorMerged
+          ? "Merged camp"
+          : null;
+
   return (
     <div className="game-page-content pageShell">
       <div style={{ marginBottom: 10 }}>
         <div className="gameHeaderTitle" style={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.3 }}>
           {data.game.gameType.replace(/_/g, " ")}{" "}
           <span style={{ opacity: 0.55, fontWeight: 800 }}>#{data.game.number}</span>
+          {lobbyLabel ? (
+            <span style={{ marginLeft: 10, fontSize: 16, fontWeight: 900, color: "#2e7d32" }}>
+              · {lobbyLabel}
+            </span>
+          ) : null}
         </div>
 
         <div
@@ -433,6 +463,39 @@ export default function GamePage({ params }: { params: { id: string } }) {
             </>
           )}
         </div>
+
+        {isSpectator && tribeLobbies ? (
+          <div style={{ marginTop: 8, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <span style={{ fontSize: 12, fontWeight: 800 }}>Spectate tribe:</span>
+            {(["A", "B"] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => {
+                  setSpectateTribe(t);
+                  void load({ bust: true, tribe: t }).catch((e) => setError(e.message));
+                }}
+                style={{
+                  fontWeight: 900,
+                  padding: "4px 10px",
+                  borderRadius: 4,
+                  border: "1px solid var(--border)",
+                  background: spectateTribe === t ? "#66bb6a" : "var(--bg-btn-disabled)",
+                  color: spectateTribe === t ? "#1b3d1f" : "inherit",
+                  cursor: "pointer",
+                }}
+              >
+                Tribe {t}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
+        {tribeLobbies && myTribe ? (
+          <div style={{ marginTop: 6, fontSize: 12, opacity: 0.8 }}>
+            You are in <b>Tribe {myTribe}</b> — this lobby is separate until the merge.
+          </div>
+        ) : null}
       </div>
 
       {isCasting ? (
@@ -444,7 +507,8 @@ export default function GamePage({ params }: { params: { id: string } }) {
         />
       ) : (
         <PlayerStrip
-          players={data.players}
+          players={lobbyPlayers}
+          columns={tribeLobbies ? 10 : isSurvivor ? 20 : 15}
           povUserId={data.game.povUserId}
           hohUserId={data.game.hohUserId}
           gameType={data.game.gameType}
@@ -510,7 +574,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
             <PmPanel
               gameId={gameId}
               meUserId={data.meUserId}
-              players={data.players.map((p) => ({ userId: p.userId, username: p.username, status: p.status }))}
+              players={lobbyPlayers.map((p) => ({ userId: p.userId, username: p.username, status: p.status }))}
             />
           )}
 
@@ -570,7 +634,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
     gameType={data.game.gameType}
     meUserId={data.meUserId}
     povUserId={null}
-    players={data.players.map((p) => ({
+    players={lobbyPlayers.map((p) => ({
       userId: p.userId,
       username: p.username,
       status: p.status,

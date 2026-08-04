@@ -29,6 +29,8 @@ function suffix(n: number) {
 
 export default function PlayerStrip(props: {
   players: Player[];
+  /** Grid columns; Survivor tribe lobby uses 10 */
+  columns?: number;
   povUserId: string | null;
   hohUserId?: string | null;
   gameType?: string;
@@ -49,6 +51,7 @@ export default function PlayerStrip(props: {
 }) {
   const {
     players,
+    columns = 15,
     povUserId,
     hohUserId,
     gameType,
@@ -87,7 +90,15 @@ export default function PlayerStrip(props: {
 
   return (
     <div className="theme-sidebar-panel" style={{ borderRadius: 4, padding: "6px 8px", overflow: "hidden" }}>
-      <div className="gamePlayerStrip" style={{ display: "grid", gridTemplateColumns: "repeat(15, minmax(0, 1fr))", gap: 4, alignItems: "start" }}>
+      <div
+        className="gamePlayerStrip"
+        style={{
+          display: "grid",
+          gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+          gap: 4,
+          alignItems: "start",
+        }}
+      >
         {players.map((p) => {
           const isPov = p.userId === povUserId;
           const isHoh = hohUserId != null && p.userId === hohUserId;

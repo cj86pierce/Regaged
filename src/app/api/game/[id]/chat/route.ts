@@ -25,15 +25,34 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   const inGame = await prisma.gamePlayer.findUnique({
     where: { gameId_userId: { gameId, userId } },
-    select: { status: true },
+    select: { status: true, tribe: true },
   });
   if (!inGame || inGame.status !== "ACTIVE") return bad("Not in this game", 403);
+
+  const game = await prisma.game.findUnique({
+    where: { id: gameId },
+    select: { gameType: true, survivorMerged: true, state: true },
+  });
+  if (!game) return bad("Game not found", 404);
+
+  const isSurvivor = game.gameType === "SURVIVOR" || game.gameType === "SURVIVOR_BOT";
+  const tribeScoped =
+    isSurvivor &&
+    !game.survivorMerged &&
+    game.state !== "ENROLLING" &&
+    (inGame.tribe === "A" || inGame.tribe === "B");
 
   const now = new Date();
 
   const created = await prisma.$transaction(async (tx) => {
     const msg = await tx.gameMessage.create({
-      data: { gameId, userId, channel: "PUBLIC", body: text },
+      data: {
+        gameId,
+        userId,
+        channel: "PUBLIC",
+        body: text,
+        tribe: tribeScoped ? inGame.tribe : null,
+      },
       select: { id: true, body: true, createdAt: true, userId: true, user: { select: { username: true } } },
     });
 

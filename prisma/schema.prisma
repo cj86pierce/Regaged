@@ -653,12 +653,15 @@ model GameMessage {
   channel   ChatChannel
   body      String
   createdAt DateTime    @default(now())
+  /// Survivor pre-merge: "A" | "B". Null = all / merged / non-Survivor.
+  tribe     String?
 
   game      Game              @relation(fields: [gameId], references: [id], onDelete: Cascade)
   user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   reactions MessageReaction[]
 
   @@index([gameId, channel, createdAt])
+  @@index([gameId, tribe, createdAt])
 }
 
 model MessageReaction {
