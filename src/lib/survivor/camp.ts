@@ -200,17 +200,16 @@ export async function tickCampDay(gameId: string, opts: { merged: boolean; isBot
     select: { userId: true, user: { select: { username: true } } },
   });
   if (dead.length) {
-    let place = await prisma.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
+    const { SURVIVOR_MAX } = await import("@/lib/survivor/timing");
     for (const d of dead) {
       await prisma.gamePlayer.update({
         where: { gameId_userId: { gameId, userId: d.userId } },
         data: {
           status: "ELIMINATED",
           eliminatedAt: now,
-          eliminatedPlace: place,
+          eliminatedPlace: SURVIVOR_MAX, // 20th — only 1st / 20th in Survivor
         },
       });
-      place--;
       await prisma.gameMessage.create({
         data: {
           gameId,

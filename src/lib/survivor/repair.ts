@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getSystemUserId } from "@/lib/systemUser";
 import { assignEqualSitOuts } from "@/lib/survivor/sitOuts";
-import { SURVIVOR_MERGE_MAX, survivorPhaseMs } from "@/lib/survivor/timing";
+import { SURVIVOR_MAX, SURVIVOR_MERGE_MAX, survivorPhaseMs } from "@/lib/survivor/timing";
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -62,16 +62,20 @@ async function endBotMergeNow(gameId: string) {
   });
 
   await prisma.$transaction(async (tx) => {
-    for (let i = 0; i < actives.length; i++) {
+    for (const a of actives) {
       await tx.gamePlayer.update({
-        where: { gameId_userId: { gameId, userId: actives[i].userId } },
+        where: { gameId_userId: { gameId, userId: a.userId } },
         data: {
           status: "ELIMINATED",
           eliminatedAt: now,
-          eliminatedPlace: i + 1,
+          eliminatedPlace: 1,
         },
       });
     }
+    await tx.gamePlayer.updateMany({
+      where: { gameId, status: "ELIMINATED", eliminatedPlace: { not: 1 } },
+      data: { eliminatedPlace: SURVIVOR_MAX },
+    });
     await tx.game.update({
       where: { id: gameId },
       data: {

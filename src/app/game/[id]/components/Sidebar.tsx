@@ -406,8 +406,8 @@ export default function Sidebar(props: {
           {isSurvivor ? (
             <>
               <b>Survivor:</b> Two tribe lobbies (A/B). Manage camp, play competitions; highest tribe
-              total wins immunity; top scorer on the losing tribe is also immune. At 10 left, merge
-              into a new game with two reshuffled tribes (bots end at that merge).
+              total wins immunity; top scorer on the losing tribe is also immune. Places are only
+              1st (make merge) or 20th (out). At 10 left, 1sts go to a new merge lobby (bots end there).
               <br /><br />
             </>
           ) : isFrookies ? (

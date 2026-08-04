@@ -25,37 +25,23 @@ async function closeTribalWithMergePlaces(tribalGameId: string) {
       });
     }
 
-    // Backfill any losers missing a place (merge = 1st, lose = 11–20).
-    const missing = await tx.gamePlayer.findMany({
+    // Only two places: 1st (made merge) or 20th (out). Normalize everyone else to 20th.
+    await tx.gamePlayer.updateMany({
+      where: {
+        gameId: tribalGameId,
+        status: "ELIMINATED",
+        eliminatedPlace: { not: 1 },
+      },
+      data: { eliminatedPlace: SURVIVOR_MAX },
+    });
+    await tx.gamePlayer.updateMany({
       where: {
         gameId: tribalGameId,
         status: "ELIMINATED",
         eliminatedPlace: null,
       },
-      select: { userId: true },
-      orderBy: [{ eliminatedAt: "asc" }, { joinedAt: "asc" }],
+      data: { eliminatedPlace: SURVIVOR_MAX },
     });
-    const used = new Set(
-      (
-        await tx.gamePlayer.findMany({
-          where: { gameId: tribalGameId, eliminatedPlace: { not: null } },
-          select: { eliminatedPlace: true },
-        })
-      )
-        .map((p) => p.eliminatedPlace)
-        .filter((p): p is number => p != null)
-    );
-    let nextLose = SURVIVOR_MAX;
-    for (const m of missing) {
-      while (used.has(nextLose) || nextLose === 1) nextLose -= 1;
-      if (nextLose < 2) break;
-      await tx.gamePlayer.update({
-        where: { gameId_userId: { gameId: tribalGameId, userId: m.userId } },
-        data: { eliminatedPlace: nextLose },
-      });
-      used.add(nextLose);
-      nextLose -= 1;
-    }
 
     await tx.game.update({
       where: { id: tribalGameId },
@@ -93,7 +79,7 @@ export async function finishBotTribalAtMerge(tribalGameId: string) {
 /**
  * Live tribal stage ends at 10 remaining:
  * - Remaining castaways place 1st + merge rewards, then auto-enroll in a new merge Survivor (2 tribes).
- * - Already voted out keep their lose places (11–20).
+ * - Voted out = 20th only (no 2nd–19th).
  */
 export async function finishTribalAndSpawnMerge(
   tribalGameId: string,
@@ -159,7 +145,7 @@ export async function finishTribalAndSpawnMerge(
       gameId: tribalGameId,
       userId: systemUserId,
       channel: "PUBLIC",
-      body: `[SYSTEM] MERGE! Remaining castaways place 1st (+${FIRST_PLACE.karma} karma, +${FIRST_PLACE.tMoney} T$) and auto-enroll in the merge game (2 new tribes). Losers keep their places. Advancing: ${names}.`,
+      body: `[SYSTEM] MERGE! Remaining castaways place 1st (+${FIRST_PLACE.karma} karma, +${FIRST_PLACE.tMoney} T$) and auto-enroll in the merge game (2 new tribes). Everyone voted out: 20th. Advancing: ${names}.`,
     },
   });
 

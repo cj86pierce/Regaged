@@ -3,7 +3,11 @@ import { getSystemUserId } from "@/lib/systemUser";
 import { tickCampDay } from "@/lib/survivor/camp";
 import { finishTribalAndSpawnMerge } from "@/lib/survivor/merge";
 import { assignEqualSitOuts } from "@/lib/survivor/sitOuts";
-import { survivorPhaseMs } from "@/lib/survivor/timing";
+import { SURVIVOR_MAX, survivorPhaseMs } from "@/lib/survivor/timing";
+
+/** Survivor only records 1st (made it) or 20th (out). */
+const SURVIVOR_LOSE_PLACE = SURVIVOR_MAX;
+const SURVIVOR_WIN_PLACE = 1;
 
 type Phase =
   | "TRIBE_CHALLENGE"
@@ -34,16 +38,25 @@ async function finishSurvivor(gameId: string, isBot: boolean) {
   });
 
   await prisma.$transaction(async (tx) => {
-    for (let i = 0; i < actives.length; i++) {
+    // Everyone still in places 1st; anyone already out should already be 20th.
+    for (const a of actives) {
       await tx.gamePlayer.update({
-        where: { gameId_userId: { gameId, userId: actives[i].userId } },
+        where: { gameId_userId: { gameId, userId: a.userId } },
         data: {
           status: "ELIMINATED",
           eliminatedAt: now,
-          eliminatedPlace: i + 1,
+          eliminatedPlace: SURVIVOR_WIN_PLACE,
         },
       });
     }
+    await tx.gamePlayer.updateMany({
+      where: {
+        gameId,
+        status: "ELIMINATED",
+        eliminatedPlace: { not: SURVIVOR_WIN_PLACE },
+      },
+      data: { eliminatedPlace: SURVIVOR_LOSE_PLACE },
+    });
     await tx.game.update({
       where: { id: gameId },
       data: {
@@ -53,27 +66,24 @@ async function finishSurvivor(gameId: string, isBot: boolean) {
         survivorPhase: null,
       },
     });
+    const names = actives.map((a) => a.user.username).join(", ");
     await tx.gameMessage.create({
       data: {
         gameId,
         userId: systemUserId,
         channel: "PUBLIC",
-        body: `[SYSTEM] Survivor finished! Winner: ${actives[0]?.user.username ?? "?"}`,
+        body: `[SYSTEM] Survivor finished! 1st: ${names || "?"}. Everyone else: 20th.`,
       },
     });
   });
 
-  if (!isBot && actives[0]) {
-    await prisma.user.update({
-      where: { id: actives[0].userId },
-      data: { karma: { increment: 50 }, tMoney: { increment: 40 } },
-    });
-  }
-  if (!isBot && actives[1]) {
-    await prisma.user.update({
-      where: { id: actives[1].userId },
-      data: { karma: { increment: 20 }, tMoney: { increment: 20 } },
-    });
+  if (!isBot) {
+    for (const a of actives) {
+      await prisma.user.update({
+        where: { id: a.userId },
+        data: { karma: { increment: 50 }, tMoney: { increment: 40 } },
+      });
+    }
   }
 }
 
@@ -115,9 +125,7 @@ async function eliminateByVote(gameId: string, eligibleUserIds: string[], isBot:
   }
   if (!target) return null;
 
-  // Place = how many are still in (including the person leaving). First boot of 20 → 20th.
-  const remaining = await prisma.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
-  const place = remaining;
+  // Survivor placements are only 1st (made merge / finished) or 20th (out).
   const victim = await prisma.gamePlayer.findUnique({
     where: { gameId_userId: { gameId, userId: target } },
     include: { user: { select: { username: true } } },
@@ -128,7 +136,7 @@ async function eliminateByVote(gameId: string, eligibleUserIds: string[], isBot:
     data: {
       status: "ELIMINATED",
       eliminatedAt: new Date(),
-      eliminatedPlace: place,
+      eliminatedPlace: SURVIVOR_LOSE_PLACE,
     },
   });
 
