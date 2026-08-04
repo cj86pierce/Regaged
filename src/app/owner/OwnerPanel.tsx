@@ -82,7 +82,7 @@ export default function OwnerPanel() {
   async function call(action: string, extra: Record<string, unknown> = {}, nameOverride?: string) {
     setBusy(true);
     setMsg(null);
-    const name = (nameOverride ?? username.trim() || user?.username || "").trim();
+    const name = (nameOverride ?? (username.trim() || user?.username || "")).trim();
     const res = await fetch("/api/owner/user", {
       method: "POST",
       headers: { "content-type": "application/json" },
