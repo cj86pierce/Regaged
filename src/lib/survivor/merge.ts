@@ -5,19 +5,8 @@ import { SURVIVOR_MAX } from "@/lib/survivor/timing";
 
 const FIRST_PLACE = { karma: 50, tMoney: 40 };
 
-/**
- * Tribal stage ends at 10 remaining:
- * - Remaining castaways place 1st + merge rewards, then auto-enroll in merge Survivor.
- * - Already voted out keep their lose places (11–20). Anyone missing a place is backfilled.
- */
-export async function finishTribalAndSpawnMerge(
-  tribalGameId: string,
-  gameType: "SURVIVOR" | "SURVIVOR_BOT"
-) {
-  const isBot = gameType === "SURVIVOR_BOT";
+async function closeTribalWithMergePlaces(tribalGameId: string) {
   const now = new Date();
-  const systemUserId = await getSystemUserId();
-
   const actives = await prisma.gamePlayer.findMany({
     where: { gameId: tribalGameId, status: "ACTIVE" },
     select: { userId: true, user: { select: { username: true } } },
@@ -79,16 +68,52 @@ export async function finishTribalAndSpawnMerge(
     });
   });
 
-  if (!isBot) {
-    for (const a of actives) {
-      await prisma.user.update({
-        where: { id: a.userId },
-        data: {
-          karma: { increment: FIRST_PLACE.karma },
-          tMoney: { increment: FIRST_PLACE.tMoney },
-        },
-      });
-    }
+  return actives;
+}
+
+/**
+ * Bot tribal ends at merge — no second season that runs forever.
+ * Remaining castaways place 1st; game completes.
+ */
+export async function finishBotTribalAtMerge(tribalGameId: string) {
+  const systemUserId = await getSystemUserId();
+  const actives = await closeTribalWithMergePlaces(tribalGameId);
+  const names = actives.map((a) => a.user.username).join(", ");
+  await prisma.gameMessage.create({
+    data: {
+      gameId: tribalGameId,
+      userId: systemUserId,
+      channel: "PUBLIC",
+      body: `[SYSTEM] MERGE! Bot Survivor ends here (one tribal → merge). Remaining place 1st: ${names}.`,
+    },
+  });
+  return { ended: true as const, remaining: actives.length };
+}
+
+/**
+ * Live tribal stage ends at 10 remaining:
+ * - Remaining castaways place 1st + merge rewards, then auto-enroll in a new merge Survivor (2 tribes).
+ * - Already voted out keep their lose places (11–20).
+ */
+export async function finishTribalAndSpawnMerge(
+  tribalGameId: string,
+  gameType: "SURVIVOR" | "SURVIVOR_BOT"
+) {
+  const isBot = gameType === "SURVIVOR_BOT";
+  // Bots never spawn a merge season — they stop at the merge beat.
+  if (isBot) return finishBotTribalAtMerge(tribalGameId);
+
+  const systemUserId = await getSystemUserId();
+  const actives = await closeTribalWithMergePlaces(tribalGameId);
+
+  for (const a of actives) {
+    await prisma.user.update({
+      where: { id: a.userId },
+      data: {
+        karma: { increment: FIRST_PLACE.karma },
+        tMoney: { increment: FIRST_PLACE.tMoney },
+      },
+    });
   }
 
   const mergeGame = await prisma.game.create({
@@ -113,8 +138,8 @@ export async function finishTribalAndSpawnMerge(
           gameId: mergeGame.id,
           userId: a.userId,
           status: "ACTIVE",
-          tribe: "MERGED",
-          // Wiki: personal meters drop hard after merge
+          // Tribes assigned when merge starts (always A/B, never one camp).
+          tribe: null,
           food: 35,
           water: 35,
           health: 100,
@@ -132,7 +157,7 @@ export async function finishTribalAndSpawnMerge(
       gameId: tribalGameId,
       userId: systemUserId,
       channel: "PUBLIC",
-      body: `[SYSTEM] MERGE! Remaining castaways place 1st (+${FIRST_PLACE.karma} karma, +${FIRST_PLACE.tMoney} T$) and auto-enroll in the merge game. Losers keep their elimination places. Advancing: ${names}.`,
+      body: `[SYSTEM] MERGE! Remaining castaways place 1st (+${FIRST_PLACE.karma} karma, +${FIRST_PLACE.tMoney} T$) and auto-enroll in the merge game (2 new tribes). Losers keep their places. Advancing: ${names}.`,
     },
   });
 
@@ -145,7 +170,7 @@ export async function finishTribalAndSpawnMerge(
       userId: systemUserId,
       channel: "PUBLIC",
       body: didStart
-        ? "[SYSTEM] Merge Survivor begins! Players shuffled — individual immunity challenges."
+        ? "[SYSTEM] Merge Survivor begins — reshuffled into two tribes."
         : "[SYSTEM] Merge lobby waiting for castaways…",
     },
   });

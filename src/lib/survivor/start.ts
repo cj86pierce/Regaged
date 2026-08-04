@@ -58,6 +58,10 @@ async function startMergeSurvivor(gameId: string, gameType: "SURVIVOR" | "SURVIV
     select: { userId: true },
   });
   const shuffled = shuffle(players.map((p) => p.userId));
+  // Always two tribe lobbies — split evenly (e.g. 5+5).
+  const mid = Math.ceil(shuffled.length / 2);
+  const tribeA = shuffled.slice(0, mid);
+  const tribeB = shuffled.slice(mid);
 
   const now = new Date();
   const isBot = gameType === "SURVIVOR_BOT";
@@ -65,21 +69,36 @@ async function startMergeSurvivor(gameId: string, gameType: "SURVIVOR" | "SURVIV
   const systemUserId = await getSystemUserId();
 
   await prisma.$transaction(async (tx) => {
-    // Clear seats then reassign shuffled order
     for (const uid of shuffled) {
       await tx.gamePlayer.update({
         where: { gameId_userId: { gameId, userId: uid } },
         data: { seatIndex: null },
       });
     }
-    for (let i = 0; i < shuffled.length; i++) {
-      // Wiki: merge stats drop a lot
+    let seat = 1;
+    for (const uid of tribeA) {
       const meters = personalMetersFromHealth(40);
       await tx.gamePlayer.update({
-        where: { gameId_userId: { gameId, userId: shuffled[i] } },
+        where: { gameId_userId: { gameId, userId: uid } },
         data: {
-          seatIndex: i + 1,
-          tribe: "MERGED",
+          seatIndex: seat++,
+          tribe: "A",
+          food: meters.food,
+          water: meters.water,
+          hasImmunity: false,
+          challengeScore: 0,
+          sittingOut: false,
+          health: 70,
+        },
+      });
+    }
+    for (const uid of tribeB) {
+      const meters = personalMetersFromHealth(40);
+      await tx.gamePlayer.update({
+        where: { gameId_userId: { gameId, userId: uid } },
+        data: {
+          seatIndex: seat++,
+          tribe: "B",
           food: meters.food,
           water: meters.water,
           hasImmunity: false,
@@ -98,8 +117,9 @@ async function startMergeSurvivor(gameId: string, gameType: "SURVIVOR" | "SURVIV
         startsAt: now,
         roundStartedAt: now,
         stateEndsAt: new Date(now.getTime() + phaseMs),
-        survivorPhase: "INDIVIDUAL_CHALLENGE",
-        survivorMerged: true,
+        // Merge stage still uses two tribe screens (not one combined camp).
+        survivorPhase: "TRIBE_CHALLENGE",
+        survivorMerged: false,
         survivorIsMerge: true,
         losingTribe: null,
       },
@@ -110,12 +130,13 @@ async function startMergeSurvivor(gameId: string, gameType: "SURVIVOR" | "SURVIV
         gameId,
         userId: systemUserId,
         channel: "PUBLIC",
-        body: "[SYSTEM] Merge Survivor starts! Castaways shuffled. Camp meters reset low — keep fire and supplies up.",
+        body: `[SYSTEM] Merge Survivor starts! Reshuffled into Tribe A (${tribeA.length}) and Tribe B (${tribeB.length}). Camp meters reset low.`,
       },
     });
   });
 
   await initCampOnStart(gameId);
+  await assignEqualSitOuts(gameId);
   return { ok: true as const, started: true as const, merge: true as const };
 }
 

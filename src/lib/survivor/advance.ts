@@ -305,6 +305,7 @@ export async function advanceSurvivorIfDue(gameId: string) {
       stateEndsAt: true,
       survivorPhase: true,
       survivorMerged: true,
+      survivorIsMerge: true,
       losingTribe: true,
       roundNumber: true,
     },
@@ -427,10 +428,41 @@ export async function advanceSurvivorIfDue(gameId: string) {
         where: { gameId, status: "ACTIVE" },
       });
 
-      // Tribal stage always ends at merge (≤10). No solo “final 2” finish here.
-      if (activeCount <= 10) {
+      // Final 2 always ends the season (tribal or merge stage).
+      if (activeCount <= 2) {
+        await finishSurvivor(gameId, isBot);
+        return { ok: true as const, advanced: true as const, finished: true as const };
+      }
+
+      // First tribal stage → merge at ≤10. Merge stage keeps two tribes until final 2.
+      // Bot tribal stops at merge (no endless second season).
+      if (!game.survivorIsMerge && activeCount <= 10) {
         await finishTribalAndSpawnMerge(gameId, game.gameType);
         return { ok: true as const, advanced: true as const, merged: true as const };
+      }
+
+      // If one tribe is wiped, dissolve into individual immunity (one camp).
+      const [aLeft, bLeft] = await Promise.all([
+        prisma.gamePlayer.count({ where: { gameId, status: "ACTIVE", tribe: "A" } }),
+        prisma.gamePlayer.count({ where: { gameId, status: "ACTIVE", tribe: "B" } }),
+      ]);
+      if (aLeft === 0 || bLeft === 0) {
+        await prisma.gamePlayer.updateMany({
+          where: { gameId, status: "ACTIVE" },
+          data: { tribe: "MERGED", sittingOut: false, challengeScore: 0, hasImmunity: false },
+        });
+        await prisma.game.update({
+          where: { id: gameId },
+          data: {
+            survivorMerged: true,
+            survivorPhase: "INDIVIDUAL_CHALLENGE",
+            state: "ROUND_NOMINATE",
+            losingTribe: null,
+            roundNumber: { increment: 1 },
+            stateEndsAt: nextEnds(isBot),
+          },
+        });
+        return { ok: true as const, advanced: true as const, dissolved: true as const };
       }
 
       await resetScores(gameId);
@@ -449,7 +481,7 @@ export async function advanceSurvivorIfDue(gameId: string) {
     }
   }
 
-  // ---------- Post-merge individual ----------
+  // ---------- Individual (only if a tribe was wiped) ----------
   if (phase === "INDIVIDUAL_CHALLENGE" || phase === "INDIVIDUAL_IMMUNITY") {
     await resolveIndividualChallenge(gameId, isBot, game.roundNumber);
     return { ok: true as const, advanced: true as const };

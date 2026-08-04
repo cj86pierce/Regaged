@@ -54,7 +54,7 @@ export async function runTick(): Promise<TickResult> {
         gameType: { in: ["FASTING_BOT", "CASTING_BOT", "FROOKIES_BOT", "ROOKIES_BOT", "SURVIVOR_BOT"] },
         state: "ENROLLING",
       },
-      select: { id: true, gameType: true },
+      select: { id: true, gameType: true, survivorIsMerge: true },
       take: 20,
     });
     for (const g of enrollingBots) {
@@ -62,8 +62,14 @@ export async function runTick(): Promise<TickResult> {
         if (g.gameType === "FASTING_BOT") await tryStartFastingBotGame(g.id);
         else if (g.gameType === "FROOKIES_BOT" || g.gameType === "ROOKIES_BOT") await tryStartFastingStyleBotGame(g.id, g.gameType);
         else if (g.gameType === "SURVIVOR_BOT") {
-          await fillGameWithBots(g.id, SURVIVOR_MAX);
-          await tryStartSurvivorGame(g.id, "SURVIVOR_BOT");
+          // Merge lobbies are auto-seated from tribal — never pad them to 20 (that made merge run forever).
+          // Bot tribal seasons also end at merge, so merge ENROLLING bots should be rare.
+          if (g.survivorIsMerge) {
+            await tryStartSurvivorGame(g.id, "SURVIVOR_BOT");
+          } else {
+            await fillGameWithBots(g.id, SURVIVOR_MAX);
+            await tryStartSurvivorGame(g.id, "SURVIVOR_BOT");
+          }
         } else await tryStartCastingBotGame(g.id);
       } catch {}
     }
