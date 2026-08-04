@@ -4,14 +4,19 @@ export const HOF_SIZE = 500;
 
 /** Exclude bots / system-ish accounts from Hall of Fame. */
 export function hofUserWhere() {
+  // Note: do not use NOT (email endsWith …) alone — SQL NULL emails fail that
+  // predicate and would hide every user without an email.
   return {
-    NOT: {
-      OR: [
-        { usernameLower: { startsWith: "bot_" } },
-        { usernameLower: { startsWith: "__" } },
-        { email: { endsWith: "@regaged.bot" } },
-      ],
-    },
+    AND: [
+      { NOT: { usernameLower: { startsWith: "bot_" } } },
+      { NOT: { usernameLower: { startsWith: "__" } } },
+      {
+        OR: [
+          { email: null },
+          { NOT: { email: { endsWith: "@regaged.bot" } } },
+        ],
+      },
+    ],
   };
 }
 
