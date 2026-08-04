@@ -1,8 +1,16 @@
 import { prisma } from "@/lib/prisma";
 
+/** Profile badge cutoff (rank shown next to names). */
 export const HOF_SIZE = 500;
 
-/** Exclude bots / system-ish accounts from Hall of Fame. */
+/** HOF page: avatars for this many, name list through this many. */
+export const HOF_AVATAR_TOP = 10;
+export const HOF_DISPLAY_TOP = 25;
+
+/** Owner / staff accounts kept off the public board. */
+export const HOF_EXCLUDED_USERNAMES = ["siege", "basilswank"] as const;
+
+/** Exclude bots / system-ish / owner accounts from Hall of Fame. */
 export function hofUserWhere() {
   // Bots are created with *@regaged.bot emails (see botUsers / seed-bots).
   // Do NOT use Prisma startsWith("bot_") / startsWith("__"): those become SQL
@@ -12,6 +20,7 @@ export function hofUserWhere() {
     AND: [
       { OR: [{ email: null }, { NOT: { email: { endsWith: "@regaged.bot" } } }] },
       { NOT: { usernameLower: "__system__" } },
+      { NOT: { usernameLower: { in: [...HOF_EXCLUDED_USERNAMES] } } },
     ],
   };
 }
@@ -38,6 +47,14 @@ export async function getHofTop(limit = HOF_SIZE): Promise<HofEntry[]> {
   }));
 }
 
+function isHofExcludedUser(usernameLower: string, email: string | null): boolean {
+  if (usernameLower.startsWith("bot_")) return true;
+  if (usernameLower.startsWith("__")) return true;
+  if (email?.endsWith("@regaged.bot")) return true;
+  if ((HOF_EXCLUDED_USERNAMES as readonly string[]).includes(usernameLower)) return true;
+  return false;
+}
+
 /**
  * 1-based karma rank among eligible users (same ordering as HOF).
  * Returns null if the user is a bot / excluded.
@@ -54,13 +71,7 @@ export async function getKarmaRank(userId: string): Promise<number | null> {
     },
   });
   if (!me) return null;
-  if (
-    me.usernameLower.startsWith("bot_") ||
-    me.usernameLower.startsWith("__") ||
-    (me.email?.endsWith("@regaged.bot") ?? false)
-  ) {
-    return null;
-  }
+  if (isHofExcludedUser(me.usernameLower, me.email)) return null;
 
   const ahead = await prisma.user.count({
     where: {
