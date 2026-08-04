@@ -67,21 +67,22 @@ export const MINIGAME_DEFS: Record<MinigameId, MinigameDef> = {
   match3: {
     id: "match3",
     name: "Candy Match",
-    blurb: "Swap to make matches of 3+. More clears and cascades = better.",
+    blurb: "90s timed Match-3. Board reshuffles if no moves left.",
     averageScore: 40_000_000,
     sanitizeRaw: (raw) => {
       if (!raw || typeof raw !== "object") return null;
       const r = raw as Record<string, unknown>;
       const cleared = Math.round(num(r.cleared));
       const cascades = Math.round(num(r.cascades));
-      const leftoverMoves = Math.round(num(r.leftoverMoves));
-      if (cleared < 0 || cleared > 5000) return null;
-      if (cascades < 0 || cascades > 2000) return null;
-      if (leftoverMoves < 0 || leftoverMoves > 30) return null;
-      return { cleared, cascades, leftoverMoves };
+      // leftoverMs preferred; accept leftoverMoves for any in-flight clients
+      const leftoverMs = Math.round(num(r.leftoverMs, num(r.leftoverMoves)));
+      if (cleared < 0 || cleared > 20_000) return null;
+      if (cascades < 0 || cascades > 10_000) return null;
+      if (leftoverMs < 0 || leftoverMs > 180_000) return null;
+      return { cleared, cascades, leftoverMs };
     },
     toChallengeScore: (raw) =>
-      clampInt(raw.cleared * 1_000_000 + raw.cascades * 1_000 + raw.leftoverMoves),
+      clampInt(raw.cleared * 1_000_000 + raw.cascades * 1_000 + raw.leftoverMs),
   },
 
   rhythm: {
