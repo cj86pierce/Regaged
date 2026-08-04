@@ -42,6 +42,14 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       tribeBFood: true,
       tribeBWater: true,
       tribeBFire: true,
+      tribeAWeather: true,
+      tribeBWeather: true,
+      tribeAGatherReadyAt: true,
+      tribeBGatherReadyAt: true,
+      tribeARainUntil: true,
+      tribeBRainUntil: true,
+      tribeAFireUntil: true,
+      tribeBFireUntil: true,
     },
   });
 
@@ -140,6 +148,30 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       : null;
 
   const isSurvivor = game.gameType === "SURVIVOR" || game.gameType === "SURVIVOR_BOT";
+  if (isSurvivor && game.state !== "ENROLLING" && game.state !== "COMPLETED") {
+    const { syncCampTimers } = await import("@/lib/survivor/camp");
+    await syncCampTimers(gameId).catch(() => null);
+    const camp = await prisma.game.findUnique({
+      where: { id: gameId },
+      select: {
+        tribeAFood: true,
+        tribeAWater: true,
+        tribeAFire: true,
+        tribeBFood: true,
+        tribeBWater: true,
+        tribeBFire: true,
+        tribeAWeather: true,
+        tribeBWeather: true,
+        tribeAGatherReadyAt: true,
+        tribeBGatherReadyAt: true,
+        tribeARainUntil: true,
+        tribeBRainUntil: true,
+        tribeAFireUntil: true,
+        tribeBFireUntil: true,
+      },
+    });
+    if (camp) Object.assign(game, camp);
+  }
   const tribeLobbies =
     isSurvivor && !game.survivorMerged && game.state !== "ENROLLING" && game.state !== "COMPLETED";
 
@@ -415,14 +447,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       survivorMerged: game.survivorMerged ?? false,
       survivorIsMerge: game.survivorIsMerge ?? false,
       losingTribe: game.losingTribe ?? undefined,
-      survivorSupplies: {
-        tribeAFood: game.tribeAFood,
-        tribeAWater: game.tribeAWater,
-        tribeAFire: game.tribeAFire,
-        tribeBFood: game.tribeBFood,
-        tribeBWater: game.tribeBWater,
-        tribeBFire: game.tribeBFire,
-      },
+      survivorSupplies: (await import("@/lib/survivor/camp")).campPublicView(game),
     },
 
     // Survivor tribe lobbies
@@ -470,8 +495,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
           ? (p.castingDayMiniGameScore ?? 0)
           : undefined,
         tribe: (p as { tribe?: string | null }).tribe ?? null,
-        food: (p as { food?: number }).food ?? 5,
-        water: (p as { water?: number }).water ?? 5,
+        food: p.food ?? 70,
+        water: p.water ?? 70,
         hasImmunity: (p as { hasImmunity?: boolean }).hasImmunity ?? false,
         challengeScore: (p as { challengeScore?: number }).challengeScore ?? 0,
         sittingOut: (p as { sittingOut?: boolean }).sittingOut ?? false,

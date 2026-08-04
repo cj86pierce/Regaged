@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getSystemUserId } from "@/lib/systemUser";
+import { initCampOnStart, personalMetersFromHealth } from "@/lib/survivor/camp";
 import { assignEqualSitOuts } from "@/lib/survivor/sitOuts";
 import { SURVIVOR_MAX, survivorPhaseMs } from "@/lib/survivor/timing";
 
@@ -72,17 +73,19 @@ async function startMergeSurvivor(gameId: string, gameType: "SURVIVOR" | "SURVIV
       });
     }
     for (let i = 0; i < shuffled.length; i++) {
+      // Wiki: merge stats drop a lot
+      const meters = personalMetersFromHealth(40);
       await tx.gamePlayer.update({
         where: { gameId_userId: { gameId, userId: shuffled[i] } },
         data: {
           seatIndex: i + 1,
           tribe: "MERGED",
-          food: 5,
-          water: 5,
+          food: meters.food,
+          water: meters.water,
           hasImmunity: false,
           challengeScore: 0,
           sittingOut: false,
-          health: 100,
+          health: 70,
         },
       });
     }
@@ -99,12 +102,6 @@ async function startMergeSurvivor(gameId: string, gameType: "SURVIVOR" | "SURVIV
         survivorMerged: true,
         survivorIsMerge: true,
         losingTribe: null,
-        tribeAFood: 10,
-        tribeAWater: 10,
-        tribeAFire: true,
-        tribeBFood: 10,
-        tribeBWater: 10,
-        tribeBFire: true,
       },
     });
 
@@ -113,11 +110,12 @@ async function startMergeSurvivor(gameId: string, gameType: "SURVIVOR" | "SURVIV
         gameId,
         userId: systemUserId,
         channel: "PUBLIC",
-        body: "[SYSTEM] Merge Survivor starts! Castaways shuffled. Play the challenge for individual immunity.",
+        body: "[SYSTEM] Merge Survivor starts! Castaways shuffled. Camp meters reset low — keep fire and supplies up.",
       },
     });
   });
 
+  await initCampOnStart(gameId);
   return { ok: true as const, started: true as const, merge: true as const };
 }
 
@@ -137,12 +135,14 @@ async function startTribalSurvivor(gameId: string, gameType: "SURVIVOR" | "SURVI
 
   await prisma.$transaction(async (tx) => {
     for (const uid of tribeA) {
+      const meters = personalMetersFromHealth(100);
       await tx.gamePlayer.update({
         where: { gameId_userId: { gameId, userId: uid } },
         data: {
           tribe: "A",
-          food: 5,
-          water: 5,
+          health: 100,
+          food: meters.food,
+          water: meters.water,
           hasImmunity: false,
           challengeScore: 0,
           sittingOut: false,
@@ -150,12 +150,14 @@ async function startTribalSurvivor(gameId: string, gameType: "SURVIVOR" | "SURVI
       });
     }
     for (const uid of tribeB) {
+      const meters = personalMetersFromHealth(100);
       await tx.gamePlayer.update({
         where: { gameId_userId: { gameId, userId: uid } },
         data: {
           tribe: "B",
-          food: 5,
-          water: 5,
+          health: 100,
+          food: meters.food,
+          water: meters.water,
           hasImmunity: false,
           challengeScore: 0,
           sittingOut: false,
@@ -175,12 +177,6 @@ async function startTribalSurvivor(gameId: string, gameType: "SURVIVOR" | "SURVI
         survivorMerged: false,
         survivorIsMerge: false,
         losingTribe: null,
-        tribeAFood: 10,
-        tribeAWater: 10,
-        tribeAFire: true,
-        tribeBFood: 10,
-        tribeBWater: 10,
-        tribeBFire: true,
       },
     });
 
@@ -189,11 +185,12 @@ async function startTribalSurvivor(gameId: string, gameType: "SURVIVOR" | "SURVI
         gameId,
         userId: systemUserId,
         channel: "PUBLIC",
-        body: "[SYSTEM] Survivor begins! Tribes A and B assigned. Equal competitors per tribe — play the challenge.",
+        body: "[SYSTEM] Survivor begins! Tribes assigned. Manage camp food/water/fire — and play the challenge.",
       },
     });
   });
 
+  await initCampOnStart(gameId);
   await assignEqualSitOuts(gameId);
 
   return { ok: true as const, started: true as const };

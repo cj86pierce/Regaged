@@ -114,8 +114,9 @@ export async function finishTribalAndSpawnMerge(
           userId: a.userId,
           status: "ACTIVE",
           tribe: "MERGED",
-          food: 5,
-          water: 5,
+          // Wiki: personal meters drop hard after merge
+          food: 35,
+          water: 35,
           health: 100,
           challengeScore: 0,
           hasImmunity: false,

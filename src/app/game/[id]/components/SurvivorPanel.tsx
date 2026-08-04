@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { getMinigameDef, pickMinigameForDay } from "@/lib/minigamePicker";
+import SurvivorCamp, { type CampSupplies } from "./SurvivorCamp";
 
 type Player = {
   userId: string;
@@ -25,14 +26,7 @@ export default function SurvivorPanel(props: {
   merged?: boolean;
   meUserId: string | null;
   players: Player[];
-  supplies?: {
-    tribeAFood: number;
-    tribeAWater: number;
-    tribeAFire: boolean;
-    tribeBFood: number;
-    tribeBWater: number;
-    tribeBFire: boolean;
-  } | null;
+  supplies?: CampSupplies | null;
   onRefresh: () => void;
 }) {
   const [msg, setMsg] = useState<string | null>(null);
@@ -106,27 +100,26 @@ export default function SurvivorPanel(props: {
         {props.merged ? " · Merged" : ""}
       </div>
 
-      {props.supplies && !props.merged && (
-        <div style={{ fontSize: 11, opacity: 0.85, marginBottom: 8, display: "grid", gap: 2 }}>
-          <div>
-            Tribe A — food {props.supplies.tribeAFood} · water {props.supplies.tribeAWater} · fire{" "}
-            {props.supplies.tribeAFire ? "on" : "off"}
-            {isChallenge ? ` · competing ${competeCountA}` : ""}
-          </div>
-          <div>
-            Tribe B — food {props.supplies.tribeBFood} · water {props.supplies.tribeBWater} · fire{" "}
-            {props.supplies.tribeBFire ? "on" : "off"}
-            {isChallenge ? ` · competing ${competeCountB}` : ""}
-          </div>
-        </div>
+      {me && me.status === "ACTIVE" && props.supplies && (
+        <SurvivorCamp
+          gameId={props.gameId}
+          merged={!!props.merged}
+          myTribe={me.tribe}
+          personalFood={me.food ?? 0}
+          personalWater={me.water ?? 0}
+          health={me.health ?? 0}
+          supplies={props.supplies}
+          onRefresh={props.onRefresh}
+        />
       )}
 
       {me && me.status === "ACTIVE" && (
         <div style={{ fontSize: 12, marginBottom: 8 }}>
-          You: tribe {me.tribe ?? "?"} · food {me.food ?? 0} · water {me.water ?? 0} · HP{" "}
-          {me.health ?? 0}
+          You: tribe {me.tribe ?? "?"}
           {me.hasImmunity ? " · IMMUNE" : ""}
-          {me.sittingOut ? " · SITTING OUT" : ""} · score {me.challengeScore ?? 0}
+          {me.sittingOut ? " · SITTING OUT" : ""}
+          {isChallenge ? ` · score ${me.challengeScore ?? 0}` : ""}
+          {!props.merged && isChallenge ? ` · A competing ${competeCountA} / B ${competeCountB}` : ""}
         </div>
       )}
 

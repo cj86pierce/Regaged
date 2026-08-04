@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getSystemUserId } from "@/lib/systemUser";
+import { tickCampDay } from "@/lib/survivor/camp";
 import { finishTribalAndSpawnMerge } from "@/lib/survivor/merge";
 import { assignEqualSitOuts } from "@/lib/survivor/sitOuts";
 import { survivorPhaseMs } from "@/lib/survivor/timing";
@@ -21,83 +22,6 @@ async function resetScores(gameId: string) {
     where: { gameId, status: "ACTIVE" },
     data: { challengeScore: 0, hasImmunity: false },
   });
-}
-
-async function tickMeters(gameId: string, merged: boolean) {
-  const game = await prisma.game.findUnique({
-    where: { id: gameId },
-    select: {
-      tribeAFood: true,
-      tribeAWater: true,
-      tribeAFire: true,
-      tribeBFood: true,
-      tribeBWater: true,
-      tribeBFire: true,
-    },
-  });
-  if (!game) return;
-
-  if (!merged) {
-    await prisma.game.update({
-      where: { id: gameId },
-      data: {
-        tribeAFood: Math.max(0, game.tribeAFood - 1),
-        tribeAWater: Math.max(0, game.tribeAWater - 1),
-        tribeBFood: Math.max(0, game.tribeBFood - 1),
-        tribeBWater: Math.max(0, game.tribeBWater - 1),
-      },
-    });
-  }
-
-  const actives = await prisma.gamePlayer.findMany({
-    where: { gameId, status: "ACTIVE" },
-    select: { userId: true, food: true, water: true, health: true, tribe: true },
-  });
-
-  for (const p of actives) {
-    let food = Math.max(0, p.food - 1);
-    let water = Math.max(0, p.water - 1);
-    let health = p.health;
-    if (food === 0 || water === 0) health = Math.max(0, health - 10);
-    if (!merged) {
-      const fire =
-        p.tribe === "A" ? game.tribeAFire : p.tribe === "B" ? game.tribeBFire : true;
-      if (!fire) health = Math.max(0, health - 5);
-    }
-    await prisma.gamePlayer.update({
-      where: { gameId_userId: { gameId, userId: p.userId } },
-      data: { food, water, health },
-    });
-  }
-
-  const dead = await prisma.gamePlayer.findMany({
-    where: { gameId, status: "ACTIVE", health: { lte: 0 } },
-    select: { userId: true },
-  });
-  if (dead.length) {
-    const remaining = await prisma.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
-    let place = remaining;
-    const systemUserId = await getSystemUserId();
-    for (const d of dead) {
-      await prisma.gamePlayer.update({
-        where: { gameId_userId: { gameId, userId: d.userId } },
-        data: {
-          status: "ELIMINATED",
-          eliminatedAt: new Date(),
-          eliminatedPlace: place,
-        },
-      });
-      place--;
-      await prisma.gameMessage.create({
-        data: {
-          gameId,
-          userId: systemUserId,
-          channel: "PUBLIC",
-          body: `[SYSTEM] A castaway was medically evacuated (health 0).`,
-        },
-      });
-    }
-  }
 }
 
 async function finishSurvivor(gameId: string, isBot: boolean) {
@@ -497,7 +421,7 @@ export async function advanceSurvivorIfDue(gameId: string) {
         eligible.map((e) => e.userId),
         isBot
       );
-      await tickMeters(gameId, false);
+      await tickCampDay(gameId, { merged: false, isBot });
 
       const activeCount = await prisma.gamePlayer.count({
         where: { gameId, status: "ACTIVE" },
@@ -571,7 +495,7 @@ export async function advanceSurvivorIfDue(gameId: string) {
       eligible.map((e) => e.userId),
       isBot
     );
-    await tickMeters(gameId, true);
+    await tickCampDay(gameId, { merged: true, isBot });
 
     const activeCount = await prisma.gamePlayer.count({
       where: { gameId, status: "ACTIVE" },

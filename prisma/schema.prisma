@@ -504,12 +504,23 @@ model Game {
 
   // Survivor
   survivorPhase           String? // TRIBE_CHALLENGE | IMMUNITY | TRIBAL_COUNCIL | MERGE | INDIVIDUAL_CHALLENGE | INDIVIDUAL_IMMUNITY | VOTE
-  tribeAFood              Int     @default(10)
-  tribeAWater             Int     @default(10)
+  tribeAFood              Int     @default(40)
+  tribeAWater             Int     @default(40)
   tribeAFire              Boolean @default(true)
-  tribeBFood              Int     @default(10)
-  tribeBWater             Int     @default(10)
+  tribeBFood              Int     @default(40)
+  tribeBWater             Int     @default(40)
   tribeBFire              Boolean @default(true)
+  /** SUN | RAIN | CLOUDY — weather for gathering */
+  tribeAWeather           String  @default("SUN")
+  tribeBWeather           String  @default("SUN")
+  tribeAGatherReadyAt     DateTime?
+  tribeBGatherReadyAt     DateTime?
+  /** While set and in the future, tribe is collecting rain (no drinking from stock). */
+  tribeARainUntil         DateTime?
+  tribeBRainUntil         DateTime?
+  /** When fire is out, relights at this time. */
+  tribeAFireUntil         DateTime?
+  tribeBFireUntil         DateTime?
   survivorMerged          Boolean @default(false)
   /** True when this lobby is the post-tribe merge game (10 seats, starts individual). */
   survivorIsMerge         Boolean @default(false)
@@ -574,13 +585,14 @@ model GamePlayer {
   castingHealthGainedToday Int       @default(0)
   castingHealthTickedAt    DateTime?
 
-  // Survivor
+  // Survivor (food/water are personal % 0–100)
   tribe                String? // A | B | MERGED
-  food                 Int     @default(5)
-  water                Int     @default(5)
+  food                 Int     @default(70)
+  water                Int     @default(70)
   hasImmunity          Boolean @default(false)
   sittingOut           Boolean @default(false)
   challengeScore       Int     @default(0)
+  lastGatherAt         DateTime?
 
   @@unique([gameId, userId])
   @@unique([gameId, seatIndex])

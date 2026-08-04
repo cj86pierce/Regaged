@@ -73,6 +73,14 @@ type GameState = {
       tribeBFood: number;
       tribeBWater: number;
       tribeBFire: boolean;
+      tribeAWeather?: string;
+      tribeBWeather?: string;
+      tribeAGatherReadyAt?: string | null;
+      tribeBGatherReadyAt?: string | null;
+      tribeARainUntil?: string | null;
+      tribeBRainUntil?: string | null;
+      tribeAFireUntil?: string | null;
+      tribeBFireUntil?: string | null;
     };
   };
   lobby: { current: number; needed: number } | null;

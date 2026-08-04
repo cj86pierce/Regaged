@@ -405,10 +405,10 @@ export default function Sidebar(props: {
         <div style={{ fontSize: 12, marginTop: 8, lineHeight: 1.35 }}>
           {isSurvivor ? (
             <>
-              <b>Survivor:</b> Play the minigame competition. Highest tribe total wins immunity.
-              On the losing tribe, the top individual score is also immune. Equal numbers compete
-              from each tribe (extras sit out). Losing tribe votes someone out. At 10 left, all
-              place 1st and auto-enter a merge Survivor (shuffled individual game).
+              <b>Survivor:</b> Manage camp — personal food/water (blue), tribe stock, weather
+              gather, and fire (never eat/drink with fire out). Play the competition; highest tribe
+              total wins immunity; top scorer on the losing tribe is also immune. Equal competitors
+              per tribe. At 10 left, merge (1st + rewards).
               <br /><br />
             </>
           ) : isFrookies ? (
