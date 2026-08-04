@@ -16,7 +16,7 @@ type OwnerUser = {
   lockedLoginIp: string | null;
 };
 
-type OnlineRow = {
+type PlayerRow = {
   id: string;
   username: string;
   lastSeenAt: string;
@@ -28,11 +28,15 @@ type OnlineRow = {
   banned: boolean;
 };
 
-function secondsAgo(iso: string): string {
-  const s = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
-  if (s < 60) return `${s}s ago`;
-  const m = Math.floor(s / 60);
-  return `${m}m ago`;
+function recencyLabel(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(ms / 60000);
+  if (mins < 5) return "online";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 48) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
 }
 
 export default function OwnerPanel() {
@@ -47,37 +51,53 @@ export default function OwnerPanel() {
   const [newUsername, setNewUsername] = useState("");
   const [banReason, setBanReason] = useState("");
 
-  const [online, setOnline] = useState<OnlineRow[]>([]);
-  const [onlineErr, setOnlineErr] = useState<string | null>(null);
+  const [players, setPlayers] = useState<PlayerRow[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [listErr, setListErr] = useState<string | null>(null);
+  const [listBusy, setListBusy] = useState(false);
 
-  const loadOnline = useCallback(async () => {
+  const loadPlayers = useCallback(async (p: number) => {
     if (typeof document !== "undefined" && document.hidden) return;
+    setListBusy(true);
     try {
-      const res = await fetch("/api/owner/online", { credentials: "include", cache: "no-store" });
+      const res = await fetch(`/api/owner/players?page=${p}`, {
+        credentials: "include",
+        cache: "no-store",
+      });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setOnlineErr(json?.error ?? "Failed to load online");
+        setListErr(json?.error ?? "Failed to load players");
+        setListBusy(false);
         return;
       }
-      setOnlineErr(null);
-      setOnline(json.online ?? []);
+      setListErr(null);
+      setPlayers(json.players ?? []);
+      setPage(json.page ?? p);
+      setTotalPages(json.totalPages ?? 1);
+      setTotal(json.total ?? 0);
     } catch {
-      setOnlineErr("Failed to load online");
+      setListErr("Failed to load players");
     }
+    setListBusy(false);
   }, []);
 
   useEffect(() => {
-    void loadOnline();
-    const id = window.setInterval(() => void loadOnline(), 15000);
+    void loadPlayers(page);
+  }, [loadPlayers, page]);
+
+  useEffect(() => {
+    const id = window.setInterval(() => void loadPlayers(page), 20000);
     const onVis = () => {
-      if (!document.hidden) void loadOnline();
+      if (!document.hidden) void loadPlayers(page);
     };
     document.addEventListener("visibilitychange", onVis);
     return () => {
       window.clearInterval(id);
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, [loadOnline]);
+  }, [loadPlayers, page]);
 
   async function call(action: string, extra: Record<string, unknown> = {}, nameOverride?: string) {
     setBusy(true);
@@ -103,6 +123,7 @@ export default function OwnerPanel() {
       setUsername(json.user.username);
     }
     setMsg(action === "lookup" ? "Loaded." : "Done.");
+    void loadPlayers(page);
   }
 
   return (
@@ -115,24 +136,32 @@ export default function OwnerPanel() {
           background: "var(--bg-card)",
         }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, marginBottom: 10 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "baseline",
+            gap: 8,
+            marginBottom: 10,
+          }}
+        >
           <div style={{ fontWeight: 900 }}>
-            Online now{" "}
-            <span style={{ fontWeight: 700, color: "var(--text-muted)" }}>({online.length})</span>
+            Players by recency{" "}
+            <span style={{ fontWeight: 700, color: "var(--text-muted)" }}>({total})</span>
           </div>
-          <button type="button" onClick={() => void loadOnline()} style={{ fontSize: 12 }}>
+          <button type="button" disabled={listBusy} onClick={() => void loadPlayers(page)} style={{ fontSize: 12 }}>
             Refresh
           </button>
         </div>
         <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 8 }}>
-          Active in the last 5 minutes. Click a name to look them up.
+          10 per page · most recently active first · click to look up
         </div>
-        {onlineErr ? <div style={{ color: "var(--text-error)", fontSize: 13 }}>{onlineErr}</div> : null}
-        {!onlineErr && !online.length ? (
-          <div style={{ fontSize: 13, opacity: 0.7 }}>No one online right now.</div>
+        {listErr ? <div style={{ color: "var(--text-error)", fontSize: 13 }}>{listErr}</div> : null}
+        {!listErr && !players.length ? (
+          <div style={{ fontSize: 13, opacity: 0.7 }}>No players found.</div>
         ) : null}
-        <div style={{ display: "grid", gap: 4, maxHeight: 280, overflow: "auto" }}>
-          {online.map((o) => (
+        <div style={{ display: "grid", gap: 4 }}>
+          {players.map((o) => (
             <button
               key={o.id}
               type="button"
@@ -160,10 +189,39 @@ export default function OwnerPanel() {
                 {o.banned ? " · Banned" : ""}
               </span>
               <span style={{ fontSize: 12, color: "var(--text-muted)", flexShrink: 0 }}>
-                {secondsAgo(o.lastSeenAt)} · {o.karma}k · T${o.tMoney}
+                {recencyLabel(o.lastSeenAt)} · {o.karma}k · T${o.tMoney}
               </span>
             </button>
           ))}
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 8,
+            marginTop: 12,
+            flexWrap: "wrap",
+          }}
+        >
+          <button
+            type="button"
+            disabled={listBusy || page <= 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+          >
+            ← Prev
+          </button>
+          <span style={{ fontSize: 13, fontWeight: 800 }}>
+            Page {page} / {totalPages}
+          </span>
+          <button
+            type="button"
+            disabled={listBusy || page >= totalPages}
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+          >
+            Next →
+          </button>
         </div>
       </section>
 
