@@ -191,6 +191,7 @@ async function eliminateByVote(gameId: string, eligibleUserIds: string[], isBot:
   }
   if (!target) return null;
 
+  // Place = how many are still in (including the person leaving). First boot of 20 → 20th.
   const remaining = await prisma.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
   const place = remaining;
   const victim = await prisma.gamePlayer.findUnique({
@@ -502,11 +503,7 @@ export async function advanceSurvivorIfDue(gameId: string) {
         where: { gameId, status: "ACTIVE" },
       });
 
-      if (activeCount <= 2) {
-        await finishSurvivor(gameId, isBot);
-        return { ok: true as const, advanced: true as const, finished: true as const };
-      }
-
+      // Tribal stage always ends at merge (≤10). No solo “final 2” finish here.
       if (activeCount <= 10) {
         await finishTribalAndSpawnMerge(gameId, game.gameType);
         return { ok: true as const, advanced: true as const, merged: true as const };

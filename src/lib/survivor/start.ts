@@ -29,7 +29,26 @@ export async function tryStartSurvivorGame(gameId: string, gameType: "SURVIVOR" 
   }
 
   if (count < SURVIVOR_MAX) return { ok: true as const, skipped: true as const };
+  // Cap overflow (race enroll) so tribes are always 10 + 10.
+  if (count > SURVIVOR_MAX) {
+    await trimActivePlayers(gameId, SURVIVOR_MAX);
+  }
   return startTribalSurvivor(gameId, gameType);
+}
+
+/** Keep earliest joiners; drop extras so the lobby cannot start over max. */
+async function trimActivePlayers(gameId: string, max: number) {
+  const players = await prisma.gamePlayer.findMany({
+    where: { gameId, status: "ACTIVE" },
+    select: { userId: true },
+    orderBy: { joinedAt: "asc" },
+  });
+  const drop = players.slice(max);
+  for (const d of drop) {
+    await prisma.gamePlayer.delete({
+      where: { gameId_userId: { gameId, userId: d.userId } },
+    });
+  }
 }
 
 async function startMergeSurvivor(gameId: string, gameType: "SURVIVOR" | "SURVIVOR_BOT") {

@@ -164,6 +164,13 @@ export async function POST(req: Request) {
   });
 
   if (!existing) {
+    const activeCount = await prisma.gamePlayer.count({
+      where: { gameId: lobby.id, status: "ACTIVE" },
+    });
+    if (activeCount >= MAX) {
+      return NextResponse.json({ error: "Lobby is full." }, { status: 409 });
+    }
+
     if (gameType === "FROOKIES" || gameType === "SURVIVOR") {
       const updated = await prisma.user.updateMany({
         where: { id: userId, tMoney: { gte: 10 } },
@@ -192,11 +199,44 @@ export async function POST(req: Request) {
     const open: number[] = [];
     for (let i = 1; i <= MAX; i++) if (!taken.has(i)) open.push(i);
 
-    const seat = open.length ? open[Math.floor(Math.random() * open.length)] : null;
+    // Never create seatless overflow players (this caused 21 in Survivor).
+    if (!open.length) {
+      if (gameType === "FROOKIES" || gameType === "SURVIVOR") {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { tMoney: { increment: 10 } },
+        });
+      }
+      if (gameType === "ROOKIES") {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { tMoney: { increment: 15 } },
+        });
+      }
+      return NextResponse.json({ error: "Lobby is full." }, { status: 409 });
+    }
 
-    await prisma.gamePlayer.create({
-      data: { gameId: lobby.id, userId, status: "ACTIVE", ...(seat ? { seatIndex: seat } : {}) },
-    });
+    const seat = open[Math.floor(Math.random() * open.length)];
+
+    try {
+      await prisma.gamePlayer.create({
+        data: { gameId: lobby.id, userId, status: "ACTIVE", seatIndex: seat },
+      });
+    } catch {
+      if (gameType === "FROOKIES" || gameType === "SURVIVOR") {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { tMoney: { increment: 10 } },
+        });
+      }
+      if (gameType === "ROOKIES") {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { tMoney: { increment: 15 } },
+        });
+      }
+      return NextResponse.json({ error: "Lobby is full." }, { status: 409 });
+    }
   }
 
   if (isBotMode) {

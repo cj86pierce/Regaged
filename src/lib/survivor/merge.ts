@@ -1,12 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import { getSystemUserId } from "@/lib/systemUser";
 import { tryStartSurvivorGame } from "@/lib/survivor/start";
+import { SURVIVOR_MAX } from "@/lib/survivor/timing";
 
 const FIRST_PLACE = { karma: 50, tMoney: 40 };
 
 /**
- * Tribal stage ends at 10 remaining: everyone places 1st, then auto-enrolls
- * into a new merge Survivor lobby (10 seats). Start + shuffle when full.
+ * Tribal stage ends at 10 remaining:
+ * - Remaining castaways place 1st + merge rewards, then auto-enroll in merge Survivor.
+ * - Already voted out keep their lose places (11–20). Anyone missing a place is backfilled.
  */
 export async function finishTribalAndSpawnMerge(
   tribalGameId: string,
@@ -19,6 +21,7 @@ export async function finishTribalAndSpawnMerge(
   const actives = await prisma.gamePlayer.findMany({
     where: { gameId: tribalGameId, status: "ACTIVE" },
     select: { userId: true, user: { select: { username: true } } },
+    orderBy: { joinedAt: "asc" },
   });
 
   await prisma.$transaction(async (tx) => {
@@ -32,6 +35,39 @@ export async function finishTribalAndSpawnMerge(
         },
       });
     }
+
+    // Backfill any losers missing a place (merge = 1st, lose = 11–20).
+    const missing = await tx.gamePlayer.findMany({
+      where: {
+        gameId: tribalGameId,
+        status: "ELIMINATED",
+        eliminatedPlace: null,
+      },
+      select: { userId: true },
+      orderBy: [{ eliminatedAt: "asc" }, { joinedAt: "asc" }],
+    });
+    const used = new Set(
+      (
+        await tx.gamePlayer.findMany({
+          where: { gameId: tribalGameId, eliminatedPlace: { not: null } },
+          select: { eliminatedPlace: true },
+        })
+      )
+        .map((p) => p.eliminatedPlace)
+        .filter((p): p is number => p != null)
+    );
+    let nextLose = SURVIVOR_MAX;
+    for (const m of missing) {
+      while (used.has(nextLose) || nextLose === 1) nextLose -= 1;
+      if (nextLose < 2) break;
+      await tx.gamePlayer.update({
+        where: { gameId_userId: { gameId: tribalGameId, userId: m.userId } },
+        data: { eliminatedPlace: nextLose },
+      });
+      used.add(nextLose);
+      nextLose -= 1;
+    }
+
     await tx.game.update({
       where: { id: tribalGameId },
       data: {
@@ -95,7 +131,7 @@ export async function finishTribalAndSpawnMerge(
       gameId: tribalGameId,
       userId: systemUserId,
       channel: "PUBLIC",
-      body: `[SYSTEM] MERGE! Remaining castaways place 1st (+${FIRST_PLACE.karma} karma, +${FIRST_PLACE.tMoney} T$) and auto-enroll in the merge game. Advancing: ${names}.`,
+      body: `[SYSTEM] MERGE! Remaining castaways place 1st (+${FIRST_PLACE.karma} karma, +${FIRST_PLACE.tMoney} T$) and auto-enroll in the merge game. Losers keep their elimination places. Advancing: ${names}.`,
     },
   });
 
@@ -109,7 +145,7 @@ export async function finishTribalAndSpawnMerge(
       channel: "PUBLIC",
       body: didStart
         ? "[SYSTEM] Merge Survivor begins! Players shuffled — individual immunity challenges."
-        : "[SYSTEM] Merge lobby waiting for 10 castaways…",
+        : "[SYSTEM] Merge lobby waiting for castaways…",
     },
   });
 

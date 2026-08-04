@@ -56,11 +56,17 @@ export async function fillGameWithBots(gameId: string, maxPlayers: number): Prom
   let added = 0;
   for (const botId of botUserIds) {
     if (current + added >= maxPlayers) break;
-    const seat = open.length > 0 ? open.splice(Math.floor(Math.random() * open.length), 1)[0] ?? null : null;
-    await prisma.gamePlayer.create({
-      data: { gameId, userId: botId, status: "ACTIVE", ...(seat != null ? { seatIndex: seat } : {}) },
-    });
-    added++;
+    if (!open.length) break;
+    const seat = open.splice(Math.floor(Math.random() * open.length), 1)[0];
+    if (seat == null) break;
+    try {
+      await prisma.gamePlayer.create({
+        data: { gameId, userId: botId, status: "ACTIVE", seatIndex: seat },
+      });
+      added++;
+    } catch {
+      break;
+    }
   }
   return added;
 }
