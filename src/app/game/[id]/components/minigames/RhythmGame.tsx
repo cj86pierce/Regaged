@@ -8,6 +8,7 @@ const LANES = 4;
 const DURATION_MS = 35_000;
 const NOTE_TRAVEL_MS = 1400;
 const HIT_WINDOW_MS = 140;
+const PREP_SECONDS = 3;
 const KEYS = ["a", "s", "d", "f"];
 
 type Note = { id: number; lane: number; hitAt: number; hit?: "perfect" | "good" | "miss" };
@@ -15,7 +16,8 @@ type Note = { id: number; lane: number; hitAt: number; hit?: "perfect" | "good" 
 /** Guitar-Hero lite: falling notes, tap lanes. */
 export default function RhythmGame(props: MinigameProps) {
   const { gameId, meUserId, myScore, onSubmitScore } = props;
-  const [phase, setPhase] = useState<"idle" | "play" | "done">("idle");
+  const [phase, setPhase] = useState<"idle" | "ready" | "play" | "done">("idle");
+  const [prepCount, setPrepCount] = useState(PREP_SECONDS);
   const [now, setNow] = useState(0);
   const [points, setPoints] = useState(0);
   const [combo, setCombo] = useState(0);
@@ -29,13 +31,13 @@ export default function RhythmGame(props: MinigameProps) {
   const [, bump] = useState(0);
   const statsRef = useRef({ points: 0, maxCombo: 0 });
 
-  const start = useCallback(() => {
-    if (!meUserId) return;
+  const beginPlay = useCallback(() => {
     const t0 = performance.now();
     startRef.current = t0;
     const notes: Note[] = [];
     let id = 0;
-    for (let t = 900; t < DURATION_MS - 400; t += 380 + Math.floor(Math.random() * 220)) {
+    // First notes arrive after a short lead-in so players can settle on the pads
+    for (let t = 1200; t < DURATION_MS - 400; t += 380 + Math.floor(Math.random() * 220)) {
       notes.push({ id: id++, lane: Math.floor(Math.random() * LANES), hitAt: t0 + t });
       if (Math.random() < 0.25) {
         notes.push({
@@ -51,10 +53,30 @@ export default function RhythmGame(props: MinigameProps) {
     setCombo(0);
     setMaxCombo(0);
     setPhase("play");
+    setNow(t0);
+  }, []);
+
+  const start = useCallback(() => {
+    if (!meUserId) return;
+    notesRef.current = [];
+    setPoints(0);
+    setCombo(0);
+    setMaxCombo(0);
     setResult(null);
     setError(null);
-    setNow(t0);
+    setPrepCount(PREP_SECONDS);
+    setPhase("ready");
   }, [meUserId]);
+
+  useEffect(() => {
+    if (phase !== "ready") return;
+    if (prepCount <= 0) {
+      beginPlay();
+      return;
+    }
+    const t = setTimeout(() => setPrepCount((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [phase, prepCount, beginPlay]);
 
   useEffect(() => {
     if (phase !== "play") return;
@@ -177,6 +199,28 @@ export default function RhythmGame(props: MinigameProps) {
       myScore={myScore}
     >
       {phase === "idle" && <PlayButton onClick={start} />}
+
+      {phase === "ready" && (
+        <div
+          style={{
+            height: 220,
+            borderRadius: 10,
+            border: "1px solid var(--border)",
+            background: "var(--bg-msg)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+          }}
+        >
+          <div style={{ fontSize: 12, opacity: 0.75 }}>Get ready — fingers on A S D F</div>
+          <div style={{ fontSize: 56, fontWeight: 1000, letterSpacing: 2 }}>
+            {prepCount > 0 ? prepCount : "GO!"}
+          </div>
+          <div style={{ fontSize: 11, opacity: 0.65 }}>Notes start after the countdown</div>
+        </div>
+      )}
 
       {phase === "play" && (
         <div>
