@@ -1,8 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { getMinigameDef, pickMinigameForDay } from "@/lib/minigamePicker";
-import { renderMinigame } from "./minigames/renderMinigame";
 
 type Player = {
   userId: string;
@@ -122,22 +122,26 @@ export default function SurvivorPanel(props: {
       )}
 
       {isChallenge && me?.status === "ACTIVE" && !me.sittingOut && (
-        <div style={{ marginBottom: 10 }}>
-          <div style={{ fontSize: 12, fontWeight: 900, marginBottom: 4 }}>
-            Competition: {minigameDef.name}
+        <div style={{ marginBottom: 8 }}>
+          <div style={{ fontSize: 12, marginBottom: 6, opacity: 0.85 }}>
+            Competition: <b>{minigameDef.name}</b>
           </div>
-          <div style={{ fontSize: 11, opacity: 0.8, marginBottom: 8, lineHeight: 1.4 }}>
-            {props.merged
-              ? "Highest score wins individual immunity. Best score counts if you retry."
-              : "Tribe totals win immunity. Highest score on the losing tribe also gets immunity."}
-          </div>
-          {renderMinigame(minigameId, {
-            gameId: props.gameId,
-            meUserId: props.meUserId,
-            myScore: me.challengeScore ?? 0,
-            scoreMode: "survivor",
-            onSubmitScore: () => props.onRefresh(),
-          })}
+          <Link
+            href={`/game/${props.gameId}/challenge`}
+            style={{
+              display: "block",
+              padding: "10px 12px",
+              borderRadius: 10,
+              border: "1px solid var(--border)",
+              background: "var(--bg-btn-send)",
+              color: "var(--text-btn-send)",
+              fontWeight: 1000,
+              textAlign: "center",
+              textDecoration: "none",
+            }}
+          >
+            Play competition →
+          </Link>
         </div>
       )}
 

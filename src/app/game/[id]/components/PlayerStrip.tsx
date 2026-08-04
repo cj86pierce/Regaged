@@ -68,8 +68,10 @@ export default function PlayerStrip(props: {
     setEvictSelected,
   } = props;
 
-  const isNominate = gameState === "ROUND_NOMINATE";
-  const isVote = gameState === "ROUND_VOTE";
+  const isSurvivor = gameType === "SURVIVOR" || gameType === "SURVIVOR_BOT";
+  // Survivor uses challenge/vote phases, not Fasting-style nominations.
+  const isNominate = !isSurvivor && gameState === "ROUND_NOMINATE";
+  const isVote = !isSurvivor && gameState === "ROUND_VOTE";
   const isCompleted = gameState === "COMPLETED";
   const hasHoh = hohUserId != null;
   const onlyHohCanNominate = hasHoh && (gameType === "FROOKIES" || gameType === "FROOKIES_BOT" || gameType === "ROOKIES" || gameType === "ROOKIES_BOT");
