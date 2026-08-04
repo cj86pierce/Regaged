@@ -147,13 +147,13 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   let myTribe: string | null =
     myGp?.tribe === "A" || myGp?.tribe === "B" || myGp?.tribe === "MERGED" ? myGp.tribe : null;
 
-  // Players are locked to their tribe lobby; spectators pick A/B via ?tribe=
+  // ?tribe=A|B switches which tribe lobby you view (chat/roster). Default: your own tribe.
   let viewTribe: string | null = null;
   if (tribeLobbies) {
-    if (myTribe === "A" || myTribe === "B") {
-      viewTribe = myTribe;
-    } else if (requestedTribe === "A" || requestedTribe === "B") {
+    if (requestedTribe === "A" || requestedTribe === "B") {
       viewTribe = requestedTribe;
+    } else if (myTribe === "A" || myTribe === "B") {
+      viewTribe = myTribe;
     } else {
       viewTribe = "A";
     }

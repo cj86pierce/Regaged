@@ -163,16 +163,23 @@ export default function GamePage({ params }: { params: { id: string } }) {
 
   const [sending, setSending] = useState(false);
   const [reactingIds, setReactingIds] = useState<Record<string, boolean>>({});
-  /** Spectators only: which tribe lobby to watch (A/B). Players are locked server-side. */
-  const [spectateTribe, setSpectateTribe] = useState<"A" | "B">("A");
+  /** Which tribe lobby to show (A/B). Players can switch to view the other tribe. */
+  const [lobbyTribe, setLobbyTribe] = useState<"A" | "B" | null>(null);
 
   async function load(opts?: { bust?: boolean; tribe?: "A" | "B" }) {
-    const tribe = opts?.tribe ?? spectateTribe;
-    const q = `page=${page}&pageSize=25&tribe=${tribe}${opts?.bust ? `&_=${Date.now()}` : ""}`;
+    const tribe = opts?.tribe ?? lobbyTribe ?? undefined;
+    const tribeQ = tribe ? `&tribe=${tribe}` : "";
+    const q = `page=${page}&pageSize=25${tribeQ}${opts?.bust ? `&_=${Date.now()}` : ""}`;
     const res = await fetch(`/api/game/${gameId}/state?${q}`, { cache: "no-store" });
     const json = await res.json();
     if (!res.ok) throw new Error(json?.error ?? "Failed to load game");
     setData(json);
+    if (
+      (json.viewTribe === "A" || json.viewTribe === "B") &&
+      (opts?.tribe || lobbyTribe == null)
+    ) {
+      setLobbyTribe(json.viewTribe);
+    }
 
     if (
       json.game.gameType === "FASTING" ||
@@ -242,6 +249,17 @@ export default function GamePage({ params }: { params: { id: string } }) {
 
     const text = chatText;
     if (!text.trim()) return;
+
+    // Chat always posts to your own tribe; don't send while viewing the other lobby.
+    if (
+      data?.tribeLobbies &&
+      (data.myTribe === "A" || data.myTribe === "B") &&
+      data.viewTribe &&
+      data.viewTribe !== data.myTribe
+    ) {
+      setError("Switch back to your tribe to chat.");
+      return;
+    }
 
     setSending(true);
 
@@ -401,7 +419,11 @@ export default function GamePage({ params }: { params: { id: string } }) {
   const tribeLobbies = !!data.tribeLobbies;
   const viewTribe = data.viewTribe ?? null;
   const myTribe = data.myTribe ?? null;
-  const isSpectator = isSurvivor && !myTribe && data.game.state !== "ENROLLING";
+  const viewingOtherTribe =
+    !!tribeLobbies &&
+    (myTribe === "A" || myTribe === "B") &&
+    !!viewTribe &&
+    viewTribe !== myTribe;
 
   const lobbyPlayers =
     tribeLobbies && (viewTribe === "A" || viewTribe === "B")
@@ -476,15 +498,24 @@ export default function GamePage({ params }: { params: { id: string } }) {
           )}
         </div>
 
-        {isSpectator && tribeLobbies ? (
+        {tribeLobbies ? (
           <div style={{ marginTop: 8, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-            <span style={{ fontSize: 12, fontWeight: 800 }}>Spectate tribe:</span>
+            {myTribe === "A" || myTribe === "B" ? (
+              <span style={{ fontSize: 12, opacity: 0.85 }}>
+                Your tribe: <b>{myTribe}</b>
+                {viewTribe && viewTribe !== myTribe ? (
+                  <> · viewing <b>Tribe {viewTribe}</b></>
+                ) : null}
+              </span>
+            ) : (
+              <span style={{ fontSize: 12, fontWeight: 800 }}>Spectate tribe:</span>
+            )}
             {(["A", "B"] as const).map((t) => (
               <button
                 key={t}
                 type="button"
                 onClick={() => {
-                  setSpectateTribe(t);
+                  setLobbyTribe(t);
                   void load({ bust: true, tribe: t }).catch((e) => setError(e.message));
                 }}
                 style={{
@@ -492,20 +523,18 @@ export default function GamePage({ params }: { params: { id: string } }) {
                   padding: "4px 10px",
                   borderRadius: 4,
                   border: "1px solid var(--border)",
-                  background: spectateTribe === t ? "#66bb6a" : "var(--bg-btn-disabled)",
-                  color: spectateTribe === t ? "#1b3d1f" : "inherit",
+                  background: viewTribe === t ? "#66bb6a" : "var(--bg-btn-disabled)",
+                  color: viewTribe === t ? "#1b3d1f" : "inherit",
                   cursor: "pointer",
                 }}
               >
-                Tribe {t}
+                {myTribe === "A" || myTribe === "B"
+                  ? t === myTribe
+                    ? `My tribe (${t})`
+                    : `Other tribe (${t})`
+                  : `Tribe ${t}`}
               </button>
             ))}
-          </div>
-        ) : null}
-
-        {tribeLobbies && myTribe ? (
-          <div style={{ marginTop: 6, fontSize: 12, opacity: 0.8 }}>
-            You are in <b>Tribe {myTribe}</b> — this lobby is separate until the merge.
           </div>
         ) : null}
       </div>
@@ -550,6 +579,22 @@ export default function GamePage({ params }: { params: { id: string } }) {
         }}
       >
         <div>
+          {viewingOtherTribe ? (
+            <div
+              style={{
+                marginBottom: 8,
+                padding: "8px 10px",
+                borderRadius: 8,
+                border: "1px solid var(--border)",
+                background: "var(--bg-card)",
+                fontSize: 12,
+                fontWeight: 800,
+              }}
+            >
+              Viewing Tribe {viewTribe} (read-only chat). Switch to My tribe ({myTribe}) to talk and
+              compete.
+            </div>
+          ) : null}
           <Tabs tab={tab} setTab={setTab} publicCount={data.pagination.totalCount} />
 
           {tab === "public" &&
@@ -599,7 +644,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
 
         <div style={{ display: "flex", flexDirection: "column", gap: 12, minHeight: 0 }}>
           {isRookiesLive && <RookiesBetPanel gameId={gameId} />}
-          {isSurvivor && (
+          {isSurvivor && !viewingOtherTribe && (
             <SurvivorPanel
               gameId={gameId}
               phase={data.game.survivorPhase}
