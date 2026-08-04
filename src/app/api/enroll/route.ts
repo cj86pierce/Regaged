@@ -8,7 +8,7 @@ import { tryStartFastingBotGame, tryStartFastingStyleBotGame } from "@/lib/gameE
 import { tryStartCastingBotGame } from "@/lib/gameEngineBot";
 import { fillGameWithBots } from "@/lib/botUsers";
 import { tryStartSurvivorGame } from "@/lib/survivor/start";
-import { SURVIVOR_MAX } from "@/lib/survivor/timing";
+import { SURVIVOR_MAX, SURVIVOR_MERGE_MAX } from "@/lib/survivor/timing";
 
 const FASTING_MAX = 15;
 const CASTING_MAX = 20;
@@ -103,12 +103,7 @@ export async function POST(req: Request) {
     }
   }
 
-  const MAX =
-    gameType === "CASTING" || gameType === "CASTING_BOT"
-      ? CASTING_MAX
-      : gameType === "SURVIVOR" || gameType === "SURVIVOR_BOT"
-        ? SURVIVOR_MAX
-        : FASTING_MAX;
+  const isSurvivor = gameType === "SURVIVOR" || gameType === "SURVIVOR_BOT";
 
   const alreadySameType = await prisma.gamePlayer.findFirst({
     where: {
@@ -124,18 +119,37 @@ export async function POST(req: Request) {
 
   if (alreadySameType) return NextResponse.json({ ok: true, gameId: alreadySameType.gameId });
 
+  // Public enroll joins tribal Survivor only (merge lobbies are auto-filled from tribe stage).
   let lobby = await prisma.game.findFirst({
-    where: { gameType, state: "ENROLLING" },
+    where: {
+      gameType,
+      state: "ENROLLING",
+      ...(isSurvivor ? { survivorIsMerge: false } : {}),
+    },
     orderBy: { createdAt: "asc" },
-    select: { id: true },
+    select: { id: true, survivorIsMerge: true },
   });
 
   if (!lobby) {
     lobby = await prisma.game.create({
-      data: { gameType, state: "ENROLLING", roundNumber: 0 },
-      select: { id: true },
+      data: {
+        gameType,
+        state: "ENROLLING",
+        roundNumber: 0,
+        ...(isSurvivor ? { survivorIsMerge: false } : {}),
+      },
+      select: { id: true, survivorIsMerge: true },
     });
   }
+
+  const MAX =
+    gameType === "CASTING" || gameType === "CASTING_BOT"
+      ? CASTING_MAX
+      : isSurvivor
+        ? lobby.survivorIsMerge
+          ? SURVIVOR_MERGE_MAX
+          : SURVIVOR_MAX
+        : FASTING_MAX;
 
   const isBotMode =
     gameType === "FASTING_BOT" ||

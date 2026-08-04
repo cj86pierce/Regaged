@@ -3,39 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { getMinigameDef, pickMinigameForDay, type MinigameId } from "@/lib/minigamePicker";
-import EmojiMatchingGame from "../components/minigames/EmojiMatchingGame";
-import EmojiMatch3Game from "../components/minigames/EmojiMatch3Game";
-import RhythmGame from "../components/minigames/RhythmGame";
-import DealOrNoDealGame from "../components/minigames/DealOrNoDealGame";
-import SimonGame from "../components/minigames/SimonGame";
-import ReactionGame from "../components/minigames/ReactionGame";
-import MathRushGame from "../components/minigames/MathRushGame";
-import DodgeGame from "../components/minigames/DodgeGame";
-import type { MinigameProps } from "../components/minigames/types";
-
-function renderMinigame(id: MinigameId, props: MinigameProps) {
-  switch (id) {
-    case "matching":
-      return <EmojiMatchingGame {...props} />;
-    case "match3":
-      return <EmojiMatch3Game {...props} />;
-    case "rhythm":
-      return <RhythmGame {...props} />;
-    case "deal":
-      return <DealOrNoDealGame {...props} />;
-    case "simon":
-      return <SimonGame {...props} />;
-    case "reaction":
-      return <ReactionGame {...props} />;
-    case "mathrush":
-      return <MathRushGame {...props} />;
-    case "dodge":
-      return <DodgeGame {...props} />;
-    default:
-      return null;
-  }
-}
+import { getMinigameDef, pickMinigameForDay } from "@/lib/minigamePicker";
+import { renderMinigame } from "../components/minigames/renderMinigame";
 
 export default function ChallengePage() {
   const params = useParams();
@@ -47,6 +16,8 @@ export default function ChallengePage() {
     gameType: string;
     state: string;
     roundNumber: number;
+    survivorPhase: string | null;
+    sittingOut: boolean;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -59,12 +30,18 @@ export default function ChallengePage() {
     const me = json.meUserId
       ? json.players?.find((p: { userId: string }) => p.userId === json.meUserId)
       : null;
+    const gameType = json.game?.gameType ?? "";
+    const isSurvivor = gameType === "SURVIVOR" || gameType === "SURVIVOR_BOT";
     setData({
       meUserId: json.meUserId ?? null,
-      myScore: me?.castingDayMiniGameScore ?? 0,
-      gameType: json.game?.gameType ?? "",
+      myScore: isSurvivor
+        ? (me?.challengeScore ?? 0)
+        : (me?.castingDayMiniGameScore ?? 0),
+      gameType,
       state: json.game?.state ?? "",
       roundNumber: json.game?.roundNumber ?? 1,
+      survivorPhase: json.game?.survivorPhase ?? null,
+      sittingOut: !!me?.sittingOut,
     });
   }
 
@@ -74,8 +51,13 @@ export default function ChallengePage() {
 
   const isCasting = data?.gameType === "CASTING" || data?.gameType === "CASTING_BOT";
   const isFrookies = data?.gameType === "FROOKIES" || data?.gameType === "FROOKIES_BOT";
-  const hasMinigame = isCasting || isFrookies;
-  const canPlay = data?.state === "ROUND_VOTE" || data?.state === "ROUND_NOMINATE";
+  const isSurvivor = data?.gameType === "SURVIVOR" || data?.gameType === "SURVIVOR_BOT";
+  const hasMinigame = isCasting || isFrookies || isSurvivor;
+  const survivorChallenge =
+    data?.survivorPhase === "TRIBE_CHALLENGE" || data?.survivorPhase === "INDIVIDUAL_CHALLENGE";
+  const canPlay = isSurvivor
+    ? data?.state === "ROUND_NOMINATE" && survivorChallenge && !data.sittingOut
+    : data?.state === "ROUND_VOTE" || data?.state === "ROUND_NOMINATE";
   const minigame = data ? pickMinigameForDay(gameId, data.roundNumber) : null;
   const def = minigame ? getMinigameDef(minigame) : null;
 
@@ -101,9 +83,19 @@ export default function ChallengePage() {
         </div>
       )}
 
-      {hasMinigame && !canPlay && data && (
+      {hasMinigame && data?.sittingOut && isSurvivor && (
         <div className="theme-sidebar-panel" style={{ padding: 16 }}>
-          <p>Challenges are available during nomination or vote phases.</p>
+          <p>You are sitting out so both tribes send the same number of competitors.</p>
+        </div>
+      )}
+
+      {hasMinigame && !canPlay && data && !data.sittingOut && (
+        <div className="theme-sidebar-panel" style={{ padding: 16 }}>
+          <p>
+            {isSurvivor
+              ? "Challenges are available during the tribe or individual challenge phase."
+              : "Challenges are available during nomination or vote phases."}
+          </p>
         </div>
       )}
 
@@ -111,16 +103,19 @@ export default function ChallengePage() {
         <>
           <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 10, lineHeight: 1.45 }}>
             <div style={{ fontWeight: 900, marginBottom: 4 }}>
-              {isFrookies ? "Round" : "Day"} {data.roundNumber}: {def.name}
+              {isSurvivor || isFrookies ? "Round" : "Day"} {data.roundNumber}: {def.name}
             </div>
-            {isFrookies
-              ? "Highest challenge score wins POV. You keep your best score if you retry."
-              : "Low challenge score + low activity puts you at risk of nomination. Keys matter for final placements."}
+            {isSurvivor
+              ? "Tribe totals win immunity; highest score on the losing tribe gets individual immunity. Best score counts if you retry."
+              : isFrookies
+                ? "Highest challenge score wins POV. You keep your best score if you retry."
+                : "Low challenge score + low activity puts you at risk of nomination. Keys matter for final placements."}
           </div>
           {renderMinigame(minigame, {
             gameId,
             meUserId: data.meUserId,
             myScore: data.myScore,
+            scoreMode: isSurvivor ? "survivor" : "casting",
             onSubmitScore: () => {
               void load();
             },

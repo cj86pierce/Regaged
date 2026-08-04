@@ -511,6 +511,8 @@ model Game {
   tribeBWater             Int     @default(10)
   tribeBFire              Boolean @default(true)
   survivorMerged          Boolean @default(false)
+  /** True when this lobby is the post-tribe merge game (10 seats, starts individual). */
+  survivorIsMerge         Boolean @default(false)
   losingTribe             String? // A | B during tribal
 
   rookiesBets             RookiesBet[]

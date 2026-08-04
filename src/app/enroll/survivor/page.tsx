@@ -26,8 +26,9 @@ export default function EnrollSurvivorPage() {
     <main style={{ padding: 12 }}>
       <h1 style={{ marginTop: 0 }}>Survivor</h1>
       <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 12 }}>
-        Yellow card + T$10. 20 castaways, 2 tribes of 10. Tribe challenges, immunity, tribal council.
-        Merge at 10 remaining.
+        Yellow card + T$10. 20 castaways, 2 tribes of 10. Everyone plays the minigame — highest tribe
+        total wins immunity; top scorer on the losing tribe is also immune. Equal competitors each
+        round. At 10 left, all place 1st and auto-enroll into a merge Survivor (shuffled).
       </div>
       <button
         onClick={enroll}

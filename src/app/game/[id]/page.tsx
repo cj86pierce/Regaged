@@ -64,6 +64,7 @@ type GameState = {
     stateEndsAt: string | null;
     survivorPhase?: string | null;
     survivorMerged?: boolean;
+    survivorIsMerge?: boolean;
     losingTribe?: string | null;
     survivorSupplies?: {
       tribeAFood: number;
@@ -384,7 +385,13 @@ export default function GamePage({ params }: { params: { id: string } }) {
   const isSurvivor =
     data.game.gameType === "SURVIVOR" || data.game.gameType === "SURVIVOR_BOT";
   const isRookiesLive = data.game.gameType === "ROOKIES" || data.game.gameType === "ROOKIES_BOT";
-  const maxPlayers = isCasting || isSurvivor ? 20 : 15;
+  const maxPlayers = isCasting
+    ? 20
+    : isSurvivor
+      ? data.game.survivorIsMerge
+        ? 10
+        : 20
+      : 15;
 
   const myNomLockedIn = data.myNomLocked === true;
   const myVoteLockedIn = data.voteInfo?.myVoteTargetUserId ?? null;
@@ -448,7 +455,12 @@ export default function GamePage({ params }: { params: { id: string } }) {
               </span>
               <span>·</span>
               <span>
-                <b>{data.game.state.replace(/_/g, " ")}</b>
+                <b>
+                  {(isSurvivor && data.game.survivorPhase
+                    ? data.game.survivorPhase
+                    : data.game.state
+                  ).replace(/_/g, " ")}
+                </b>
               </span>
               {data.game.stateEndsAt && (
                 <>
@@ -591,6 +603,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
             <SurvivorPanel
               gameId={gameId}
               phase={data.game.survivorPhase}
+              roundNumber={data.game.roundNumber}
               losingTribe={data.game.losingTribe}
               merged={!!data.game.survivorMerged}
               meUserId={data.meUserId}
@@ -617,8 +630,9 @@ export default function GamePage({ params }: { params: { id: string } }) {
             />
           ) : isSurvivor ? (
             <Sidebar
-              gameState={data.game.state === "COMPLETED" ? "COMPLETED" : "ENROLLING"}
+              gameState={data.game.state}
               roundNumber={data.game.roundNumber}
+              survivorPhase={data.game.survivorPhase}
               nomSelected={[]}
               canConfirmNoms={false}
               onConfirmNoms={async () => {}}

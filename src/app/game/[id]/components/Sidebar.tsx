@@ -26,6 +26,8 @@ export default function Sidebar(props: {
   // Frookies: competition + POV save + HOH-only noms
   gameId?: string;
   gameType?: string;
+  /** Survivor phase label for Read this / round box */
+  survivorPhase?: string | null;
   meUserId?: string | null;
   povUserId?: string | null;
   hohUserId?: string | null;
@@ -61,6 +63,7 @@ export default function Sidebar(props: {
     messages = [],
     gameId,
     gameType,
+    survivorPhase,
     meUserId,
     povUserId,
     hohUserId,
@@ -76,6 +79,7 @@ export default function Sidebar(props: {
 
   const isFrookies = gameType === "FROOKIES" || gameType === "FROOKIES_BOT";
   const isRookies = gameType === "ROOKIES" || gameType === "ROOKIES_BOT";
+  const isSurvivor = gameType === "SURVIVOR" || gameType === "SURVIVOR_BOT";
   const iAmPov = !!(meUserId && povUserId === meUserId);
   const iAmHoh = !!(meUserId && hohUserId === meUserId);
   const povSaveSubmitted = !!povSavedUserId;
@@ -290,6 +294,7 @@ export default function Sidebar(props: {
         </div>
       )}
 
+      {!isSurvivor && (
       <div style={box}>
         <div style={{ fontWeight: 1000, marginBottom: 8 }}>
           {gameState === "ROUND_NOMINATE"
@@ -382,11 +387,31 @@ export default function Sidebar(props: {
           </div>
         )}
       </div>
+      )}
+
+      {isSurvivor && (
+        <div style={box}>
+          <div style={{ fontWeight: 1000, marginBottom: 8 }}>Round</div>
+          <div style={{ fontSize: 12, opacity: 0.85 }}>
+            Round <b>{roundNumber}</b>
+            {" · "}
+            <b>{(survivorPhase ?? gameState).replace(/_/g, " ")}</b>
+          </div>
+        </div>
+      )}
 
       <div style={box}>
         <div style={{ fontWeight: 1000, color: "#b02a37" }}>Read this</div>
         <div style={{ fontSize: 12, marginTop: 8, lineHeight: 1.35 }}>
-          {isFrookies ? (
+          {isSurvivor ? (
+            <>
+              <b>Survivor:</b> Play the minigame competition. Highest tribe total wins immunity.
+              On the losing tribe, the top individual score is also immune. Equal numbers compete
+              from each tribe (extras sit out). Losing tribe votes someone out. At 10 left, all
+              place 1st and auto-enter a merge Survivor (shuffled individual game).
+              <br /><br />
+            </>
+          ) : isFrookies ? (
             <>
               <b>Frookies:</b> Play the competition (highest score = POV, costs health to win). POV can save themselves or one player. HOH nominates 2. Vote to evict. At final 2, the jury (9th–3rd place) votes for the winner.
               <br /><br />
@@ -402,7 +427,16 @@ export default function Sidebar(props: {
               <br /><br />
             </>
           )}
-          <b>State:</b> {gameState} · <b>Round:</b> {roundNumber}
+          {isSurvivor ? (
+            <>
+              <b>Phase:</b> {(survivorPhase ?? gameState).replace(/_/g, " ")} · <b>Round:</b>{" "}
+              {roundNumber}
+            </>
+          ) : (
+            <>
+              <b>State:</b> {gameState} · <b>Round:</b> {roundNumber}
+            </>
+          )}
         </div>
       </div>
 

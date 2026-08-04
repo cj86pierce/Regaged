@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { getMinigameDef, pickMinigameForDay } from "@/lib/minigamePicker";
+import { renderMinigame } from "./minigames/renderMinigame";
 
 type Player = {
   userId: string;
@@ -12,11 +14,13 @@ type Player = {
   health?: number;
   hasImmunity?: boolean;
   challengeScore?: number;
+  sittingOut?: boolean;
 };
 
 export default function SurvivorPanel(props: {
   gameId: string;
   phase: string | null | undefined;
+  roundNumber: number;
   losingTribe?: string | null;
   merged?: boolean;
   meUserId: string | null;
@@ -35,10 +39,17 @@ export default function SurvivorPanel(props: {
   const [busy, setBusy] = useState(false);
   const me = props.players.find((p) => p.userId === props.meUserId);
   const phase = props.phase ?? "";
-  const isChallenge = ["TRIBE_CHALLENGE", "IMMUNITY", "INDIVIDUAL_CHALLENGE", "INDIVIDUAL_IMMUNITY"].includes(
-    phase
-  );
+  const isChallenge = phase === "TRIBE_CHALLENGE" || phase === "INDIVIDUAL_CHALLENGE";
   const isVote = phase === "TRIBAL_COUNCIL" || phase === "VOTE";
+  const minigameId = pickMinigameForDay(props.gameId, props.roundNumber || 1);
+  const minigameDef = getMinigameDef(minigameId);
+
+  const competeCountA = props.players.filter(
+    (p) => p.status === "ACTIVE" && p.tribe === "A" && !p.sittingOut
+  ).length;
+  const competeCountB = props.players.filter(
+    (p) => p.status === "ACTIVE" && p.tribe === "B" && !p.sittingOut
+  ).length;
 
   const voteTargets = props.players.filter((p) => {
     if (p.status !== "ACTIVE" || p.hasImmunity || p.userId === props.meUserId) return false;
@@ -47,21 +58,6 @@ export default function SurvivorPanel(props: {
     }
     return true;
   });
-
-  async function compete() {
-    setBusy(true);
-    setMsg(null);
-    const res = await fetch(`/api/game/${props.gameId}/survivor/challenge`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ score: 10 + Math.floor(Math.random() * 15) }),
-    });
-    const json = await res.json().catch(() => ({}));
-    setBusy(false);
-    if (!res.ok) return setMsg(json?.error ?? "Failed");
-    setMsg(`Score: ${json.challengeScore}`);
-    props.onRefresh();
-  }
 
   async function vote(targetUserId: string) {
     setBusy(true);
@@ -100,10 +96,12 @@ export default function SurvivorPanel(props: {
           <div>
             Tribe A — food {props.supplies.tribeAFood} · water {props.supplies.tribeAWater} · fire{" "}
             {props.supplies.tribeAFire ? "on" : "off"}
+            {isChallenge ? ` · competing ${competeCountA}` : ""}
           </div>
           <div>
             Tribe B — food {props.supplies.tribeBFood} · water {props.supplies.tribeBWater} · fire{" "}
             {props.supplies.tribeBFire ? "on" : "off"}
+            {isChallenge ? ` · competing ${competeCountB}` : ""}
           </div>
         </div>
       )}
@@ -112,14 +110,35 @@ export default function SurvivorPanel(props: {
         <div style={{ fontSize: 12, marginBottom: 8 }}>
           You: tribe {me.tribe ?? "?"} · food {me.food ?? 0} · water {me.water ?? 0} · HP{" "}
           {me.health ?? 0}
-          {me.hasImmunity ? " · IMMUNE" : ""} · score {me.challengeScore ?? 0}
+          {me.hasImmunity ? " · IMMUNE" : ""}
+          {me.sittingOut ? " · SITTING OUT" : ""} · score {me.challengeScore ?? 0}
         </div>
       )}
 
-      {isChallenge && me?.status === "ACTIVE" && (
-        <button type="button" disabled={busy} onClick={() => void compete()} style={{ marginBottom: 8 }}>
-          {busy ? "…" : "Compete (+score)"}
-        </button>
+      {isChallenge && me?.status === "ACTIVE" && me.sittingOut && (
+        <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 8 }}>
+          Sitting out so both tribes send the same number of competitors.
+        </div>
+      )}
+
+      {isChallenge && me?.status === "ACTIVE" && !me.sittingOut && (
+        <div style={{ marginBottom: 10 }}>
+          <div style={{ fontSize: 12, fontWeight: 900, marginBottom: 4 }}>
+            Competition: {minigameDef.name}
+          </div>
+          <div style={{ fontSize: 11, opacity: 0.8, marginBottom: 8, lineHeight: 1.4 }}>
+            {props.merged
+              ? "Highest score wins individual immunity. Best score counts if you retry."
+              : "Tribe totals win immunity. Highest score on the losing tribe also gets immunity."}
+          </div>
+          {renderMinigame(minigameId, {
+            gameId: props.gameId,
+            meUserId: props.meUserId,
+            myScore: me.challengeScore ?? 0,
+            scoreMode: "survivor",
+            onSubmitScore: () => props.onRefresh(),
+          })}
+        </div>
       )}
 
       {isVote && me?.status === "ACTIVE" && (

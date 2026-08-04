@@ -3,17 +3,20 @@ export type MinigameProps = {
   meUserId: string | null;
   myScore: number;
   onSubmitScore: (challengeScore?: number) => void;
+  /** Defaults to casting; Survivor challenges use survivor endpoint. */
+  scoreMode?: "casting" | "survivor" | "arcade";
 };
 
 export async function submitMinigameScore(opts: {
   gameId: string;
   minigameId: string;
   raw: Record<string, number>;
+  mode?: "casting" | "survivor" | "arcade";
 }): Promise<{ challengeScore: number; improved: boolean }> {
-  const arcade = opts.gameId === "arcade";
+  const arcade = opts.gameId === "arcade" || opts.mode === "arcade";
   const url = arcade
     ? "/api/minigames/score"
-    : `/api/game/${opts.gameId}/casting/mini-game`;
+    : `/api/game/${opts.gameId}/mini-game`;
   const res = await fetch(url, {
     method: "POST",
     headers: { "content-type": "application/json" },

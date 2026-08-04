@@ -34,6 +34,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       frookiesPhase: true,
       survivorPhase: true,
       survivorMerged: true,
+      survivorIsMerge: true,
       losingTribe: true,
       tribeAFood: true,
       tribeAWater: true,
@@ -204,19 +205,19 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   ]);
 
   const activeCount = playersRaw.filter((p) => p.status === "ACTIVE").length;
+  const lobbyCap =
+    game.gameType === "CASTING" || game.gameType === "CASTING_BOT"
+      ? 20
+      : game.gameType === "SURVIVOR" || game.gameType === "SURVIVOR_BOT"
+        ? game.survivorIsMerge
+          ? 10
+          : 20
+        : 15;
   const lobby =
     game.state === "ENROLLING"
       ? {
           current: activeCount,
-          needed: Math.max(
-            0,
-            (game.gameType === "CASTING" ||
-            game.gameType === "CASTING_BOT" ||
-            game.gameType === "SURVIVOR" ||
-            game.gameType === "SURVIVOR_BOT"
-              ? 20
-              : 15) - activeCount
-          ),
+          needed: Math.max(0, lobbyCap - activeCount),
         }
       : null;
 
@@ -412,6 +413,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       frookiesPhase: game.frookiesPhase ?? undefined,
       survivorPhase: game.survivorPhase ?? undefined,
       survivorMerged: game.survivorMerged ?? false,
+      survivorIsMerge: game.survivorIsMerge ?? false,
       losingTribe: game.losingTribe ?? undefined,
       survivorSupplies: {
         tribeAFood: game.tribeAFood,
@@ -472,6 +474,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         water: (p as { water?: number }).water ?? 5,
         hasImmunity: (p as { hasImmunity?: boolean }).hasImmunity ?? false,
         challengeScore: (p as { challengeScore?: number }).challengeScore ?? 0,
+        sittingOut: (p as { sittingOut?: boolean }).sittingOut ?? false,
 
         isNominee: isCastingNominee || isFastingNominee,
 

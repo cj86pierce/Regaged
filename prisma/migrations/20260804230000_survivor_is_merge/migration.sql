@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Game" ADD COLUMN IF NOT EXISTS "survivorIsMerge" BOOLEAN NOT NULL DEFAULT false;

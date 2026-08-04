@@ -23,7 +23,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   }
 
   const phase = game.survivorPhase ?? "";
-  const challengePhases = ["TRIBE_CHALLENGE", "IMMUNITY", "INDIVIDUAL_CHALLENGE", "INDIVIDUAL_IMMUNITY"];
+  const challengePhases = ["TRIBE_CHALLENGE", "INDIVIDUAL_CHALLENGE"];
   if (!challengePhases.includes(phase) || game.state !== "ROUND_NOMINATE") {
     return NextResponse.json({ error: "Not in a challenge phase" }, { status: 400 });
   }
@@ -33,7 +33,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   const gp = await prisma.gamePlayer.findUnique({
     where: { gameId_userId: { gameId, userId } },
-    select: { status: true, tribe: true, challengeScore: true, sittingOut: true },
+    select: { status: true, challengeScore: true, sittingOut: true },
   });
   if (!gp || gp.status !== "ACTIVE") {
     return NextResponse.json({ error: "Not in game" }, { status: 403 });
@@ -41,10 +41,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   if (gp.sittingOut) {
     return NextResponse.json({ error: "Sitting out" }, { status: 403 });
   }
-  if (phase === "IMMUNITY" && gp.tribe !== game.losingTribe) {
-    return NextResponse.json({ error: "Only the losing tribe plays immunity" }, { status: 403 });
-  }
 
+  // Prefer /mini-game; this route keeps a small bump for legacy clients.
   const body = await req.json().catch(() => null);
   const add = Math.min(50, Math.max(1, Math.trunc(Number(body?.score) || 10)));
 

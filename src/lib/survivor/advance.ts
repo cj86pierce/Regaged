@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getSystemUserId } from "@/lib/systemUser";
+import { finishTribalAndSpawnMerge } from "@/lib/survivor/merge";
+import { assignEqualSitOuts } from "@/lib/survivor/sitOuts";
 import { survivorPhaseMs } from "@/lib/survivor/timing";
 
 type Phase =
@@ -68,7 +70,6 @@ async function tickMeters(gameId: string, merged: boolean) {
     });
   }
 
-  // Starve out (health 0)
   const dead = await prisma.gamePlayer.findMany({
     where: { gameId, status: "ACTIVE", health: { lte: 0 } },
     select: { userId: true },
@@ -172,7 +173,6 @@ async function eliminateByVote(gameId: string, eligibleUserIds: string[], isBot:
     }
   }
 
-  // If no votes, pick lowest challenge score / random among eligible
   let target = eligibleUserIds[0] ?? null;
   let best = -1;
   for (const [uid, n] of tallies) {
@@ -220,54 +220,25 @@ async function eliminateByVote(gameId: string, eligibleUserIds: string[], isBot:
   return target;
 }
 
-async function doMerge(gameId: string, isBot: boolean) {
-  const systemUserId = await getSystemUserId();
-  const actives = await prisma.gamePlayer.findMany({
-    where: { gameId, status: "ACTIVE" },
-    select: { userId: true },
-  });
-
-  await prisma.gamePlayer.updateMany({
-    where: { gameId, status: "ACTIVE" },
-    data: { tribe: "MERGED", hasImmunity: false, challengeScore: 0 },
-  });
-
-  await prisma.game.update({
-    where: { id: gameId },
-    data: {
-      survivorMerged: true,
-      survivorPhase: "INDIVIDUAL_CHALLENGE",
-      state: "ROUND_NOMINATE",
-      losingTribe: null,
-      stateEndsAt: nextEnds(isBot),
-      roundNumber: { increment: 1 },
-    },
-  });
-
-  if (!isBot) {
-    for (const a of actives) {
-      await prisma.user.update({
-        where: { id: a.userId },
-        data: { karma: { increment: 10 }, tMoney: { increment: 10 } },
-      });
-    }
-  }
-
-  await prisma.gameMessage.create({
-    data: {
-      gameId,
-      userId: systemUserId,
-      channel: "PUBLIC",
-      body: "[SYSTEM] MERGE! Tribes unite. +10 karma and +10 T$ to remaining castaways.",
-    },
-  });
-}
-
-/** Seed bot challenge scores if still 0. */
+/** Seed bot challenge scores if still 0 (competitors only). */
 async function seedBotScores(gameId: string, tribeFilter?: string | null) {
-  const where: { gameId: string; status: "ACTIVE"; tribe?: string } = {
+  const game = await prisma.game.findUnique({
+    where: { id: gameId },
+    select: { roundNumber: true },
+  });
+  const { pickMinigameForDay } = await import("@/lib/minigamePicker");
+  const { sampleBotChallengeScore } = await import("@/lib/minigames/registry");
+  const minigameId = pickMinigameForDay(gameId, game?.roundNumber ?? 1);
+
+  const where: {
+    gameId: string;
+    status: "ACTIVE";
+    sittingOut: boolean;
+    tribe?: string;
+  } = {
     gameId,
     status: "ACTIVE",
+    sittingOut: false,
   };
   if (tribeFilter) where.tribe = tribeFilter;
   const rows = await prisma.gamePlayer.findMany({
@@ -280,9 +251,123 @@ async function seedBotScores(gameId: string, tribeFilter?: string | null) {
     if (!isBot) continue;
     await prisma.gamePlayer.update({
       where: { gameId_userId: { gameId, userId: r.userId } },
-      data: { challengeScore: 10 + Math.floor(Math.random() * 90) },
+      data: { challengeScore: sampleBotChallengeScore(minigameId) },
     });
   }
+}
+
+async function resolveTribeChallenge(gameId: string, isBot: boolean, roundNumber: number) {
+  const systemUserId = await getSystemUserId();
+  await seedBotScores(gameId, "A");
+  await seedBotScores(gameId, "B");
+
+  const a = await prisma.gamePlayer.aggregate({
+    where: { gameId, status: "ACTIVE", tribe: "A", sittingOut: false },
+    _sum: { challengeScore: true },
+  });
+  const b = await prisma.gamePlayer.aggregate({
+    where: { gameId, status: "ACTIVE", tribe: "B", sittingOut: false },
+    _sum: { challengeScore: true },
+  });
+  const aScore = a._sum.challengeScore ?? 0;
+  const bScore = b._sum.challengeScore ?? 0;
+  const losing =
+    aScore === bScore ? (Math.random() < 0.5 ? "A" : "B") : aScore > bScore ? "B" : "A";
+  const winning = losing === "A" ? "B" : "A";
+
+  await prisma.gamePlayer.updateMany({
+    where: { gameId, status: "ACTIVE" },
+    data: { hasImmunity: false },
+  });
+
+  const top = await prisma.gamePlayer.findFirst({
+    where: {
+      gameId,
+      status: "ACTIVE",
+      tribe: losing,
+      sittingOut: false,
+    },
+    orderBy: { challengeScore: "desc" },
+    select: { userId: true, user: { select: { username: true } } },
+  });
+
+  if (top) {
+    await prisma.gamePlayer.update({
+      where: { gameId_userId: { gameId, userId: top.userId } },
+      data: { hasImmunity: true },
+    });
+  }
+
+  await prisma.gameMessage.create({
+    data: {
+      gameId,
+      userId: systemUserId,
+      channel: "PUBLIC",
+      body:
+        `[SYSTEM] Tribe ${winning} wins immunity (${winning === "A" ? aScore : bScore} vs ${losing === "A" ? aScore : bScore}). ` +
+        (top
+          ? `${top.user.username} has individual immunity on Tribe ${losing}. Tribal Council begins.`
+          : `Tribe ${losing} goes to Tribal Council.`),
+    },
+  });
+
+  await prisma.evictionVote.deleteMany({
+    where: { gameId, roundNumber },
+  });
+
+  await prisma.game.update({
+    where: { id: gameId },
+    data: {
+      survivorPhase: "TRIBAL_COUNCIL",
+      losingTribe: losing,
+      state: "ROUND_VOTE",
+      stateEndsAt: nextEnds(isBot),
+    },
+  });
+}
+
+async function resolveIndividualChallenge(gameId: string, isBot: boolean, roundNumber: number) {
+  const systemUserId = await getSystemUserId();
+  await seedBotScores(gameId, null);
+
+  const top = await prisma.gamePlayer.findFirst({
+    where: { gameId, status: "ACTIVE" },
+    orderBy: { challengeScore: "desc" },
+    select: { userId: true, user: { select: { username: true } } },
+  });
+
+  await prisma.gamePlayer.updateMany({
+    where: { gameId, status: "ACTIVE" },
+    data: { hasImmunity: false },
+  });
+
+  if (top) {
+    await prisma.gamePlayer.update({
+      where: { gameId_userId: { gameId, userId: top.userId } },
+      data: { hasImmunity: true },
+    });
+    await prisma.gameMessage.create({
+      data: {
+        gameId,
+        userId: systemUserId,
+        channel: "PUBLIC",
+        body: `[SYSTEM] ${top.user.username} wins individual immunity.`,
+      },
+    });
+  }
+
+  await prisma.evictionVote.deleteMany({
+    where: { gameId, roundNumber },
+  });
+
+  await prisma.game.update({
+    where: { id: gameId },
+    data: {
+      survivorPhase: "VOTE",
+      state: "ROUND_VOTE",
+      stateEndsAt: nextEnds(isBot),
+    },
+  });
 }
 
 export async function advanceSurvivorIfDue(gameId: string) {
@@ -315,59 +400,27 @@ export async function advanceSurvivorIfDue(gameId: string) {
 
   const isBot = game.gameType === "SURVIVOR_BOT";
   const phase = (game.survivorPhase ?? "TRIBE_CHALLENGE") as Phase;
-  const systemUserId = await getSystemUserId();
 
   // ---------- Pre-merge tribe loop ----------
   if (!game.survivorMerged) {
     if (phase === "TRIBE_CHALLENGE") {
-      await seedBotScores(gameId, "A");
-      await seedBotScores(gameId, "B");
-      const a = await prisma.gamePlayer.aggregate({
-        where: { gameId, status: "ACTIVE", tribe: "A" },
-        _sum: { challengeScore: true },
-      });
-      const b = await prisma.gamePlayer.aggregate({
-        where: { gameId, status: "ACTIVE", tribe: "B" },
-        _sum: { challengeScore: true },
-      });
-      const aScore = a._sum.challengeScore ?? 0;
-      const bScore = b._sum.challengeScore ?? 0;
-      const losing = aScore === bScore ? (Math.random() < 0.5 ? "A" : "B") : aScore > bScore ? "B" : "A";
-      const winning = losing === "A" ? "B" : "A";
-
-      await prisma.gameMessage.create({
-        data: {
-          gameId,
-          userId: systemUserId,
-          channel: "PUBLIC",
-          body: `[SYSTEM] Tribe ${winning} wins immunity! Tribe ${losing} goes to Tribal Council.`,
-        },
-      });
-
-      await prisma.gamePlayer.updateMany({
-        where: { gameId, status: "ACTIVE" },
-        data: { challengeScore: 0, hasImmunity: false },
-      });
-
-      await prisma.game.update({
-        where: { id: gameId },
-        data: {
-          survivorPhase: "IMMUNITY",
-          losingTribe: losing,
-          state: "ROUND_NOMINATE",
-          stateEndsAt: nextEnds(isBot),
-        },
-      });
+      await resolveTribeChallenge(gameId, isBot, game.roundNumber);
       return { ok: true as const, advanced: true as const };
     }
 
+    // Legacy mid-game: old IMMUNITY phase → finish with whatever scores remain
     if (phase === "IMMUNITY") {
       const losing = game.losingTribe ?? "A";
       await seedBotScores(gameId, losing);
       const top = await prisma.gamePlayer.findFirst({
-        where: { gameId, status: "ACTIVE", tribe: losing },
+        where: { gameId, status: "ACTIVE", tribe: losing, sittingOut: false },
         orderBy: { challengeScore: "desc" },
         select: { userId: true, user: { select: { username: true } } },
+      });
+      const systemUserId = await getSystemUserId();
+      await prisma.gamePlayer.updateMany({
+        where: { gameId, status: "ACTIVE" },
+        data: { hasImmunity: false },
       });
       if (top) {
         await prisma.gamePlayer.update({
@@ -383,11 +436,9 @@ export async function advanceSurvivorIfDue(gameId: string) {
           },
         });
       }
-
       await prisma.evictionVote.deleteMany({
         where: { gameId, roundNumber: game.roundNumber },
       });
-
       await prisma.game.update({
         where: { id: gameId },
         data: {
@@ -410,7 +461,7 @@ export async function advanceSurvivorIfDue(gameId: string) {
         },
         select: { userId: true },
       });
-      // Bot voters cast random votes
+
       if (isBot) {
         const voters = await prisma.gamePlayer.findMany({
           where: { gameId, status: "ACTIVE", tribe: losing },
@@ -457,7 +508,7 @@ export async function advanceSurvivorIfDue(gameId: string) {
       }
 
       if (activeCount <= 10) {
-        await doMerge(gameId, isBot);
+        await finishTribalAndSpawnMerge(gameId, game.gameType);
         return { ok: true as const, advanced: true as const, merged: true as const };
       }
 
@@ -472,62 +523,14 @@ export async function advanceSurvivorIfDue(gameId: string) {
           stateEndsAt: nextEnds(isBot),
         },
       });
+      await assignEqualSitOuts(gameId);
       return { ok: true as const, advanced: true as const };
     }
   }
 
   // ---------- Post-merge individual ----------
-  if (phase === "INDIVIDUAL_CHALLENGE") {
-    await seedBotScores(gameId, null);
-    await prisma.game.update({
-      where: { id: gameId },
-      data: {
-        survivorPhase: "INDIVIDUAL_IMMUNITY",
-        state: "ROUND_NOMINATE",
-        stateEndsAt: nextEnds(isBot),
-      },
-    });
-    return { ok: true as const, advanced: true as const };
-  }
-
-  if (phase === "INDIVIDUAL_IMMUNITY") {
-    await seedBotScores(gameId, null);
-    const top = await prisma.gamePlayer.findFirst({
-      where: { gameId, status: "ACTIVE" },
-      orderBy: { challengeScore: "desc" },
-      select: { userId: true, user: { select: { username: true } } },
-    });
-    if (top) {
-      await prisma.gamePlayer.updateMany({
-        where: { gameId, status: "ACTIVE" },
-        data: { hasImmunity: false },
-      });
-      await prisma.gamePlayer.update({
-        where: { gameId_userId: { gameId, userId: top.userId } },
-        data: { hasImmunity: true },
-      });
-      await prisma.gameMessage.create({
-        data: {
-          gameId,
-          userId: systemUserId,
-          channel: "PUBLIC",
-          body: `[SYSTEM] ${top.user.username} wins individual immunity.`,
-        },
-      });
-    }
-
-    await prisma.evictionVote.deleteMany({
-      where: { gameId, roundNumber: game.roundNumber },
-    });
-
-    await prisma.game.update({
-      where: { id: gameId },
-      data: {
-        survivorPhase: "VOTE",
-        state: "ROUND_VOTE",
-        stateEndsAt: nextEnds(isBot),
-      },
-    });
+  if (phase === "INDIVIDUAL_CHALLENGE" || phase === "INDIVIDUAL_IMMUNITY") {
+    await resolveIndividualChallenge(gameId, isBot, game.roundNumber);
     return { ok: true as const, advanced: true as const };
   }
 
@@ -595,7 +598,6 @@ export async function advanceSurvivorIfDue(gameId: string) {
     return { ok: true as const, advanced: true as const };
   }
 
-  // Fallback: start tribe challenge
   await prisma.game.update({
     where: { id: gameId },
     data: {
@@ -604,5 +606,6 @@ export async function advanceSurvivorIfDue(gameId: string) {
       stateEndsAt: nextEnds(isBot),
     },
   });
+  if (!game.survivorMerged) await assignEqualSitOuts(gameId);
   return { ok: true as const, advanced: true as const, fixed: true as const };
 }
