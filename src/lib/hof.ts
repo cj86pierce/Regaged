@@ -4,19 +4,12 @@ export const HOF_SIZE = 500;
 
 /** Exclude bots / system-ish accounts from Hall of Fame. */
 export function hofUserWhere() {
-  // Note: do not use NOT (email endsWith …) alone — SQL NULL emails fail that
-  // predicate and would hide every user without an email.
+  // Bots are created with *@regaged.bot emails (see botUsers / seed-bots).
+  // Do NOT use Prisma startsWith("bot_") / startsWith("__"): those become SQL
+  // LIKE with unescaped `_` wildcards and can match (or exclude) everyone.
+  // Also include null emails — NOT (email endsWith …) alone drops NULLs in SQL.
   return {
-    AND: [
-      { NOT: { usernameLower: { startsWith: "bot_" } } },
-      { NOT: { usernameLower: { startsWith: "__" } } },
-      {
-        OR: [
-          { email: null },
-          { NOT: { email: { endsWith: "@regaged.bot" } } },
-        ],
-      },
-    ],
+    OR: [{ email: null }, { NOT: { email: { endsWith: "@regaged.bot" } } }],
   };
 }
 
