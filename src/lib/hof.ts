@@ -9,7 +9,10 @@ export function hofUserWhere() {
   // LIKE with unescaped `_` wildcards and can match (or exclude) everyone.
   // Also include null emails — NOT (email endsWith …) alone drops NULLs in SQL.
   return {
-    OR: [{ email: null }, { NOT: { email: { endsWith: "@regaged.bot" } } }],
+    AND: [
+      { OR: [{ email: null }, { NOT: { email: { endsWith: "@regaged.bot" } } }] },
+      { NOT: { usernameLower: "__system__" } },
+    ],
   };
 }
 
