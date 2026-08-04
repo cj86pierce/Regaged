@@ -31,7 +31,7 @@ export default function EnrollFrookiesBotPage() {
     <main style={{ padding: 12 }}>
       <h1 style={{ marginTop: 0 }}>Frookies (Bot)</h1>
       <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 12 }}>
-        60s rounds. Bots fill slots. Same rules as Frookies. No payouts. Practice mode.
+        Same Frookies rules on ~2 minute phases. Bots fill the lobby. Practice — no payouts.
       </div>
 
       <button

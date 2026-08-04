@@ -1,11 +1,10 @@
 import Link from "next/link";
 
 const ROW1: { href: string; label: string }[] = [
-  { href: "/profile", label: "Contact" },
-  { href: "/blogs", label: "Press" },
-  { href: "#tos", label: "TOS" },
-  { href: "#privacy", label: "Privacy" },
-  { href: "#faq", label: "F.A.Q." },
+  { href: "/contact", label: "Contact" },
+  { href: "/tos", label: "TOS" },
+  { href: "/privacy", label: "Privacy" },
+  { href: "/faq", label: "F.A.Q." },
   { href: "/hof", label: "HOF" },
   { href: "/minigames", label: "Minigames" },
 ];

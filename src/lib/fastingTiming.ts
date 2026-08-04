@@ -31,3 +31,28 @@ export function getFinal3Ms(isBot: boolean): number {
   if (isBot) return BOT_ROUND_MS;
   return envMs("FASTING_FINAL3_SECONDS", FINAL3_MS);
 }
+
+/** Rookies day length: 24h live, 2 min bot practice. */
+export function getRookiesDayMs(isBot: boolean): number {
+  return isBot ? BOT_ROUND_MS : 24 * 60 * 60 * 1000;
+}
+
+/** Frookies POV save window after noms. */
+export function getFrookiesPovSaveMs(isBot: boolean): number {
+  if (isBot) return Math.min(45_000, BOT_ROUND_MS);
+  return Math.min(5 * 60_000, getFastingVoteMs());
+}
+
+/** Frookies HOH renom window after POV saves a nominee. */
+export function getFrookiesHohRenomMs(isBot: boolean): number {
+  return isBot ? Math.min(30_000, BOT_ROUND_MS) : 60_000;
+}
+
+export function isBotGameType(gameType: string): boolean {
+  return (
+    gameType === "FASTING_BOT" ||
+    gameType === "CASTING_BOT" ||
+    gameType === "FROOKIES_BOT" ||
+    gameType === "ROOKIES_BOT"
+  );
+}

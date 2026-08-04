@@ -2,8 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { getSystemUserId } from "@/lib/systemUser";
 import { assignRookiesHoh } from "@/lib/rookiesHoh";
 import { finishFastingGame } from "@/lib/fastingVotes";
+import { getRookiesDayMs, isBotGameType } from "@/lib/fastingTiming";
 
-const ROOKIES_DAY_MS = 24 * 60 * 60 * 1000;
 const ROOKIES_DAY_7 = 7;
 
 /**
@@ -13,11 +13,13 @@ const ROOKIES_DAY_7 = 7;
  * - If POV was used on one of those, replace with the next-highest
  * - Place top 3 when ≤3 remain
  */
-export async function resolveRookiesEviction(gameId: string) {
-  const lockRows = await prisma.$queryRaw<{ locked: boolean }[]>`
-    SELECT pg_try_advisory_lock(hashtext(${gameId})) as locked
-  `;
-  if (!lockRows?.[0]?.locked) return { ok: true, skipped: true as const };
+export async function resolveRookiesEviction(gameId: string, opts?: { skipLock?: boolean }) {
+  if (!opts?.skipLock) {
+    const lockRows = await prisma.$queryRaw<{ locked: boolean }[]>`
+      SELECT pg_try_advisory_lock(hashtext(${gameId})) as locked
+    `;
+    if (!lockRows?.[0]?.locked) return { ok: true, skipped: true as const };
+  }
 
   try {
     const game = await prisma.game.findUnique({
@@ -31,7 +33,13 @@ export async function resolveRookiesEviction(gameId: string) {
         povSavedUserId: true,
       },
     });
-    if (!game || game.gameType !== "ROOKIES" || game.state !== "ROUND_VOTE") return { ok: true, skipped: true as const };
+    if (
+      !game ||
+      (game.gameType !== "ROOKIES" && game.gameType !== "ROOKIES_BOT") ||
+      game.state !== "ROUND_VOTE"
+    ) {
+      return { ok: true, skipped: true as const };
+    }
 
     const rr = await prisma.roundResult.findUnique({
       where: { gameId_roundNumber: { gameId, roundNumber: game.roundNumber } },
@@ -150,12 +158,13 @@ export async function resolveRookiesEviction(gameId: string) {
     const remainingActive = await prisma.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
     // FAQ: top 3 place by activity when final 3 reached
     if (remainingActive <= 3) {
-      await finishFastingGame(gameId, "ROOKIES");
+      await finishFastingGame(gameId, game.gameType);
       return { ok: true, finished: true as const };
     }
 
     const nextRound = game.roundNumber + 1;
     const isDay7 = nextRound >= ROOKIES_DAY_7;
+    const dayMs = getRookiesDayMs(isBotGameType(game.gameType));
 
     await prisma.game.update({
       where: { id: gameId },
@@ -166,7 +175,7 @@ export async function resolveRookiesEviction(gameId: string) {
         hohUserId: null,
         povSavedUserId: null,
         roundStartedAt: now,
-        stateEndsAt: new Date(now.getTime() + ROOKIES_DAY_MS),
+        stateEndsAt: new Date(now.getTime() + dayMs),
       },
     });
 
@@ -189,6 +198,8 @@ export async function resolveRookiesEviction(gameId: string) {
 
     return { ok: true, advancedToRound: nextRound };
   } finally {
-    await prisma.$queryRaw`SELECT pg_advisory_unlock(hashtext(${gameId}))`;
+    if (!opts?.skipLock) {
+      await prisma.$queryRaw`SELECT pg_advisory_unlock(hashtext(${gameId}))`;
+    }
   }
 }

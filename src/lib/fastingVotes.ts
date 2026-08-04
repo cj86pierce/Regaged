@@ -5,18 +5,30 @@ import { assignFrookiesHoh } from "@/lib/frookiesHoh";
 import { enterFrookiesJuryPhase } from "@/lib/frookiesJury";
 import { BOT_ROUND_MS, getFastingNomMs, getFinal3Ms } from "@/lib/fastingTiming";
 
-export async function resolveFastingEviction(gameId: string) {
-  const lockRows = await prisma.$queryRaw<{ locked: boolean }[]>`
-    SELECT pg_try_advisory_lock(hashtext(${gameId})) as locked
-  `;
-  if (!lockRows?.[0]?.locked) return { ok: true, skipped: true as const };
+export async function resolveFastingEviction(gameId: string, opts?: { skipLock?: boolean }) {
+  if (!opts?.skipLock) {
+    const lockRows = await prisma.$queryRaw<{ locked: boolean }[]>`
+      SELECT pg_try_advisory_lock(hashtext(${gameId})) as locked
+    `;
+    if (!lockRows?.[0]?.locked) return { ok: true, skipped: true as const };
+  }
 
   try {
     const game = await prisma.game.findUnique({
       where: { id: gameId },
       select: { id: true, gameType: true, state: true, roundNumber: true },
     });
-    if (!game || (game.gameType !== "FASTING" && game.gameType !== "FASTING_BOT" && game.gameType !== "FROOKIES" && game.gameType !== "ROOKIES" && game.gameType !== "FROOKIES_BOT" && game.gameType !== "ROOKIES_BOT") || game.state !== "ROUND_VOTE") return { ok: true, skipped: true as const };
+    // Rookies use resolveRookiesEviction — do not handle here.
+    if (
+      !game ||
+      (game.gameType !== "FASTING" &&
+        game.gameType !== "FASTING_BOT" &&
+        game.gameType !== "FROOKIES" &&
+        game.gameType !== "FROOKIES_BOT") ||
+      game.state !== "ROUND_VOTE"
+    ) {
+      return { ok: true, skipped: true as const };
+    }
 
     const rr = await prisma.roundResult.findUnique({
       where: { gameId_roundNumber: { gameId, roundNumber: game.roundNumber } },
@@ -101,15 +113,12 @@ export async function resolveFastingEviction(gameId: string) {
       await enterFastingFinal3(gameId, game.gameType);
       return { ok: true, finished: true as const };
     }
-    // Rookies places top 3 when ≤3 remain
-    if (!isFrookiesType && !isFastingType && result.remainingActive <= 3) {
-      await finishFastingGame(gameId, game.gameType);
-      return { ok: true, finished: true as const };
-    }
-
     const nextRound = game.roundNumber + 1;
     const now2 = new Date();
-    const nomMs = (game.gameType === "FASTING_BOT" || game.gameType === "FROOKIES_BOT" || game.gameType === "ROOKIES_BOT") ? BOT_ROUND_MS : getFastingNomMs();
+    const nomMs =
+      game.gameType === "FASTING_BOT" || game.gameType === "FROOKIES_BOT"
+        ? BOT_ROUND_MS
+        : getFastingNomMs();
     const isFrookies = game.gameType === "FROOKIES" || game.gameType === "FROOKIES_BOT";
 
     await prisma.game.update({
@@ -140,7 +149,9 @@ export async function resolveFastingEviction(gameId: string) {
 
     return { ok: true, advancedToRound: nextRound };
   } finally {
-    await prisma.$queryRaw`SELECT pg_advisory_unlock(hashtext(${gameId}))`;
+    if (!opts?.skipLock) {
+      await prisma.$queryRaw`SELECT pg_advisory_unlock(hashtext(${gameId}))`;
+    }
   }
 }
 

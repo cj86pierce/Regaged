@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getSystemUserId } from "@/lib/systemUser";
+import { getRookiesDayMs, isBotGameType } from "@/lib/fastingTiming";
 
 function activityScore(p: { chatCount: number; plusCount: number; minusCount: number }) {
   return p.chatCount + 2 * p.plusCount - p.minusCount;
@@ -16,7 +17,7 @@ export async function resolveRookiesNominations(gameId: string) {
     where: { id: gameId },
     select: { id: true, state: true, roundNumber: true, hohUserId: true, gameType: true },
   });
-  if (!game || game.gameType !== "ROOKIES") return;
+  if (!game || (game.gameType !== "ROOKIES" && game.gameType !== "ROOKIES_BOT")) return;
   if (game.state !== "ROUND_NOMINATE") return;
 
   const players = await prisma.gamePlayer.findMany({
@@ -106,10 +107,10 @@ export async function resolveRookiesNominations(gameId: string) {
       },
     });
 
-    const ROOKIES_VOTE_MS = 24 * 60 * 60 * 1000;
+    const voteMs = getRookiesDayMs(isBotGameType(game.gameType));
     await tx.game.update({
       where: { id: gameId },
-      data: { state: "ROUND_VOTE", stateEndsAt: new Date(Date.now() + ROOKIES_VOTE_MS) },
+      data: { state: "ROUND_VOTE", stateEndsAt: new Date(Date.now() + voteMs) },
     });
 
     const tag = `[SYSTEM:NOM_ROOKIES:R${game.roundNumber}]`;

@@ -31,7 +31,7 @@ export default function EnrollFrookiesPage() {
     <main style={{ padding: 12 }}>
       <h1 style={{ marginTop: 0 }}>Frookies</h1>
       <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 12 }}>
-        Same rules as Fastings. POV → nominate → evict. For friends and newcomers.
+        HOH + competition POV, save/renom, then votes. Jury (9th–3rd) picks the winner at final 2.
       </div>
 
       <button

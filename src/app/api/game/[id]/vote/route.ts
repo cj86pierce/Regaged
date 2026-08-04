@@ -39,7 +39,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     rr.nomineeCUserId,
     rr.nomineeDUserId,
   ].filter(Boolean) as string[];
-  const isRookies = game.gameType === "ROOKIES" && nominees.length >= 3;
+  const isRookies =
+    (game.gameType === "ROOKIES" || game.gameType === "ROOKIES_BOT") && nominees.length >= 3;
 
   if (nominees.includes(userId))
     return NextResponse.json({ error: "Nominees cannot vote" }, { status: 403 });

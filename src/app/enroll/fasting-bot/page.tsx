@@ -29,7 +29,7 @@ export default function EnrollFastingBotPage() {
     <main style={{ padding: 12 }}>
       <h1 style={{ marginTop: 0 }}>Fastings (Bot)</h1>
       <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 12 }}>
-        Copy-bot mode. 2-minute rounds. Bots fill remaining slots. No payouts.
+        Same Fastings rules on ~2 minute phases. Bots fill remaining slots. Practice — no payouts.
       </div>
 
       <button

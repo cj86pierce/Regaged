@@ -31,7 +31,7 @@ export default function EnrollRookiesBotPage() {
     <main style={{ padding: 12 }}>
       <h1 style={{ marginTop: 0 }}>Rookies (Bot)</h1>
       <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 12 }}>
-        60s rounds. Bots fill slots. Same rules as Rookies. No payouts. Practice mode.
+        Same Rookies rules on ~2 minute days. Bots fill the lobby. Practice — no payouts.
       </div>
 
       <button

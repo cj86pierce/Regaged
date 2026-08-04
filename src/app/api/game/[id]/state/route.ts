@@ -294,7 +294,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     }
 
     if (game.state === "ROUND_VOTE") {
-      const isRookies = game.gameType === "ROOKIES" && !!nomineeC;
+      const isRookies =
+        (game.gameType === "ROOKIES" || game.gameType === "ROOKIES_BOT") && !!nomineeC;
       if (isRookies && meUserId) {
         const myRankingVotes = await prisma.rankingVote.findMany({
           where: { gameId, roundNumber: game.roundNumber, voterUserId: meUserId },

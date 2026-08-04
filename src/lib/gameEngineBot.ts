@@ -1,12 +1,12 @@
 /**
- * Start FASTING_BOT and CASTING_BOT games with 60-second rounds.
- * Does not modify original gameEngine / gameEngineCastings.
+ * Start bot practice games — same rules as live, ~2 minute phases.
  */
 import { prisma } from "@/lib/prisma";
 import { assignFastingPov } from "@/lib/fastingPov";
 import { assignFrookiesHoh } from "@/lib/frookiesHoh";
+import { assignRookiesHoh } from "@/lib/rookiesHoh";
+import { BOT_ROUND_MS } from "@/lib/fastingTiming";
 
-const BOT_ROUND_MS = 2 * 60 * 1000; // 2 min for testing
 const FASTING_BOT_MAX = 15;
 const CASTING_BOT_MAX = 20;
 
@@ -24,16 +24,21 @@ export async function tryStartFastingStyleBotGame(
     where: { id: gameId },
     select: { id: true, gameType: true, state: true },
   });
-  if (!game || !FASTING_STYLE_BOT_TYPES.includes(game.gameType as (typeof FASTING_STYLE_BOT_TYPES)[number]) || game.state !== "ENROLLING")
+  if (
+    !game ||
+    !FASTING_STYLE_BOT_TYPES.includes(game.gameType as (typeof FASTING_STYLE_BOT_TYPES)[number]) ||
+    game.state !== "ENROLLING"
+  ) {
     return { ok: false, skipped: true as const };
+  }
   if (game.gameType !== gameType) return { ok: false, skipped: true as const };
 
   const count = await prisma.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
   if (count < FASTING_BOT_MAX) return { ok: true, skipped: true as const };
 
   const now = new Date();
-
   const isFrookiesBot = gameType === "FROOKIES_BOT";
+  const isRookiesBot = gameType === "ROOKIES_BOT";
 
   await prisma.game.update({
     where: { id: gameId },
@@ -44,15 +49,27 @@ export async function tryStartFastingStyleBotGame(
       roundStartedAt: now,
       stateEndsAt: new Date(now.getTime() + BOT_ROUND_MS),
       povUserId: null,
-      hohUserId: isFrookiesBot ? null : undefined,
-      povSavedUserId: isFrookiesBot ? null : undefined,
+      hohUserId: null,
+      povSavedUserId: null,
+      frookiesPhase: null,
     },
   });
 
-  if (isFrookiesBot) {
-    try { await assignFrookiesHoh(gameId, { random: true }); } catch {}
+  if (isRookiesBot) {
+    try {
+      await assignRookiesHoh(gameId, { random: true });
+    } catch {}
+    try {
+      await assignFastingPov(gameId);
+    } catch {}
+  } else if (isFrookiesBot) {
+    try {
+      await assignFrookiesHoh(gameId, { random: true });
+    } catch {}
   } else {
-    try { await assignFastingPov(gameId); } catch {}
+    try {
+      await assignFastingPov(gameId);
+    } catch {}
   }
 
   return { ok: true };
@@ -63,14 +80,15 @@ export async function tryStartCastingBotGame(gameId: string) {
     where: { id: gameId },
     select: { id: true, gameType: true, state: true },
   });
-  if (!game || game.gameType !== "CASTING_BOT" || game.state !== "ENROLLING") return { ok: false, skipped: true as const };
+  if (!game || game.gameType !== "CASTING_BOT" || game.state !== "ENROLLING") {
+    return { ok: false, skipped: true as const };
+  }
 
   const count = await prisma.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
   if (count < CASTING_BOT_MAX) return { ok: true, skipped: true as const };
 
   const now = new Date();
 
-  /** Day 1 = nominate/compete window (no nominees). Voting begins day 2+. */
   await prisma.game.update({
     where: { id: gameId },
     data: {

@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getSystemUserId } from "@/lib/systemUser";
 
-import { BOT_ROUND_MS, getFastingVoteMs } from "@/lib/fastingTiming";
+import { getFrookiesPovSaveMs, isBotGameType } from "@/lib/fastingTiming";
 
 function activityScore(p: { chatCount: number; plusCount: number; minusCount: number }) {
   return p.chatCount + 2 * p.plusCount - p.minusCount;
@@ -69,7 +69,7 @@ export async function resolveFrookiesNominations(gameId: string) {
 
   const systemUserId = await getSystemUserId();
   const tag = `[SYSTEM:NOM_VOTES:R${game.roundNumber}]`;
-  const voteMs = game.gameType === "FROOKIES_BOT" ? BOT_ROUND_MS : getFastingVoteMs();
+  const povSaveMs = getFrookiesPovSaveMs(isBotGameType(game.gameType));
 
   await prisma.$transaction(async (tx) => {
     await tx.roundResult.upsert({
@@ -90,22 +90,21 @@ export async function resolveFrookiesNominations(gameId: string) {
       },
     });
 
-    const isBot = game.gameType === "FROOKIES_BOT";
     await tx.game.update({
       where: { id: gameId },
-      data: isBot
-        ? { state: "ROUND_VOTE", stateEndsAt: new Date(Date.now() + voteMs), povSavedUserId: null }
-        : {
-            frookiesPhase: "POV_SAVE",
-            stateEndsAt: new Date(Date.now() + Math.min(5 * 60_000, voteMs)),
-          },
+      data: {
+        frookiesPhase: "POV_SAVE",
+        stateEndsAt: new Date(Date.now() + povSaveMs),
+      },
     });
 
-    const body = isBot
-      ? `${tag}\n[SYSTEM] Nominees: ${nameA} vs ${nameB}\n[SYSTEM] Vote to evict.`
-      : `${tag}\n[SYSTEM] Nominees: ${nameA} vs ${nameB}. POV may save themselves or one other before vote.`;
     await tx.gameMessage.create({
-      data: { gameId, userId: systemUserId, channel: "PUBLIC", body },
+      data: {
+        gameId,
+        userId: systemUserId,
+        channel: "PUBLIC",
+        body: `${tag}\n[SYSTEM] Nominees: ${nameA} vs ${nameB}. POV may save themselves or one other before vote.`,
+      },
     });
   });
 }

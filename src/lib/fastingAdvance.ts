@@ -9,9 +9,13 @@ import { assignFrookiesHoh } from "@/lib/frookiesHoh";
 import { assignFrookiesPov } from "@/lib/frookiesPov";
 import { resolveFrookiesNominations } from "@/lib/frookiesNoms";
 import { enterFrookiesJuryPhase, resolveFrookiesJuryVoteIfDue } from "@/lib/frookiesJury";
-import { getFastingNomMs, getFastingVoteMs } from "@/lib/fastingTiming";
+import {
+  getFastingNomMs,
+  getFastingVoteMs,
+  getFrookiesHohRenomMs,
+  getRookiesDayMs,
+} from "@/lib/fastingTiming";
 
-const ROOKIES_DAY_MS = 24 * 60 * 60 * 1000;
 const ROOKIES_DAY_7 = 7;
 
 export async function advanceFastingIfDue(gameId: string) {
@@ -43,6 +47,7 @@ export async function advanceFastingIfDue(gameId: string) {
 
     const NOM_PHASE_MS = getFastingNomMs();
     const VOTE_PHASE_MS = getFastingVoteMs();
+    const ROOKIES_DAY_MS = getRookiesDayMs(false);
 
     // Read round result (if exists) for recovery
     const rr = await prisma.roundResult.findUnique({
@@ -79,7 +84,11 @@ export async function advanceFastingIfDue(gameId: string) {
                 }),
                 prisma.game.update({
                   where: { id: gameId },
-                  data: { frookiesPhase: "HOH_RENOM", povSavedUserId: null, stateEndsAt: new Date(Date.now() + 60_000) },
+                  data: {
+                    frookiesPhase: "HOH_RENOM",
+                    povSavedUserId: null,
+                    stateEndsAt: new Date(Date.now() + getFrookiesHohRenomMs(false)),
+                  },
                 }),
               ]);
               return { ok: true, advanced: "frookies_pov_saved_nominee" as const };
@@ -99,7 +108,46 @@ export async function advanceFastingIfDue(gameId: string) {
         if (phase === "POV_SAVE") return { ok: true, skipped: true as const, reason: "waiting_pov_save" as const };
 
         if (phase === "HOH_RENOM") {
-          return { ok: true, skipped: true as const, reason: "waiting_hoh_renom" as const };
+          if (!(due || stuck || missingTimer)) {
+            return { ok: true, skipped: true as const, reason: "waiting_hoh_renom" as const };
+          }
+          // Auto-renom if HOH never picked a replacement
+          const kept = rr?.nomineeAUserId;
+          const immune = new Set(
+            [game.hohUserId, game.povUserId, game.povSavedUserId, kept].filter(Boolean) as string[]
+          );
+          const pool = await prisma.gamePlayer.findMany({
+            where: { gameId, status: "ACTIVE", userId: { notIn: [...immune] } },
+            select: { userId: true },
+          });
+          const replacement =
+            pool[Math.floor(Math.random() * Math.max(1, pool.length))]?.userId ?? rr?.nomineeBUserId;
+          if (kept && replacement) {
+            await prisma.$transaction([
+              prisma.roundResult.update({
+                where: { gameId_roundNumber: { gameId, roundNumber: game.roundNumber } },
+                data: { nomineeAUserId: kept, nomineeBUserId: replacement },
+              }),
+              prisma.game.update({
+                where: { id: gameId },
+                data: {
+                  state: "ROUND_VOTE",
+                  stateEndsAt: new Date(Date.now() + VOTE_PHASE_MS),
+                  frookiesPhase: null,
+                },
+              }),
+            ]);
+            return { ok: true, advanced: "frookies_hoh_renom_timeout" as const };
+          }
+          await prisma.game.update({
+            where: { id: gameId },
+            data: {
+              state: "ROUND_VOTE",
+              stateEndsAt: new Date(Date.now() + VOTE_PHASE_MS),
+              frookiesPhase: null,
+            },
+          });
+          return { ok: true, advanced: "frookies_hoh_renom_to_vote" as const };
         }
 
         if (!game.hohUserId) {
@@ -150,7 +198,7 @@ export async function advanceFastingIfDue(gameId: string) {
           try { await assignFrookiesHoh(gameId, { random: false, skipLock: true }); } catch {}
           return { ok: true, fixed: "evicted_exists_forced_next_round" as const };
         }
-        await resolveFastingEviction(gameId);
+        await resolveFastingEviction(gameId, { skipLock: true });
         return { ok: true, advanced: "frookies_vote" as const };
       }
     }
@@ -222,7 +270,7 @@ export async function advanceFastingIfDue(gameId: string) {
           }
           return { ok: true, fixed: "rookies_evicted_forced_next_round" as const };
         }
-        await resolveRookiesEviction(gameId);
+        await resolveRookiesEviction(gameId, { skipLock: true });
         return { ok: true, advanced: "rookies_vote" as const };
       }
     }
@@ -280,7 +328,7 @@ export async function advanceFastingIfDue(gameId: string) {
       }
 
       // Normal eviction resolve (also advances/finishes)
-      await resolveFastingEviction(gameId);
+      await resolveFastingEviction(gameId, { skipLock: true });
       return { ok: true, advanced: "vote" as const };
     }
 

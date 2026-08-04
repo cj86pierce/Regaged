@@ -23,10 +23,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   if (!gp || gp.status !== "ACTIVE") return NextResponse.json({ error: "Not in game" }, { status: 403 });
 
   const isFrookies = game.gameType === "FROOKIES" || game.gameType === "FROOKIES_BOT";
-  // ROOKIES_BOT is intentionally excluded: its bot-driving logic
-  // (fastingBotAdvance.ts) doesn't assign a real HOH the way human ROOKIES
-  // does, so gating on hohUserId would reject every bot nomination.
-  const isRookies = game.gameType === "ROOKIES";
+  const isRookies = game.gameType === "ROOKIES" || game.gameType === "ROOKIES_BOT";
   if ((isFrookies || isRookies) && game.hohUserId !== userId) {
     return NextResponse.json({ error: "Only the HOH can nominate." }, { status: 403 });
   }
@@ -57,8 +54,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     if (!valid || valid.status !== "ACTIVE") return NextResponse.json({ error: "Invalid replacement nominee." }, { status: 400 });
     if (replacement === rr.nomineeAUserId) return NextResponse.json({ error: "Replacement must be different from the other nominee." }, { status: 400 });
 
-    const { getFastingVoteMs } = await import("@/lib/fastingTiming");
-    const voteMs = getFastingVoteMs();
+    const { BOT_ROUND_MS, getFastingVoteMs } = await import("@/lib/fastingTiming");
+    const voteMs = game.gameType === "FROOKIES_BOT" ? BOT_ROUND_MS : getFastingVoteMs();
     await prisma.$transaction([
       prisma.roundResult.update({
         where: { gameId_roundNumber: { gameId, roundNumber: game.roundNumber } },
