@@ -2,6 +2,8 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 
+const BLUE_ACCENT = "#a9cfe8";
+const BLUE_BUTTON = "linear-gradient(#d6eaf6, #a9cfe8)";
 const PINK_ACCENT = "#f48fb1";
 const PINK_BUTTON = "linear-gradient(#f8bbd9, #f48fb1)";
 const GREEN_ACCENT = "#66bb6a";
@@ -16,14 +18,16 @@ function GameCard({
   title: string;
   desc: string;
   href: string;
-  accent?: "pink" | "green";
+  accent: "blue" | "pink" | "green";
 }) {
-  const isPink = accent === "pink";
-  const isGreen = accent === "green";
-  const headerBg = isPink ? PINK_ACCENT : isGreen ? GREEN_ACCENT : "var(--accent-bg)";
-  const titleColor = isPink ? "#5a2a3a" : isGreen ? "#1b3d1f" : "var(--brand)";
-  const linkColor = isPink ? "#8b3a52" : isGreen ? "#2e7d32" : "var(--link-color)";
-  const btnBg = isPink ? PINK_BUTTON : isGreen ? GREEN_BUTTON : "var(--bg-btn-disabled)";
+  const headerBg =
+    accent === "pink" ? PINK_ACCENT : accent === "green" ? GREEN_ACCENT : BLUE_ACCENT;
+  const titleColor =
+    accent === "pink" ? "#5a2a3a" : accent === "green" ? "#1b3d1f" : "#0b2b66";
+  const linkColor =
+    accent === "pink" ? "#8b3a52" : accent === "green" ? "#2e7d32" : "#0b5ed7";
+  const btnBg =
+    accent === "pink" ? PINK_BUTTON : accent === "green" ? GREEN_BUTTON : BLUE_BUTTON;
 
   return (
     <Link href={href} className="enrollCard">
@@ -41,8 +45,7 @@ function GameCard({
       >
         <span style={{ fontWeight: 1000, fontSize: 17, color: titleColor }}>{title}</span>
       </div>
-      <div style={{ fontWeight: 1000, fontSize: 15 }}>{title}</div>
-      <div style={{ marginTop: 6, fontSize: 12, opacity: 0.8, lineHeight: 1.4 }}>{desc}</div>
+      <div style={{ marginTop: 0, fontSize: 12, opacity: 0.85, lineHeight: 1.4 }}>{desc}</div>
       <div
         style={{
           marginTop: 12,
@@ -76,10 +79,10 @@ export default function EnrollHub() {
         <section>
           <div style={{ fontWeight: 1000, fontSize: 13, marginBottom: 10, opacity: 0.85 }}>Free modes</div>
           <div className="enrollGrid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 14 }}>
-            <GameCard title="Fastings" desc="Fast rounds. POV → nominate → evict. Final 3 gets a 12-hour clock." href="/enroll/fasting" />
-            <GameCard title="Castings" desc="12-hour days. Keys, apples, challenges, and votes." href="/enroll/casting" />
-            <GameCard title="Fastings (Bot)" desc="Same Fastings rules, ~2 min phases. Bots fill seats." href="/enroll/fasting-bot" />
-            <GameCard title="Castings (Bot)" desc="Same Castings rules, ~2 min days. Bots fill seats." href="/enroll/casting-bot" />
+            <GameCard title="Fastings" desc="Fast rounds. POV → nominate → evict. Final 3 gets a 12-hour clock." href="/enroll/fasting" accent="blue" />
+            <GameCard title="Castings" desc="12-hour days. Keys, apples, challenges, and votes." href="/enroll/casting" accent="blue" />
+            <GameCard title="Fastings (Bot)" desc="Same Fastings rules, ~2 min phases. Bots fill seats." href="/enroll/fasting-bot" accent="blue" />
+            <GameCard title="Castings (Bot)" desc="Same Castings rules, ~2 min days. Bots fill seats." href="/enroll/casting-bot" accent="blue" />
           </div>
         </section>
 
