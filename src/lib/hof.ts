@@ -8,7 +8,7 @@ export const HOF_AVATAR_TOP = 10;
 export const HOF_DISPLAY_TOP = 25;
 
 /** Owner / staff accounts kept off the public board. */
-export const HOF_EXCLUDED_USERNAMES = ["siege", "basilswank"] as const;
+export const HOF_EXCLUDED_USERNAMES = ["siege"] as const;
 
 /** Exclude bots / system-ish / owner accounts from Hall of Fame. */
 export function hofUserWhere() {
