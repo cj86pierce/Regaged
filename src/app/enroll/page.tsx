@@ -99,17 +99,28 @@ export default function EnrollHub() {
               title="Rookies"
               desc="T$15 entry. Week-long. Ranking votes + secret POV."
               href="/enroll/rookies"
-              accent="green"
+              accent="pink"
             />
+            <GameCard title="Frookies (Bot)" desc="Same Frookies rules, ~2 min phases. Bots fill seats." href="/enroll/frookies-bot" accent="pink" />
+            <GameCard title="Rookies (Bot)" desc="Same Rookies rules, ~2 min days. Bots fill seats." href="/enroll/rookies-bot" accent="pink" />
+          </div>
+        </section>
+
+        <section>
+          <div style={{ fontWeight: 1000, fontSize: 13, marginBottom: 10, opacity: 0.85 }}>Survivor</div>
+          <div className="enrollGrid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 14 }}>
             <GameCard
               title="Survivor"
               desc="T$10 entry. 20 castaways, 2 tribes, challenges, tribal council."
               href="/enroll/survivor"
               accent="green"
             />
-            <GameCard title="Frookies (Bot)" desc="Same Frookies rules, ~2 min phases. Bots fill seats." href="/enroll/frookies-bot" accent="pink" />
-            <GameCard title="Rookies (Bot)" desc="Same Rookies rules, ~2 min days. Bots fill seats." href="/enroll/rookies-bot" accent="green" />
-            <GameCard title="Survivor (Bot)" desc="Same Survivor rules, ~2 min days. Bots fill seats." href="/enroll/survivor-bot" accent="green" />
+            <GameCard
+              title="Survivor (Bot)"
+              desc="Same Survivor rules, ~2 min days. Bots fill seats."
+              href="/enroll/survivor-bot"
+              accent="green"
+            />
           </div>
         </section>
       </div>
