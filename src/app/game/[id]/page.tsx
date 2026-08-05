@@ -173,19 +173,25 @@ export default function GamePage({ params }: { params: { id: string } }) {
   const [reactingIds, setReactingIds] = useState<Record<string, boolean>>({});
   /** Which tribe lobby to show (A/B). Players can switch to view the other tribe. */
   const [lobbyTribe, setLobbyTribe] = useState<"A" | "B" | null>(null);
+  // Poll/timers close over stale state — always read the current tribe from a ref.
+  const lobbyTribeRef = useRef<"A" | "B" | null>(null);
 
   async function load(opts?: { bust?: boolean; tribe?: "A" | "B" }) {
-    const tribe = opts?.tribe ?? lobbyTribe ?? undefined;
+    const tribe = opts?.tribe ?? lobbyTribeRef.current ?? undefined;
     const tribeQ = tribe ? `&tribe=${tribe}` : "";
     const q = `page=${page}&pageSize=25${tribeQ}${opts?.bust ? `&_=${Date.now()}` : ""}`;
     const res = await fetch(`/api/game/${gameId}/state?${q}`, { cache: "no-store" });
     const json = await res.json();
     if (!res.ok) throw new Error(json?.error ?? "Failed to load game");
     setData(json);
-    if (
-      (json.viewTribe === "A" || json.viewTribe === "B") &&
-      (opts?.tribe || lobbyTribe == null)
+    if (opts?.tribe === "A" || opts?.tribe === "B") {
+      lobbyTribeRef.current = opts.tribe;
+      setLobbyTribe(opts.tribe);
+    } else if (
+      lobbyTribeRef.current == null &&
+      (json.viewTribe === "A" || json.viewTribe === "B")
     ) {
+      lobbyTribeRef.current = json.viewTribe;
       setLobbyTribe(json.viewTribe);
     }
 
@@ -425,7 +431,8 @@ export default function GamePage({ params }: { params: { id: string } }) {
   const meStats = data.meUserId ? data.players.find((p) => p.userId === data.meUserId) ?? null : null;
 
   const tribeLobbies = !!data.tribeLobbies;
-  const viewTribe = data.viewTribe ?? null;
+  // Prefer the user's chosen lobby so polls can't flash them back to their tribe.
+  const viewTribe = lobbyTribe ?? data.viewTribe ?? null;
   const myTribe = data.myTribe ?? null;
   const viewingOtherTribe =
     !!tribeLobbies &&
@@ -523,6 +530,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
                 key={t}
                 type="button"
                 onClick={() => {
+                  lobbyTribeRef.current = t;
                   setLobbyTribe(t);
                   void load({ bust: true, tribe: t }).catch((e) => setError(e.message));
                 }}
