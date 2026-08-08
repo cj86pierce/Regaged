@@ -57,6 +57,7 @@ type GameState = {
     gameType: string;
     state: string;
     roundNumber: number;
+    createdAt?: string;
     povUserId: string | null;
     hohUserId?: string | null;
     povSavedUserId?: string | null;
@@ -159,24 +160,24 @@ function PhaseTimer(props: {
   );
 }
 
-function LobbyReadyTimer(props: {
-  readyAt: string;
-  isBotLobby: boolean;
-  onReady: () => void;
-}) {
+function useLobbyCountdown(readyAt: string | null | undefined, onReady: () => void) {
   const [now, setNow] = useState(() => Date.now());
   const firedRef = useRef(false);
-  const onReadyRef = useRef(props.onReady);
-  onReadyRef.current = props.onReady;
+  const onReadyRef = useRef(onReady);
+  onReadyRef.current = onReady;
 
   useEffect(() => {
+    if (!readyAt) return;
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
-  }, [props.readyAt]);
+  }, [readyAt]);
 
-  const timeLeft = Math.max(0, Math.ceil((new Date(props.readyAt).getTime() - now) / 1000));
+  const timeLeft = readyAt
+    ? Math.max(0, Math.ceil((new Date(readyAt).getTime() - now) / 1000))
+    : null;
 
   useEffect(() => {
+    if (timeLeft == null) return;
     if (timeLeft > 0) {
       firedRef.current = false;
       return;
@@ -186,18 +187,62 @@ function LobbyReadyTimer(props: {
     onReadyRef.current();
   }, [timeLeft]);
 
-  if (timeLeft <= 0) {
-    return (
-      <span style={{ opacity: 0.85 }}>
-        {props.isBotLobby ? "Starting / filling seats…" : "Starting when full…"}
-      </span>
-    );
-  }
+  return timeLeft;
+}
+
+function LobbyWaitBanner(props: {
+  readyAt: string;
+  isBotLobby: boolean;
+  current: number;
+  maxPlayers: number;
+  onReady: () => void;
+}) {
+  const timeLeft = useLobbyCountdown(props.readyAt, props.onReady);
+  if (timeLeft == null) return null;
+
+  const waiting = timeLeft > 0;
   return (
-    <span style={{ opacity: 0.85 }}>
-      Starts in <b>{fmtHMS(timeLeft)}</b>
-      {props.isBotLobby ? " (bots fill empty seats)" : ""}
-    </span>
+    <div
+      style={{
+        marginTop: 12,
+        marginBottom: 4,
+        padding: "14px 16px",
+        borderRadius: 12,
+        border: "2px solid rgba(0,0,0,0.16)",
+        background: waiting
+          ? "linear-gradient(180deg, #fff6d6 0%, #ffe8a3 100%)"
+          : "linear-gradient(180deg, #e8f5e9 0%, #c8e6c9 100%)",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+      }}
+    >
+      <div style={{ fontWeight: 1000, fontSize: 15, letterSpacing: -0.2 }}>
+        {waiting ? (
+          props.isBotLobby ? (
+            <>
+              Bots fill empty seats in <b style={{ fontSize: 20 }}>{fmtHMS(timeLeft)}</b>
+            </>
+          ) : (
+            <>
+              Lobby timer: <b style={{ fontSize: 20 }}>{fmtHMS(timeLeft)}</b>
+            </>
+          )
+        ) : props.isBotLobby ? (
+          <>Filling empty seats with bots…</>
+        ) : (
+          <>Lobby wait over — starting when full…</>
+        )}
+      </div>
+      <div style={{ marginTop: 6, fontSize: 13, fontWeight: 700, opacity: 0.8 }}>
+        Players in lobby: {props.current}/{props.maxPlayers}
+        {props.isBotLobby
+          ? waiting
+            ? " · After the timer, bots join and the game starts."
+            : " · Hang tight — bots are seating now."
+          : waiting
+            ? " · After the timer, the game starts once the lobby is full."
+            : " · Waiting for enough players to start."}
+      </div>
+    </div>
   );
 }
 
@@ -529,16 +574,6 @@ export default function GamePage({ params }: { params: { id: string } }) {
             <>
               Filling: <b>{data.lobby.current}/{maxPlayers}</b>
               <span style={{ opacity: 0.7 }}>({data.lobby.needed} needed)</span>
-              {(data.lobby.lobbyReadyAt || data.lobby.botsFillAt) ? (
-                <>
-                  <span>·</span>
-                  <LobbyReadyTimer
-                    readyAt={(data.lobby.lobbyReadyAt || data.lobby.botsFillAt)!}
-                    isBotLobby={String(data.game.gameType).endsWith("_BOT")}
-                    onReady={onPhaseExpired}
-                  />
-                </>
-              ) : null}
             </>
           ) : data.game.state === "COMPLETED" ? (
             <>Game ended · Final placements below</>
@@ -610,6 +645,27 @@ export default function GamePage({ params }: { params: { id: string } }) {
             ))}
           </div>
         ) : null}
+
+        {data.game.state === "ENROLLING" && data.lobby
+          ? (() => {
+              const readyAt =
+                data.lobby.lobbyReadyAt ||
+                data.lobby.botsFillAt ||
+                (data.game.createdAt
+                  ? new Date(new Date(data.game.createdAt).getTime() + 15 * 60 * 1000).toISOString()
+                  : null);
+              if (!readyAt) return null;
+              return (
+                <LobbyWaitBanner
+                  readyAt={readyAt}
+                  isBotLobby={String(data.game.gameType).endsWith("_BOT")}
+                  current={data.lobby.current}
+                  maxPlayers={maxPlayers}
+                  onReady={onPhaseExpired}
+                />
+              );
+            })()
+          : null}
       </div>
 
       {isCasting ? (

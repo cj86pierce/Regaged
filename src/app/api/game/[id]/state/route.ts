@@ -441,6 +441,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       gameType: game.gameType,
       state: game.state,
       roundNumber: game.roundNumber,
+      createdAt: game.createdAt.toISOString(),
       stateEndsAt: game.state === "COMPLETED" ? null : game.stateEndsAt,
       // Classic Rookies POV is secret — only reveal to the holder
       povUserId:
