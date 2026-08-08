@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { redirect } from "next/navigation";
 import { getCurrentUserIdFromHeaders } from "@/lib/getCurrentUserId";
 import { prisma } from "@/lib/prisma";
+import { isOwnerUsername } from "@/lib/usernames";
 import OwnerPanel from "./OwnerPanel";
 
 export default async function OwnerPage() {
@@ -13,7 +14,7 @@ export default async function OwnerPage() {
     where: { id: userId },
     select: { isOwner: true, usernameLower: true },
   });
-  const isOwner = !!me && (me.isOwner || me.usernameLower === "siege");
+  const isOwner = !!me && (me.isOwner || isOwnerUsername(me.usernameLower));
   if (!isOwner) {
     return (
       <main style={{ padding: 16 }}>

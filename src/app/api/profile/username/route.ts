@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUserId } from "@/lib/getCurrentUserId";
 import { prisma } from "@/lib/prisma";
+import { isReservedUsername, reservedUsernameError } from "@/lib/usernames";
 
 const YEAR_MS = 365 * 24 * 60 * 60 * 1000;
 
@@ -15,6 +16,9 @@ export async function POST(req: Request) {
   }
   if (!/^[A-Za-z0-9_]+$/.test(newName)) {
     return NextResponse.json({ error: "Letters, numbers, underscore only" }, { status: 400 });
+  }
+  if (isReservedUsername(newName)) {
+    return NextResponse.json({ error: reservedUsernameError() }, { status: 400 });
   }
 
   const me = await prisma.user.findUnique({

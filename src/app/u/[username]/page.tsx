@@ -10,6 +10,7 @@ import { getSlotDesignsForUser, getSlotDesignsForUserIds } from "@/lib/avatarSlo
 import { sortProfileGames } from "@/lib/sortProfileGames";
 import { avatarConfigFromUser } from "@/lib/avatarConfigFromUser";
 import { getKarmaRank } from "@/lib/hof";
+import { isOwnerUsername } from "@/lib/usernames";
 import {
   ACCESSORY_STYLES,
   BODY_STYLES,
@@ -216,7 +217,7 @@ export default async function PublicProfilePage({
     joinedAt: user.createdAt.toISOString(),
     karma: user.karma,
     hofRank,
-    isOwner: user.isOwner || user.usernameLower === "siege",
+    isOwner: user.isOwner || isOwnerUsername(user.usernameLower);
     isWarned: !!user.warnedAt,
     isBanned: !!user.bannedAt,
     tMoney: user.tMoney,

@@ -84,12 +84,15 @@ export async function POST(req: Request) {
       /* ignore */
     }
 
-    const usernameLower = displayName.toLowerCase();
+    const { isReservedUsername } = await import("@/lib/usernames");
+    let safeDisplay = displayName;
+    if (isReservedUsername(safeDisplay)) safeDisplay = `user_${steamIdStr.slice(-6)}`;
+    const usernameLower = safeDisplay.toLowerCase();
     const existing = await prisma.user.findFirst({
       where: { usernameLower },
       select: { id: true },
     });
-    const username = existing ? `${displayName}_${steamIdStr.slice(-6)}` : displayName;
+    const username = existing ? `${safeDisplay}_${steamIdStr.slice(-6)}` : safeDisplay;
     const finalLower = username.toLowerCase();
 
     const passwordHash = await bcrypt.hash(`steam:${steamIdStr}:${Date.now()}`, 10);

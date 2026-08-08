@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { checkBlockedContent } from "@/lib/contentFilter";
+import { isReservedUsername, reservedUsernameError } from "@/lib/usernames";
 
 function okJson(data: any) {
   return NextResponse.json(data);
@@ -27,6 +28,7 @@ export async function POST(req: Request) {
   // ✅ filter username for slurs/graphic only (swearing list not included)
   const hit = checkBlockedContent(usernameRaw);
   if (hit) return errJson("Username contains blocked language.", 400);
+  if (isReservedUsername(usernameRaw)) return errJson(reservedUsernameError(), 400);
 
   if (password.length < 6) return errJson("Password must be at least 6 characters.");
 

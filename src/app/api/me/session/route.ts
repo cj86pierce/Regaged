@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUserId } from "@/lib/getCurrentUserId";
 import { prisma } from "@/lib/prisma";
+import { isOwnerUsername } from "@/lib/usernames";
 
 /**
  * GET /api/me/session
@@ -20,6 +21,6 @@ export async function GET(req: Request) {
   return NextResponse.json({
     userId: user.id,
     username: user.username,
-    isOwner: user.isOwner || user.usernameLower === "siege",
+    isOwner: user.isOwner || isOwnerUsername(user.usernameLower),
   });
 }

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/getCurrentUserId";
+import { isOwnerUsername } from "@/lib/usernames";
 
 export async function requireOwner(req: Request): Promise<
   | { ok: true; ownerId: string }
@@ -14,10 +15,11 @@ export async function requireOwner(req: Request): Promise<
   });
   if (!user || user.bannedAt) return { ok: false, status: 401, error: "Not logged in" };
 
-  const isOwner = user.isOwner || user.usernameLower === "siege";
+  const aliasOwner = isOwnerUsername(user.usernameLower);
+  const isOwner = user.isOwner || aliasOwner;
   if (!isOwner) return { ok: false, status: 403, error: "Owner only" };
 
-  if (!user.isOwner && user.usernameLower === "siege") {
+  if (!user.isOwner && aliasOwner) {
     await prisma.user.update({ where: { id: user.id }, data: { isOwner: true } });
   }
 

@@ -104,6 +104,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Username: letters, numbers, underscore only" }, { status: 400 });
     }
     const newLower = newName.toLowerCase();
+    const { isReservedUsername, reservedUsernameError } = await import("@/lib/usernames");
+    if (isReservedUsername(newName)) {
+      return NextResponse.json({ error: reservedUsernameError() }, { status: 400 });
+    }
     if (newLower !== target.username.toLowerCase()) {
       const taken = await prisma.user.findUnique({
         where: { usernameLower: newLower },
@@ -171,8 +175,11 @@ export async function POST(req: Request) {
   }
 
   if (action === "ban") {
-    if (target.isOwner || target.username.toLowerCase() === "siege") {
-      return NextResponse.json({ error: "Cannot ban an owner" }, { status: 400 });
+    {
+      const { isOwnerUsername } = await import("@/lib/usernames");
+      if (target.isOwner || isOwnerUsername(target.username)) {
+        return NextResponse.json({ error: "Cannot ban an owner" }, { status: 400 });
+      }
     }
     const reason = typeof body?.reason === "string" ? body.reason.trim().slice(0, 200) : null;
     const updated = await prisma.user.update({

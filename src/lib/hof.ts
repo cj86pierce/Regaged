@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { HOF_EXCLUDED_USERNAMES } from "@/lib/usernames";
 
 /** Profile badge cutoff (rank shown next to names). */
 export const HOF_SIZE = 500;
@@ -7,8 +8,7 @@ export const HOF_SIZE = 500;
 export const HOF_AVATAR_TOP = 10;
 export const HOF_DISPLAY_TOP = 25;
 
-/** Owner / staff accounts kept off the public board. */
-export const HOF_EXCLUDED_USERNAMES = ["siege"] as const;
+export { HOF_EXCLUDED_USERNAMES };
 
 /** Exclude bots / system-ish / owner accounts from Hall of Fame. */
 export function hofUserWhere() {

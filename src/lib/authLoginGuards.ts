@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { ipsMatch, normalizeIp } from "@/lib/clientIp";
+import { isOwnerUsername } from "@/lib/usernames";
 
 type GuardUser = {
   id: string;
@@ -11,7 +12,7 @@ type GuardUser = {
 
 /**
  * Ban + IP lock checks after password/Steam identity is verified.
- * Ensures Siege is owner; applies OWNER_LOCKED_IP or first-login capture.
+ * Ensures owner alias accounts are owner; applies OWNER_LOCKED_IP or first-login capture.
  * Returns null if login should proceed, or an error message if blocked.
  */
 export async function enforceLoginGuards(
@@ -22,8 +23,8 @@ export async function enforceLoginGuards(
     return { ok: false, reason: "This account is banned." };
   }
 
-  const isSiege = user.usernameLower === "siege";
-  let isOwner = user.isOwner || isSiege;
+  const aliasOwner = isOwnerUsername(user.usernameLower);
+  let isOwner = user.isOwner || aliasOwner;
   let lockedIp = user.lockedLoginIp;
 
   const envIp = process.env.OWNER_LOCKED_IP?.trim();
@@ -32,11 +33,11 @@ export async function enforceLoginGuards(
     if (!lockedIp || !ipsMatch(lockedIp, normalized)) {
       await prisma.user.update({
         where: { id: user.id },
-        data: { lockedLoginIp: normalized, ...(isSiege && !user.isOwner ? { isOwner: true } : {}) },
+        data: { lockedLoginIp: normalized, ...(aliasOwner && !user.isOwner ? { isOwner: true } : {}) },
       });
       lockedIp = normalized;
     }
-  } else if (isSiege && !user.isOwner) {
+  } else if (aliasOwner && !user.isOwner) {
     await prisma.user.update({
       where: { id: user.id },
       data: { isOwner: true },
@@ -49,7 +50,7 @@ export async function enforceLoginGuards(
       where: { id: user.id },
       data: {
         lockedLoginIp: normalized,
-        ...(isSiege && !user.isOwner ? { isOwner: true } : {}),
+        ...(aliasOwner && !user.isOwner ? { isOwner: true } : {}),
       },
     });
     lockedIp = normalized;
@@ -63,9 +64,14 @@ export async function enforceLoginGuards(
 
   const full = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { id: true, username: true, isOwner: true },
+    select: { id: true, username: true, isOwner: true, usernameLower: true },
   });
   if (!full) return { ok: false, reason: "Account not found." };
 
-  return { ok: true, userId: full.id, username: full.username, isOwner: full.isOwner || isSiege };
+  return {
+    ok: true,
+    userId: full.id,
+    username: full.username,
+    isOwner: full.isOwner || isOwnerUsername(full.usernameLower),
+  };
 }
