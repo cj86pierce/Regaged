@@ -28,6 +28,15 @@ type PlayerRow = {
   banned: boolean;
 };
 
+type SupportRow = {
+  id: string;
+  name: string;
+  body: string;
+  username: string | null;
+  createdAt: string;
+  readAt: string | null;
+};
+
 function recencyLabel(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(ms / 60000);
@@ -62,6 +71,19 @@ export default function OwnerPanel() {
   const [total, setTotal] = useState(0);
   const [listErr, setListErr] = useState<string | null>(null);
   const [listBusy, setListBusy] = useState(false);
+
+  const [support, setSupport] = useState<SupportRow[]>([]);
+  const [supportUnread, setSupportUnread] = useState(0);
+  const [supportErr, setSupportErr] = useState<string | null>(null);
+  const [supportBusy, setSupportBusy] = useState(false);
+
+  const [blastSubject, setBlastSubject] = useState("Regaged beta testers needed");
+  const [blastBody, setBlastBody] = useState(
+    "Hey!\n\nWe're looking for beta testers on Regaged. Jump in, play the games, and tell us what breaks.\n\nThanks,\nRegaged"
+  );
+  const [blastRecipients, setBlastRecipients] = useState<number | null>(null);
+  const [blastBusy, setBlastBusy] = useState(false);
+  const [blastMsg, setBlastMsg] = useState<string | null>(null);
 
   const loadOnline = useCallback(async () => {
     if (typeof document !== "undefined" && document.hidden) return;
@@ -111,9 +133,49 @@ export default function OwnerPanel() {
     setListBusy(false);
   }, []);
 
+  const loadSupport = useCallback(async () => {
+    if (typeof document !== "undefined" && document.hidden) return;
+    setSupportBusy(true);
+    try {
+      const res = await fetch("/api/owner/support", {
+        credentials: "include",
+        cache: "no-store",
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setSupportErr(json?.error ?? "Failed to load support");
+        setSupportBusy(false);
+        return;
+      }
+      setSupportErr(null);
+      setSupport(json.messages ?? []);
+      setSupportUnread(typeof json.unread === "number" ? json.unread : 0);
+    } catch {
+      setSupportErr("Failed to load support");
+    }
+    setSupportBusy(false);
+  }, []);
+
+  const loadBlastCount = useCallback(async () => {
+    try {
+      const res = await fetch("/api/owner/broadcast", {
+        credentials: "include",
+        cache: "no-store",
+      });
+      const json = await res.json().catch(() => ({}));
+      if (res.ok && typeof json.verifiedRecipients === "number") {
+        setBlastRecipients(json.verifiedRecipients);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   useEffect(() => {
     void loadOnline();
-  }, [loadOnline]);
+    void loadSupport();
+    void loadBlastCount();
+  }, [loadOnline, loadSupport, loadBlastCount]);
 
   useEffect(() => {
     void loadPlayers(page);
@@ -123,11 +185,13 @@ export default function OwnerPanel() {
     const id = window.setInterval(() => {
       void loadOnline();
       void loadPlayers(page);
+      void loadSupport();
     }, 15000);
     const onVis = () => {
       if (!document.hidden) {
         void loadOnline();
         void loadPlayers(page);
+        void loadSupport();
       }
     };
     document.addEventListener("visibilitychange", onVis);
@@ -135,7 +199,7 @@ export default function OwnerPanel() {
       window.clearInterval(id);
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, [loadOnline, loadPlayers, page]);
+  }, [loadOnline, loadPlayers, loadSupport, page]);
 
   async function call(action: string, extra: Record<string, unknown> = {}, nameOverride?: string) {
     setBusy(true);
@@ -165,8 +229,186 @@ export default function OwnerPanel() {
     void loadPlayers(page);
   }
 
+  async function supportAction(id: string, action: "read" | "unread" | "delete") {
+    const res = await fetch("/api/owner/support", {
+      method: "POST",
+      credentials: "include",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id, action }),
+    });
+    if (res.ok) void loadSupport();
+  }
+
+  async function sendBlast() {
+    if (!confirm(`Send this email to ${blastRecipients ?? "all"} verified users?`)) return;
+    setBlastBusy(true);
+    setBlastMsg(null);
+    const res = await fetch("/api/owner/broadcast", {
+      method: "POST",
+      credentials: "include",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ subject: blastSubject, text: blastBody }),
+    });
+    const json = await res.json().catch(() => ({}));
+    setBlastBusy(false);
+    if (!res.ok) {
+      setBlastMsg(json?.error ?? "Broadcast failed");
+      return;
+    }
+    setBlastMsg(`Sent to ${json.sent} recipient${json.sent === 1 ? "" : "s"}${json.failed ? ` (${json.failed} failed)` : ""}.`);
+  }
+
   return (
     <div style={{ display: "grid", gap: 16 }}>
+      <section
+        style={{
+          border: "1px solid var(--border)",
+          borderRadius: 6,
+          padding: 14,
+          background: "var(--bg-card)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "baseline",
+            gap: 8,
+            marginBottom: 10,
+          }}
+        >
+          <div style={{ fontWeight: 900 }}>
+            Support inbox{" "}
+            <span style={{ fontWeight: 700, color: "var(--text-muted)" }}>
+              ({support.length}
+              {supportUnread ? ` · ${supportUnread} unread` : ""})
+            </span>
+          </div>
+          <button
+            type="button"
+            disabled={supportBusy}
+            onClick={() => void loadSupport()}
+            style={{ fontSize: 12 }}
+          >
+            Refresh
+          </button>
+        </div>
+        <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 8 }}>
+          From /contact — name + message
+        </div>
+        {supportErr ? <div style={{ color: "var(--text-error)", fontSize: 13 }}>{supportErr}</div> : null}
+        {!supportErr && !support.length ? (
+          <div style={{ fontSize: 13, opacity: 0.7 }}>No messages yet.</div>
+        ) : null}
+        <div style={{ display: "grid", gap: 8, maxHeight: 360, overflowY: "auto" }}>
+          {support.map((m) => (
+            <div
+              key={m.id}
+              style={{
+                border: "1px solid var(--border)",
+                borderRadius: 4,
+                padding: 10,
+                background: m.readAt ? "var(--bg-input)" : "rgba(102,187,106,0.12)",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: 8,
+                  flexWrap: "wrap",
+                  marginBottom: 6,
+                }}
+              >
+                <div style={{ fontWeight: 900 }}>
+                  {m.name}
+                  {m.username ? (
+                    <span style={{ fontWeight: 700, color: "var(--text-muted)" }}>
+                      {" "}
+                      · @{m.username}
+                    </span>
+                  ) : null}
+                </div>
+                <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                  {new Date(m.createdAt).toLocaleString()}
+                </div>
+              </div>
+              <div style={{ whiteSpace: "pre-wrap", fontSize: 13, lineHeight: 1.4 }}>{m.body}</div>
+              <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                {!m.readAt ? (
+                  <button type="button" style={{ fontSize: 12 }} onClick={() => void supportAction(m.id, "read")}>
+                    Mark read
+                  </button>
+                ) : (
+                  <button type="button" style={{ fontSize: 12 }} onClick={() => void supportAction(m.id, "unread")}>
+                    Mark unread
+                  </button>
+                )}
+                <button
+                  type="button"
+                  style={{ fontSize: 12, color: "#b91c1c" }}
+                  onClick={() => {
+                    if (confirm("Delete this message?")) void supportAction(m.id, "delete");
+                  }}
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section
+        style={{
+          border: "1px solid var(--border)",
+          borderRadius: 6,
+          padding: 14,
+          background: "var(--bg-card)",
+          display: "grid",
+          gap: 10,
+        }}
+      >
+        <div style={{ fontWeight: 900 }}>
+          Email verified users{" "}
+          <span style={{ fontWeight: 700, color: "var(--text-muted)" }}>
+            ({blastRecipients ?? "…"} recipients)
+          </span>
+        </div>
+        <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
+          Sends via SendGrid to everyone with a verified email (not bots). Use for beta tester calls,
+          etc.
+        </div>
+        <label style={{ display: "grid", gap: 4, fontSize: 13, fontWeight: 800 }}>
+          Subject
+          <input
+            value={blastSubject}
+            onChange={(e) => setBlastSubject(e.target.value)}
+            maxLength={200}
+            style={{ padding: "8px 10px", font: "inherit", fontWeight: 600 }}
+          />
+        </label>
+        <label style={{ display: "grid", gap: 4, fontSize: 13, fontWeight: 800 }}>
+          Message
+          <textarea
+            value={blastBody}
+            onChange={(e) => setBlastBody(e.target.value)}
+            rows={7}
+            maxLength={8000}
+            style={{ padding: "8px 10px", font: "inherit", fontWeight: 500, resize: "vertical" }}
+          />
+        </label>
+        <button
+          type="button"
+          disabled={blastBusy || !blastSubject.trim() || !blastBody.trim()}
+          onClick={() => void sendBlast()}
+          style={{ justifySelf: "start", fontWeight: 1000 }}
+        >
+          {blastBusy ? "Sending…" : "Send to all verified"}
+        </button>
+        {blastMsg ? <div style={{ fontSize: 13, fontWeight: 800 }}>{blastMsg}</div> : null}
+      </section>
+
       <section
         style={{
           border: "1px solid var(--border)",

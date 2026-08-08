@@ -27,8 +27,8 @@ export default async function OwnerPage() {
     <main style={{ padding: 16, maxWidth: 720 }}>
       <h1 style={{ marginTop: 0 }}>Owner panel</h1>
       <p style={{ color: "var(--text-muted)", marginTop: 0 }}>
-        See who’s online, browse players by recency, then look up to edit currencies, rename, warn, or
-        ban.
+        Support inbox, email verified users, see who’s online, and look up players to edit currencies,
+        rename, warn, or ban.
       </p>
       <OwnerPanel />
     </main>

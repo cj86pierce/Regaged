@@ -766,3 +766,16 @@ model CastingVote {
   @@index([gameId, dayNumber])
   @@index([gameId, dayNumber, targetUserId])
 }
+
+/** Contact / support inbox (name + message; shown in owner panel). */
+model SupportMessage {
+  id        String    @id @default(cuid())
+  name      String
+  body      String
+  userId    String?
+  createdAt DateTime  @default(now())
+  readAt    DateTime?
+
+  @@index([createdAt])
+  @@index([readAt])
+}
