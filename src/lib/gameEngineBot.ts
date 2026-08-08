@@ -6,7 +6,6 @@ import { assignFastingPov } from "@/lib/fastingPov";
 import { assignFrookiesHoh } from "@/lib/frookiesHoh";
 import { assignRookiesHoh } from "@/lib/rookiesHoh";
 import { BOT_ROUND_MS } from "@/lib/fastingTiming";
-import { notifyGameStarted } from "@/lib/email/notifyGameStarted";
 
 const FASTING_BOT_MAX = 15;
 const CASTING_BOT_MAX = 20;
@@ -73,7 +72,7 @@ export async function tryStartFastingStyleBotGame(
     } catch {}
   }
 
-  void notifyGameStarted(gameId);
+  void import("@/lib/email/notifyGameStarted").then((m) => m.notifyGameStarted(gameId));
   return { ok: true };
 }
 
@@ -102,6 +101,6 @@ export async function tryStartCastingBotGame(gameId: string) {
     },
   });
 
-  void notifyGameStarted(gameId);
+  void import("@/lib/email/notifyGameStarted").then((m) => m.notifyGameStarted(gameId));
   return { ok: true };
 }
