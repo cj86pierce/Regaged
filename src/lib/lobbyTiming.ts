@@ -10,7 +10,7 @@ import {
 import { tryStartSurvivorGame } from "@/lib/survivor/start";
 import { SURVIVOR_MAX } from "@/lib/survivor/timing";
 
-/** All lobbies stay open this long before auto-start / bot-fill. */
+/** Live lobbies wait this long, then empty seats fill with bots. */
 export const LOBBY_WAIT_MS = 15 * 60 * 1000;
 
 /** @deprecated use LOBBY_WAIT_MS */
@@ -73,8 +73,8 @@ async function startByType(gameId: string, gameType: string) {
 }
 
 /**
- * Live lobbies: wait 15m from createdAt, then start when full.
- * Merge Survivor skips the wait (already cast).
+ * Live lobbies: start immediately if human-full; otherwise wait 15m then
+ * fill empty seats with bots and start. Merge Survivor skips the wait.
  */
 export async function maybeStartLiveLobby(gameId: string) {
   const game = await prisma.game.findUnique({
@@ -96,18 +96,28 @@ export async function maybeStartLiveLobby(gameId: string) {
     return { ok: true as const, started: true as const, merge: true as const };
   }
 
+  const max = lobbyCap(game.gameType, game.survivorIsMerge);
+  const count = await prisma.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
+
+  // Full of humans → start now (no bot wait).
+  if (count >= max) {
+    await startByType(gameId, game.gameType);
+    return { ok: true as const, started: true as const };
+  }
+
   const readyAt = lobbyReadyAtFromCreated(game.createdAt);
   if (Date.now() < readyAt.getTime()) {
     return { ok: true as const, waiting: true as const, readyAt: readyAt.toISOString() };
   }
 
+  await fillGameWithBots(gameId, max);
   await startByType(gameId, game.gameType);
-  return { ok: true as const, attempted: true as const };
+  return { ok: true as const, filled: true as const };
 }
 
 /**
- * Bot lobbies: wait 15m then fill empty seats and start.
- * Human-full lobbies may start early. Merge skips the wait.
+ * Practice bot lobbies: fill empty seats immediately and start.
+ * Merge skips pad-to-max.
  */
 export async function maybeFillAndStartBotLobby(gameId: string) {
   const game = await prisma.game.findUnique({
@@ -116,7 +126,6 @@ export async function maybeFillAndStartBotLobby(gameId: string) {
       id: true,
       gameType: true,
       state: true,
-      createdAt: true,
       survivorIsMerge: true,
     },
   });
@@ -130,17 +139,7 @@ export async function maybeFillAndStartBotLobby(gameId: string) {
   }
 
   const max = lobbyCap(game.gameType, game.survivorIsMerge);
-  const humanFull =
-    (await prisma.gamePlayer.count({ where: { gameId, status: "ACTIVE" } })) >= max;
-
-  if (!humanFull) {
-    const readyAt = lobbyReadyAtFromCreated(game.createdAt);
-    if (Date.now() < readyAt.getTime()) {
-      return { ok: true as const, waiting: true as const, fillAt: readyAt.toISOString() };
-    }
-    await fillGameWithBots(gameId, max);
-  }
-
+  await fillGameWithBots(gameId, max);
   await startByType(gameId, game.gameType);
   return { ok: true as const, filled: true as const };
 }

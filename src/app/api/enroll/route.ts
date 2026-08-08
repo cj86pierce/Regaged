@@ -234,8 +234,8 @@ export async function POST(req: Request) {
     }
   }
 
-  // All lobbies wait 15 minutes before auto-start (merge Survivor starts ASAP).
-  // Bot modes fill empty seats after the wait; live modes start when full after the wait.
+  // Practice *_BOT: fill + start immediately.
+  // Live modes: start if full now; otherwise wait 15m then bot-fill empty seats.
   if (isBotMode) {
     await maybeFillAndStartBotLobby(lobby.id);
   } else {

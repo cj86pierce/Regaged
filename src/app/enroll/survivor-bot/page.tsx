@@ -26,7 +26,7 @@ export default function EnrollSurvivorBotPage() {
     <main style={{ padding: 12 }}>
       <h1 style={{ marginTop: 0 }}>Survivor (Bot)</h1>
       <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 12 }}>
-        Same Survivor rules on ~2 minute phases. Lobby waits 15 minutes for players, then bots fill empty seats. Practice — no payouts.
+        Same Survivor rules on ~2 minute phases. Bots fill instantly. Practice — no payouts.
       </div>
       <button
         onClick={enroll}

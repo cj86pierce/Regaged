@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/getCurrentUserId";
 import { touchUser } from "@/lib/touchUser";
 import { getSlotDesignsForUserIds, type SlotDesignsMap } from "@/lib/avatarSlotDesigns";
-import { lobbyReadyAtFromCreated } from "@/lib/lobbyTiming";
+import { isLiveGameType, lobbyReadyAtFromCreated } from "@/lib/lobbyTiming";
 
 const presenceTouchAt = new Map<string, number>();
 const PRESENCE_TOUCH_EVERY_MS = 60_000;
@@ -252,16 +252,21 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
           ? 10
           : 20
         : 15;
+  // Bot-fill countdown only on live lobbies (practice *_BOT fills instantly).
+  const showBotFillTimer =
+    game.state === "ENROLLING" &&
+    isLiveGameType(game.gameType) &&
+    !game.survivorIsMerge;
+
   const lobby =
     game.state === "ENROLLING"
       ? {
           current: activeCount,
           needed: Math.max(0, lobbyCap - activeCount),
-          lobbyReadyAt: !game.survivorIsMerge
+          botsFillAt: showBotFillTimer
             ? lobbyReadyAtFromCreated(game.createdAt).toISOString()
             : null,
-          /** @deprecated use lobbyReadyAt */
-          botsFillAt: !game.survivorIsMerge
+          lobbyReadyAt: showBotFillTimer
             ? lobbyReadyAtFromCreated(game.createdAt).toISOString()
             : null,
         }
