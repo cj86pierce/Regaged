@@ -66,13 +66,7 @@ export async function applyCastingsPeriodicDecay(options: {
       const damage = Math.max(0, totalDecayNow - totalDecayAlready);
 
       if (damage <= 0) {
-        // Still record that we checked, so a later activity reset is tracked correctly.
-        if (!lastDecayAt || lastDecayAt.getTime() !== now.getTime()) {
-          await prisma.gamePlayer.update({
-            where: { gameId_userId: { gameId: g.id, userId: p.userId } },
-            data: { castingLastDecayAt: now },
-          });
-        }
+        // Do not write every tick — that flooded the DB with no-op updates.
         continue;
       }
 

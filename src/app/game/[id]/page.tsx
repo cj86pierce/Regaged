@@ -191,7 +191,7 @@ function BotFillTimer(props: { botsFillAt: string; onReady: () => void }) {
   );
 }
 
-const POLL_MS = 5000;
+const POLL_MS = 12_000;
 
 export default function GamePage({ params }: { params: { id: string } }) {
   const gameId = params.id;

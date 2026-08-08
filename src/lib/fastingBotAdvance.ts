@@ -376,7 +376,28 @@ export async function advanceFastingBotIfDue(gameId: string) {
         });
         return { ok: true, fixed: "nominees_exist_moved_to_vote" as const };
       }
+      const before = await prisma.game.findUnique({
+        where: { id: gameId },
+        select: { state: true, stateEndsAt: true, roundNumber: true },
+      });
       await resolveFastingNominations(gameId);
+      const after = await prisma.game.findUnique({
+        where: { id: gameId },
+        select: { state: true, stateEndsAt: true, roundNumber: true },
+      });
+      if (
+        before &&
+        after &&
+        before.state === after.state &&
+        before.roundNumber === after.roundNumber
+      ) {
+        // Stuck (e.g. <2 eligible) — push timer so we don't re-run every tick
+        await prisma.game.update({
+          where: { id: gameId },
+          data: { stateEndsAt: new Date(Date.now() + BOT_ROUND_MS) },
+        });
+        return { ok: true, skipped: true as const, reason: "noms_unchanged" as const };
+      }
       return { ok: true, advanced: "noms" as const };
     }
 
@@ -402,7 +423,27 @@ export async function advanceFastingBotIfDue(gameId: string) {
         } catch {}
         return { ok: true, fixed: "evicted_exists_forced_next_round" as const };
       }
+      const beforeVote = await prisma.game.findUnique({
+        where: { id: gameId },
+        select: { state: true, roundNumber: true },
+      });
       await resolveFastingEviction(gameId, { skipLock: true });
+      const afterVote = await prisma.game.findUnique({
+        where: { id: gameId },
+        select: { state: true, roundNumber: true },
+      });
+      if (
+        beforeVote &&
+        afterVote &&
+        beforeVote.state === afterVote.state &&
+        beforeVote.roundNumber === afterVote.roundNumber
+      ) {
+        await prisma.game.update({
+          where: { id: gameId },
+          data: { stateEndsAt: new Date(Date.now() + BOT_ROUND_MS) },
+        });
+        return { ok: true, skipped: true as const, reason: "vote_unchanged" as const };
+      }
       return { ok: true, advanced: "vote" as const };
     }
 
