@@ -217,7 +217,7 @@ export default async function PublicProfilePage({
     joinedAt: user.createdAt.toISOString(),
     karma: user.karma,
     hofRank,
-    isOwner: user.isOwner || isOwnerUsername(user.usernameLower);
+    isOwner: user.isOwner || isOwnerUsername(user.usernameLower),
     isWarned: !!user.warnedAt,
     isBanned: !!user.bannedAt,
     tMoney: user.tMoney,
