@@ -19,7 +19,7 @@ export default async function ColorLevelsPage() {
 
   const me = await prisma.user.findUnique({
     where: { id: userId },
-    select: { username: true, karma: true, tMoney: true, pMoney: true },
+    select: { username: true, karma: true, tMoney: true },
   });
   if (!me) return <main style={{ padding: 12 }}><p>User not found.</p></main>;
 

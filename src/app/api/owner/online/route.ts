@@ -11,7 +11,6 @@ type Row = {
   lastSeenAt: Date;
   karma: number;
   tMoney: number;
-  pMoney: number;
   isOwner: boolean;
   warnedAt: Date | null;
   bannedAt: Date | null;
@@ -38,7 +37,6 @@ export async function GET(req: Request) {
         lastSeenAt: true,
         karma: true,
         tMoney: true,
-        pMoney: true,
         isOwner: true,
         warnedAt: true,
         bannedAt: true,
@@ -62,7 +60,6 @@ export async function GET(req: Request) {
             lastSeenAt: true,
             karma: true,
             tMoney: true,
-            pMoney: true,
             isOwner: true,
             warnedAt: true,
             bannedAt: true,
@@ -96,7 +93,6 @@ export async function GET(req: Request) {
       lastSeenAt: u.activeAt.toISOString(),
       karma: u.karma,
       tMoney: u.tMoney,
-      pMoney: u.pMoney,
       isOwner: u.isOwner,
       warned: !!u.warnedAt,
       banned: !!u.bannedAt,

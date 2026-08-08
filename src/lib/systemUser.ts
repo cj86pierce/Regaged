@@ -21,7 +21,6 @@ export async function getSystemUserId(): Promise<string> {
       passwordHash,
       karma: 0,
       tMoney: 0,
-    pMoney: 0,
     },
     select: { id: true },
   });

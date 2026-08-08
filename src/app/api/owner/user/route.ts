@@ -39,7 +39,6 @@ export async function POST(req: Request) {
       username: true,
       karma: true,
       tMoney: true,
-      pMoney: true,
       isOwner: true,
       bannedAt: true,
       banReason: true,
@@ -57,7 +56,7 @@ export async function POST(req: Request) {
   }
 
   if (action === "set_currencies") {
-    const data: { karma?: number; tMoney?: number; pMoney?: number } = {};
+    const data: { karma?: number; tMoney?: number } = {};
     if (body.karma !== undefined) {
       const v = clampInt(body.karma, 0, 1_000_000_000);
       if (v == null) return NextResponse.json({ error: "Invalid karma" }, { status: 400 });
@@ -67,11 +66,6 @@ export async function POST(req: Request) {
       const v = clampInt(body.tMoney, 0, 1_000_000_000);
       if (v == null) return NextResponse.json({ error: "Invalid tMoney" }, { status: 400 });
       data.tMoney = v;
-    }
-    if (body.pMoney !== undefined) {
-      const v = clampInt(body.pMoney, 0, 1_000_000_000);
-      if (v == null) return NextResponse.json({ error: "Invalid pMoney" }, { status: 400 });
-      data.pMoney = v;
     }
     if (Object.keys(data).length === 0) {
       return NextResponse.json({ error: "No currency fields" }, { status: 400 });
@@ -84,7 +78,6 @@ export async function POST(req: Request) {
         username: true,
         karma: true,
         tMoney: true,
-        pMoney: true,
         isOwner: true,
         bannedAt: true,
         banReason: true,
@@ -123,7 +116,6 @@ export async function POST(req: Request) {
         username: true,
         karma: true,
         tMoney: true,
-        pMoney: true,
         isOwner: true,
         bannedAt: true,
         banReason: true,
@@ -149,7 +141,6 @@ export async function POST(req: Request) {
         username: true,
         karma: true,
         tMoney: true,
-        pMoney: true,
         isOwner: true,
         bannedAt: true,
         banReason: true,
@@ -169,7 +160,6 @@ export async function POST(req: Request) {
         username: true,
         karma: true,
         tMoney: true,
-        pMoney: true,
         isOwner: true,
         bannedAt: true,
         banReason: true,
@@ -196,7 +186,6 @@ export async function POST(req: Request) {
         username: true,
         karma: true,
         tMoney: true,
-        pMoney: true,
         isOwner: true,
         bannedAt: true,
         banReason: true,
@@ -216,7 +205,6 @@ export async function POST(req: Request) {
         username: true,
         karma: true,
         tMoney: true,
-        pMoney: true,
         isOwner: true,
         bannedAt: true,
         banReason: true,
@@ -235,7 +223,6 @@ function serialize(u: {
   username: string;
   karma: number;
   tMoney: number;
-  pMoney: number;
   isOwner: boolean;
   bannedAt: Date | null;
   banReason: string | null;
@@ -247,7 +234,6 @@ function serialize(u: {
     username: u.username,
     karma: u.karma,
     tMoney: u.tMoney,
-    pMoney: u.pMoney,
     isOwner: u.isOwner,
     banned: !!u.bannedAt,
     banReason: u.banReason,

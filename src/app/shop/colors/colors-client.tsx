@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 
-type Me = { username: string; karma: number; tMoney: number; pMoney: number };
+type Me = { username: string; karma: number; tMoney: number };
 
 type ColorLevel = {
   id: number;

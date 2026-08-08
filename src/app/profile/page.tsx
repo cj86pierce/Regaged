@@ -39,7 +39,6 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
       username: true,
       karma: true,
       tMoney: true,
-      pMoney: true,
       bio: true, // ✅
       isOwner: true,
       warnedAt: true,
@@ -193,7 +192,6 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
     isBanned: !!user.bannedAt,
     emailVerified: !!user.emailVerifiedAt,
     tMoney: user.tMoney,
-    pMoney: user.pMoney,
     bio: user.bio ?? "", // ✅
     colorName: highestColor?.name ?? "White",
     colorAnimated: highestColor?.isAnimated ?? false,

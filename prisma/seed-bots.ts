@@ -33,7 +33,6 @@ async function main() {
         passwordHash,
         karma: 0,
         tMoney: 0,
-        pMoney: 0,
       },
     });
 

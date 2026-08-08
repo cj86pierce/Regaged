@@ -7,7 +7,6 @@ type OwnerUser = {
   username: string;
   karma: number;
   tMoney: number;
-  pMoney: number;
   isOwner: boolean;
   banned: boolean;
   banReason: string | null;
@@ -22,7 +21,6 @@ type PlayerRow = {
   lastSeenAt: string;
   karma: number;
   tMoney: number;
-  pMoney: number;
   isOwner: boolean;
   warned: boolean;
   banned: boolean;
@@ -64,7 +62,6 @@ export default function OwnerPanel() {
 
   const [karma, setKarma] = useState("");
   const [tMoney, setTMoney] = useState("");
-  const [pMoney, setPMoney] = useState("");
   const [newUsername, setNewUsername] = useState("");
   const [banReason, setBanReason] = useState("");
 
@@ -231,7 +228,6 @@ export default function OwnerPanel() {
       setUser(json.user);
       setKarma(String(json.user.karma));
       setTMoney(String(json.user.tMoney));
-      setPMoney(String(json.user.pMoney));
       setNewUsername(json.user.username);
       setUsername(json.user.username);
     }
@@ -697,10 +693,6 @@ export default function OwnerPanel() {
                 T${" "}
                 <input value={tMoney} onChange={(e) => setTMoney(e.target.value)} style={{ width: 90 }} />
               </label>
-              <label>
-                P${" "}
-                <input value={pMoney} onChange={(e) => setPMoney(e.target.value)} style={{ width: 90 }} />
-              </label>
               <button
                 type="button"
                 disabled={busy}
@@ -708,7 +700,6 @@ export default function OwnerPanel() {
                   void call("set_currencies", {
                     karma: Number(karma),
                     tMoney: Number(tMoney),
-                    pMoney: Number(pMoney),
                   })
                 }
               >

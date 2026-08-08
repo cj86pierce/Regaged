@@ -31,7 +31,6 @@ export type ProfileTabsData = {
   /** Own profile: show verify email CTA when unset */
   emailVerified?: boolean;
   tMoney: number;
-  pMoney: number;
   colorName: string;
   colorAnimated: boolean;
   lastSeenAt: string;
@@ -485,7 +484,6 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
               {data.isOwnProfile && (
                 <>
                   <StatLine label="Money:" value={data.tMoney} suffixText="R$" isCurrency />
-                  <StatLine label="Premium" value={data.pMoney} suffixText="P$" isCurrency />
                 </>
               )}
               <StatLine label="Played:" value={data.stats.gamesPlayed} suffixText="times" />

@@ -5,7 +5,7 @@ import { getCurrentUserIdFromHeaders } from "@/lib/getCurrentUserId";
 import { prisma } from "@/lib/prisma";
 
 export default async function HomePage() {
-  let me: { username: string; karma: number; tMoney: number; pMoney: number } | null = null;
+  let me: { username: string; karma: number; tMoney: number } | null = null;
   let activeGameId: string | null = null;
 
   try {
@@ -14,7 +14,7 @@ export default async function HomePage() {
     if (userId) {
       me = await prisma.user.findUnique({
         where: { id: userId },
-        select: { username: true, karma: true, tMoney: true, pMoney: true },
+        select: { username: true, karma: true, tMoney: true },
       }) ?? null;
 
       activeGameId =
@@ -80,9 +80,6 @@ export default async function HomePage() {
                   </div>
                   <div style={{ marginTop: 4 }}>
                     Karma: <b>{me.karma}</b> · R$: <b>{me.tMoney}</b>
-                  </div>
-                  <div>
-                    Premium <b>{me.pMoney}</b> P$
                   </div>
                   <div style={{ marginTop: 10, display: "flex", gap: 12, flexWrap: "wrap" }}>
                     <Link href="/profile" className="theme-link" style={{ fontSize: 13 }}>
