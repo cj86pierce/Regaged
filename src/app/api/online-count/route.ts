@@ -9,7 +9,11 @@ export async function GET() {
   const count = await prisma.user.count({
     where: {
       lastSeenAt: { gte: since },
-      NOT: { username: { startsWith: "Bot_" } },
+      // Same exclusions as /api/owner/online so badge and owner panel match.
+      NOT: [
+        { username: { startsWith: "Bot_" } },
+        { email: { endsWith: "@regaged.bot" } },
+      ],
     },
   });
   return NextResponse.json({ count });

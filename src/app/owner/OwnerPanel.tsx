@@ -51,12 +51,40 @@ export default function OwnerPanel() {
   const [newUsername, setNewUsername] = useState("");
   const [banReason, setBanReason] = useState("");
 
+  const [online, setOnline] = useState<PlayerRow[]>([]);
+  const [onlineCount, setOnlineCount] = useState(0);
+  const [onlineErr, setOnlineErr] = useState<string | null>(null);
+  const [onlineBusy, setOnlineBusy] = useState(false);
+
   const [players, setPlayers] = useState<PlayerRow[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [listErr, setListErr] = useState<string | null>(null);
   const [listBusy, setListBusy] = useState(false);
+
+  const loadOnline = useCallback(async () => {
+    if (typeof document !== "undefined" && document.hidden) return;
+    setOnlineBusy(true);
+    try {
+      const res = await fetch("/api/owner/online", {
+        credentials: "include",
+        cache: "no-store",
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setOnlineErr(json?.error ?? "Failed to load online");
+        setOnlineBusy(false);
+        return;
+      }
+      setOnlineErr(null);
+      setOnline(json.online ?? []);
+      setOnlineCount(typeof json.count === "number" ? json.count : (json.online ?? []).length);
+    } catch {
+      setOnlineErr("Failed to load online");
+    }
+    setOnlineBusy(false);
+  }, []);
 
   const loadPlayers = useCallback(async (p: number) => {
     if (typeof document !== "undefined" && document.hidden) return;
@@ -84,20 +112,30 @@ export default function OwnerPanel() {
   }, []);
 
   useEffect(() => {
+    void loadOnline();
+  }, [loadOnline]);
+
+  useEffect(() => {
     void loadPlayers(page);
   }, [loadPlayers, page]);
 
   useEffect(() => {
-    const id = window.setInterval(() => void loadPlayers(page), 20000);
+    const id = window.setInterval(() => {
+      void loadOnline();
+      void loadPlayers(page);
+    }, 15000);
     const onVis = () => {
-      if (!document.hidden) void loadPlayers(page);
+      if (!document.hidden) {
+        void loadOnline();
+        void loadPlayers(page);
+      }
     };
     document.addEventListener("visibilitychange", onVis);
     return () => {
       window.clearInterval(id);
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, [loadPlayers, page]);
+  }, [loadOnline, loadPlayers, page]);
 
   async function call(action: string, extra: Record<string, unknown> = {}, nameOverride?: string) {
     setBusy(true);
@@ -123,6 +161,7 @@ export default function OwnerPanel() {
       setUsername(json.user.username);
     }
     setMsg(action === "lookup" ? "Loaded." : "Done.");
+    void loadOnline();
     void loadPlayers(page);
   }
 
@@ -146,7 +185,80 @@ export default function OwnerPanel() {
           }}
         >
           <div style={{ fontWeight: 900 }}>
-            Players by recency{" "}
+            Online now{" "}
+            <span style={{ fontWeight: 700, color: "var(--text-muted)" }}>({onlineCount})</span>
+          </div>
+          <button
+            type="button"
+            disabled={onlineBusy}
+            onClick={() => void loadOnline()}
+            style={{ fontSize: 12 }}
+          >
+            Refresh
+          </button>
+        </div>
+        <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 8 }}>
+          Same 5-minute window as the site “online” badge · click to look up
+        </div>
+        {onlineErr ? <div style={{ color: "var(--text-error)", fontSize: 13 }}>{onlineErr}</div> : null}
+        {!onlineErr && !online.length ? (
+          <div style={{ fontSize: 13, opacity: 0.7 }}>Nobody online right now.</div>
+        ) : null}
+        <div style={{ display: "grid", gap: 4 }}>
+          {online.map((o) => (
+            <button
+              key={o.id}
+              type="button"
+              onClick={() => {
+                setUsername(o.username);
+                void call("lookup", {}, o.username);
+              }}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                gap: 10,
+                textAlign: "left",
+                padding: "6px 8px",
+                borderRadius: 4,
+                border: "1px solid var(--border)",
+                background: "var(--bg-input)",
+                cursor: "pointer",
+                font: "inherit",
+              }}
+            >
+              <span style={{ fontWeight: 800 }}>
+                {o.username}
+                {o.isOwner ? " · Owner" : ""}
+                {o.warned ? " · Warned" : ""}
+                {o.banned ? " · Banned" : ""}
+              </span>
+              <span style={{ fontSize: 12, color: "var(--text-muted)", flexShrink: 0 }}>
+                {recencyLabel(o.lastSeenAt)} · {o.karma}k · T${o.tMoney}
+              </span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section
+        style={{
+          border: "1px solid var(--border)",
+          borderRadius: 6,
+          padding: 14,
+          background: "var(--bg-card)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "baseline",
+            gap: 8,
+            marginBottom: 10,
+          }}
+        >
+          <div style={{ fontWeight: 900 }}>
+            All players by recency{" "}
             <span style={{ fontWeight: 700, color: "var(--text-muted)" }}>({total})</span>
           </div>
           <button type="button" disabled={listBusy} onClick={() => void loadPlayers(page)} style={{ fontSize: 12 }}>
