@@ -101,12 +101,18 @@ export async function maybeSpawnCastingsDrops(gameId: string) {
   }
 
   if (g.gameType === "CASTING") {
-    if (g.castingLastAppleHourKey !== hk && Math.random() < 0.55) {
+    // At most one public drop per UTC hour (was ~2/hour when both gates could fire).
+    // Retry within the hour until it lands, then stamp both keys so a second can't spawn.
+    const alreadyThisHour = g.castingLastAppleHourKey === hk || g.castingLastKeyHourKey === hk;
+    if (alreadyThisHour) return;
+
+    // ~35% per minute attempt → usually lands once in the hour, but not instantly every hour.
+    if (Math.random() < 0.35) {
       await spawnNormalDrop(gameId, dayNum);
-      await prisma.game.update({ where: { id: gameId }, data: { castingLastAppleHourKey: hk } });
-    } else if (g.castingLastKeyHourKey !== hk && Math.random() < 0.25) {
-      await spawnNormalDrop(gameId, dayNum);
-      await prisma.game.update({ where: { id: gameId }, data: { castingLastKeyHourKey: hk } });
+      await prisma.game.update({
+        where: { id: gameId },
+        data: { castingLastAppleHourKey: hk, castingLastKeyHourKey: hk },
+      });
     }
   }
 }

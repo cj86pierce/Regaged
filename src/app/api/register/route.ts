@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { checkBlockedContent } from "@/lib/contentFilter";
 import { isReservedUsername, reservedUsernameError } from "@/lib/usernames";
+import { maybeAlertSimilarUsernames } from "@/lib/similarUsernames";
 
 function okJson(data: any) {
   return NextResponse.json(data);
@@ -55,8 +56,13 @@ export async function POST(req: Request) {
         usernameLower,
         passwordHash,
       },
-      select: { id: true, createdAt: true },
+      select: { id: true, username: true, usernameLower: true, createdAt: true },
     });
+    try {
+      await maybeAlertSimilarUsernames(user);
+    } catch (e) {
+      console.error("similar username alert failed", e);
+    }
     return okJson({ ok: true, userId: user.id, createdAt: user.createdAt.toISOString() });
   } catch (e) {
     console.error("Register: user.create failed", e);

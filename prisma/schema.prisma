@@ -841,3 +841,18 @@ model SupportMessage {
   @@index([createdAt])
   @@index([readAt])
 }
+
+/** Owner notice when two lookalike usernames exist (no auto-warn). */
+model SimilarNameAlert {
+  id         String    @id @default(cuid())
+  userAId    String
+  userBId    String
+  usernameA  String
+  usernameB  String
+  reason     String
+  createdAt  DateTime  @default(now())
+  dismissedAt DateTime?
+
+  @@unique([userAId, userBId])
+  @@index([dismissedAt, createdAt])
+}

@@ -37,6 +37,14 @@ type SupportRow = {
   readAt: string | null;
 };
 
+type NameAlertRow = {
+  id: string;
+  reason: string;
+  createdAt: string;
+  a: { id: string; username: string };
+  b: { id: string; username: string };
+};
+
 function recencyLabel(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(ms / 60000);
@@ -76,6 +84,10 @@ export default function OwnerPanel() {
   const [supportUnread, setSupportUnread] = useState(0);
   const [supportErr, setSupportErr] = useState<string | null>(null);
   const [supportBusy, setSupportBusy] = useState(false);
+
+  const [nameAlerts, setNameAlerts] = useState<NameAlertRow[]>([]);
+  const [nameAlertErr, setNameAlertErr] = useState<string | null>(null);
+  const [nameAlertBusy, setNameAlertBusy] = useState(false);
 
   const loadOnline = useCallback(async () => {
     if (typeof document !== "undefined" && document.hidden) return;
@@ -148,10 +160,31 @@ export default function OwnerPanel() {
     setSupportBusy(false);
   }, []);
 
+  const loadNameAlerts = useCallback(async () => {
+    setNameAlertBusy(true);
+    setNameAlertErr(null);
+    try {
+      const res = await fetch("/api/owner/name-alerts", { cache: "no-store", credentials: "include" });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setNameAlertErr(json?.error ?? "Failed to load name alerts");
+        setNameAlerts([]);
+      } else {
+        setNameAlerts(json.alerts ?? []);
+      }
+    } catch {
+      setNameAlertErr("Failed to load name alerts");
+      setNameAlerts([]);
+    } finally {
+      setNameAlertBusy(false);
+    }
+  }, []);
+
   useEffect(() => {
     void loadOnline();
     void loadSupport();
-  }, [loadOnline, loadSupport]);
+    void loadNameAlerts();
+  }, [loadOnline, loadSupport, loadNameAlerts]);
 
   useEffect(() => {
     void loadPlayers(page);
@@ -162,12 +195,14 @@ export default function OwnerPanel() {
       void loadOnline();
       void loadPlayers(page);
       void loadSupport();
+      void loadNameAlerts();
     }, 15000);
     const onVis = () => {
       if (!document.hidden) {
         void loadOnline();
         void loadPlayers(page);
         void loadSupport();
+        void loadNameAlerts();
       }
     };
     document.addEventListener("visibilitychange", onVis);
@@ -175,7 +210,7 @@ export default function OwnerPanel() {
       window.clearInterval(id);
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, [loadOnline, loadPlayers, loadSupport, page]);
+  }, [loadOnline, loadPlayers, loadSupport, loadNameAlerts, page]);
 
   async function call(action: string, extra: Record<string, unknown> = {}, nameOverride?: string) {
     setBusy(true);
@@ -215,8 +250,135 @@ export default function OwnerPanel() {
     if (res.ok) void loadSupport();
   }
 
+  async function dismissNameAlert(id: string) {
+    const res = await fetch("/api/owner/name-alerts", {
+      method: "POST",
+      credentials: "include",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action: "dismiss", id }),
+    });
+    if (res.ok) void loadNameAlerts();
+  }
+
+  async function scanNameAlerts() {
+    setNameAlertBusy(true);
+    setNameAlertErr(null);
+    try {
+      const res = await fetch("/api/owner/name-alerts", {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "scan" }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setNameAlertErr(json?.error ?? "Scan failed");
+      } else {
+        setMsg(`Lookalike scan done — ${json.created ?? 0} new alert(s).`);
+      }
+      await loadNameAlerts();
+    } catch {
+      setNameAlertErr("Scan failed");
+    } finally {
+      setNameAlertBusy(false);
+    }
+  }
+
   return (
     <div style={{ display: "grid", gap: 16 }}>
+      <section
+        style={{
+          border: "1px solid var(--border)",
+          borderRadius: 6,
+          padding: 14,
+          background: nameAlerts.length ? "rgba(201,162,39,0.10)" : "var(--bg-card)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "baseline",
+            gap: 8,
+            marginBottom: 10,
+            flexWrap: "wrap",
+          }}
+        >
+          <div style={{ fontWeight: 900 }}>
+            Lookalike names{" "}
+            <span style={{ fontWeight: 700, color: "var(--text-muted)" }}>({nameAlerts.length})</span>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button type="button" disabled={nameAlertBusy} onClick={() => void loadNameAlerts()} style={{ fontSize: 12 }}>
+              Refresh
+            </button>
+            <button type="button" disabled={nameAlertBusy} onClick={() => void scanNameAlerts()} style={{ fontSize: 12 }}>
+              Scan recent
+            </button>
+          </div>
+        </div>
+        <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 8 }}>
+          Alert only — does not warn. Compare web tokens (user ids) side by side; click a name to look them up.
+        </div>
+        {nameAlertErr ? <div style={{ color: "var(--text-error)", fontSize: 13 }}>{nameAlertErr}</div> : null}
+        {!nameAlertErr && !nameAlerts.length ? (
+          <div style={{ fontSize: 13, opacity: 0.7 }}>No lookalike alerts. Use “Scan recent” for existing accounts.</div>
+        ) : null}
+        <div style={{ display: "grid", gap: 8, maxHeight: 420, overflowY: "auto" }}>
+          {nameAlerts.map((a) => (
+            <div
+              key={a.id}
+              style={{
+                border: "1px solid var(--border)",
+                borderRadius: 4,
+                padding: 10,
+                background: "var(--bg-card)",
+                fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+                fontSize: 12,
+              }}
+            >
+              <div style={{ fontSize: 11, opacity: 0.7, marginBottom: 6 }}>
+                {a.reason} · {new Date(a.createdAt).toLocaleString()}
+              </div>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 10,
+                }}
+              >
+                {[a.a, a.b].map((side) => (
+                  <button
+                    key={side.id}
+                    type="button"
+                    onClick={() => void call("lookup", {}, side.username)}
+                    style={{
+                      textAlign: "left",
+                      border: "1px solid var(--border)",
+                      borderRadius: 4,
+                      padding: 8,
+                      background: "var(--bg-input)",
+                      cursor: "pointer",
+                      color: "inherit",
+                    }}
+                  >
+                    <div style={{ fontWeight: 900, fontFamily: "inherit", marginBottom: 4 }} className="theme-username">
+                      {side.username}
+                    </div>
+                    <div style={{ wordBreak: "break-all", opacity: 0.85 }}>{side.id}</div>
+                  </button>
+                ))}
+              </div>
+              <div style={{ marginTop: 8 }}>
+                <button type="button" style={{ fontSize: 12 }} onClick={() => void dismissNameAlert(a.id)}>
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
       <section
         style={{
           border: "1px solid var(--border)",

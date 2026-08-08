@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUserId } from "@/lib/getCurrentUserId";
 import { prisma } from "@/lib/prisma";
 import { isReservedUsername, reservedUsernameError } from "@/lib/usernames";
+import { maybeAlertSimilarUsernames } from "@/lib/similarUsernames";
 
 const YEAR_MS = 365 * 24 * 60 * 60 * 1000;
 
@@ -56,8 +57,14 @@ export async function POST(req: Request) {
       usernameLower: newLower,
       usernameChangedAt: new Date(),
     },
-    select: { username: true, usernameChangedAt: true },
+    select: { id: true, username: true, usernameLower: true, usernameChangedAt: true },
   });
+
+  try {
+    await maybeAlertSimilarUsernames(updated);
+  } catch (e) {
+    console.error("similar username alert failed", e);
+  }
 
   return NextResponse.json({
     ok: true,
