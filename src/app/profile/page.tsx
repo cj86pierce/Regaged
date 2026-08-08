@@ -11,18 +11,6 @@ import { sortProfileGames } from "@/lib/sortProfileGames";
 import { avatarConfigFromUser } from "@/lib/avatarConfigFromUser";
 import { getKarmaRank } from "@/lib/hof";
 import { isOwnerUsername } from "@/lib/usernames";
-import {
-  ACCESSORY_STYLES,
-  BODY_STYLES,
-  EYES_STYLES,
-  HAIR_STYLES,
-  MOUTH_STYLES,
-  SHIRT_STYLES,
-} from "@/lib/avatarStyles";
-
-function oneOf(v: string, allowed: readonly string[], fallback: string) {
-  return allowed.includes(v) ? v : fallback;
-}
 
 export default async function ProfilePage({ searchParams }: { searchParams: { page?: string } }) {
   const userId = await getCurrentUserIdFromHeaders();
@@ -67,6 +55,9 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
       mouthStyle: true,
       shirtStyle: true,
       accessoryStyle: true,
+      glassesStyle: true,
+      scarStyle: true,
+      hairOrnamentStyle: true,
 
       bodyColor: true,
       hairColor: true,
@@ -74,10 +65,13 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
       mouthColor: true,
       shirtColor: true,
       accessoryColor: true,
+      backgroundColor: true,
+      glassesColor: true,
+      scarColor: true,
+      hairOrnamentColor: true,
     },
   });
   if (!user) throw new Error("User not found");
-  const u = user as typeof user & { glassesStyle?: string; scarStyle?: string; hairOrnamentStyle?: string; backgroundColor?: string; glassesColor?: string; scarColor?: string; hairOrnamentColor?: string };
 
   const slotDesigns = await getSlotDesignsForUser(userId);
 
@@ -147,12 +141,19 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
           mouthStyle: true,
           shirtStyle: true,
           accessoryStyle: true,
+          glassesStyle: true,
+          scarStyle: true,
+          hairOrnamentStyle: true,
           bodyColor: true,
           hairColor: true,
           eyeColor: true,
           mouthColor: true,
           shirtColor: true,
           accessoryColor: true,
+          backgroundColor: true,
+          glassesColor: true,
+          scarColor: true,
+          hairOrnamentColor: true,
         },
       },
     },
@@ -174,39 +175,10 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
     username: f.friend.username,
     isMutual: mutualSet.has(f.friend.id),
     slotDesigns: friendSlotDesigns[f.friend.id] ?? {},
-    avatar: {
-      bodyStyle: oneOf(f.friend.bodyStyle, BODY_STYLES, "body_m") as "body_m" | "body_f",
-      hairStyle: oneOf(f.friend.hairStyle, HAIR_STYLES, "hair_m_01"),
-      eyesStyle: oneOf(f.friend.eyesStyle, EYES_STYLES, "eyes_01"),
-      mouthStyle: oneOf(f.friend.mouthStyle, MOUTH_STYLES, "mouth_01"),
-      shirtStyle: oneOf(f.friend.shirtStyle, SHIRT_STYLES, "shirt_01"),
-      accessoryStyle: oneOf(f.friend.accessoryStyle, ACCESSORY_STYLES, "none"),
-      glassesStyle: "none",
-      scarStyle: "none",
-      hairOrnamentStyle: "none",
-      bodyColor: f.friend.bodyColor,
-      hairColor: f.friend.hairColor,
-      eyeColor: f.friend.eyeColor,
-      mouthColor: f.friend.mouthColor,
-      shirtColor: f.friend.shirtColor,
-      accessoryColor: f.friend.accessoryColor,
-      backgroundColor: "#E8E8E8",
-      glassesColor: "#111111",
-      scarColor: "#8B4513",
-      hairOrnamentColor: "#C0C0C0",
-    },
+    avatar: avatarConfigFromUser(f.friend),
   }));
 
-  const avatar: AvatarConfig = avatarConfigFromUser({
-    ...user,
-    glassesStyle: u.glassesStyle,
-    scarStyle: u.scarStyle,
-    hairOrnamentStyle: u.hairOrnamentStyle,
-    backgroundColor: u.backgroundColor,
-    glassesColor: u.glassesColor,
-    scarColor: u.scarColor,
-    hairOrnamentColor: u.hairOrnamentColor,
-  });
+  const avatar: AvatarConfig = avatarConfigFromUser(user);
 
   const hofRank = await getKarmaRank(userId);
 
