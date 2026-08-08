@@ -15,10 +15,17 @@ async function assignBotChallengeScores(gameId: string, dayNumber: number) {
   const minigameId = pickMinigameForDay(gameId, dayNumber);
   const actives = await prisma.gamePlayer.findMany({
     where: { gameId, status: "ACTIVE" },
-    select: { userId: true, castingDayMiniGameScore: true },
+    select: {
+      userId: true,
+      castingDayMiniGameScore: true,
+      user: { select: { email: true, usernameLower: true } },
+    },
   });
   for (const p of actives) {
     if ((p.castingDayMiniGameScore ?? 0) > 0) continue;
+    const isBot =
+      p.user.email?.endsWith("@regaged.bot") || p.user.usernameLower.startsWith("bot_");
+    if (!isBot) continue;
     await prisma.gamePlayer.update({
       where: { gameId_userId: { gameId, userId: p.userId } },
       data: { castingDayMiniGameScore: sampleBotChallengeScore(minigameId) },

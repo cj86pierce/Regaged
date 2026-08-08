@@ -217,13 +217,22 @@ export function toChallengeScore(id: MinigameId, raw: unknown): number | null {
   return def.toChallengeScore(sanitized);
 }
 
-/** Sample a bot score around the game's average with a long right tail (uncapped feel). */
+/**
+ * Sample a competitive bot score: clustered near a strong human average,
+ * with occasional standouts and a few weak runs so results feel real.
+ */
 export function sampleBotChallengeScore(id: MinigameId, rng = Math.random): number {
   const avg = MINIGAME_DEFS[id].averageScore;
-  // log-normal-ish: exp(normal) scaled to average
+  const roll = rng();
+  // ~12% weak, ~63% solid mid/high, ~25% standout
+  let band: number;
+  if (roll < 0.12) band = 0.45 + rng() * 0.35;
+  else if (roll < 0.75) band = 0.85 + rng() * 0.45;
+  else band = 1.2 + rng() * 0.85;
+
   const u1 = Math.max(1e-9, rng());
   const u2 = Math.max(1e-9, rng());
   const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-  const factor = Math.exp(z * 0.45); // spread
-  return clampInt(avg * factor * (0.55 + rng() * 0.9));
+  const jitter = Math.exp(z * 0.22);
+  return clampInt(avg * band * jitter);
 }

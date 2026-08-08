@@ -83,7 +83,12 @@ type GameState = {
       tribeBFireUntil?: string | null;
     };
   };
-  lobby: { current: number; needed: number } | null;
+  lobby: {
+    current: number;
+    needed: number;
+    lobbyReadyAt?: string | null;
+    botsFillAt?: string | null;
+  } | null;
   voteInfo: { myVoteTargetUserId?: string | null; myRankings?: Record<string, number> } | null;
   nomineeCUserId?: string;
   nomineeDUserId?: string;
@@ -150,6 +155,48 @@ function PhaseTimer(props: {
   return (
     <span>
       Ends in <b>{fmtHMS(timeLeft)}</b>
+    </span>
+  );
+}
+
+function LobbyReadyTimer(props: {
+  readyAt: string;
+  isBotLobby: boolean;
+  onReady: () => void;
+}) {
+  const [now, setNow] = useState(() => Date.now());
+  const firedRef = useRef(false);
+  const onReadyRef = useRef(props.onReady);
+  onReadyRef.current = props.onReady;
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [props.readyAt]);
+
+  const timeLeft = Math.max(0, Math.ceil((new Date(props.readyAt).getTime() - now) / 1000));
+
+  useEffect(() => {
+    if (timeLeft > 0) {
+      firedRef.current = false;
+      return;
+    }
+    if (firedRef.current) return;
+    firedRef.current = true;
+    onReadyRef.current();
+  }, [timeLeft]);
+
+  if (timeLeft <= 0) {
+    return (
+      <span style={{ opacity: 0.85 }}>
+        {props.isBotLobby ? "Starting / filling seats…" : "Starting when full…"}
+      </span>
+    );
+  }
+  return (
+    <span style={{ opacity: 0.85 }}>
+      Starts in <b>{fmtHMS(timeLeft)}</b>
+      {props.isBotLobby ? " (bots fill empty seats)" : ""}
     </span>
   );
 }
@@ -249,7 +296,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
   }, [gameId, page]);
 
   function onPhaseExpired() {
-    if (!data || data.game.state === "ENROLLING" || data.game.state === "COMPLETED") return;
+    if (!data || data.game.state === "COMPLETED") return;
     (async () => {
       await fetch("/api/cron/tick", { method: "POST", credentials: "include" }).catch(() => null);
       await load({ bust: true }).catch(() => null);
@@ -482,6 +529,16 @@ export default function GamePage({ params }: { params: { id: string } }) {
             <>
               Filling: <b>{data.lobby.current}/{maxPlayers}</b>
               <span style={{ opacity: 0.7 }}>({data.lobby.needed} needed)</span>
+              {(data.lobby.lobbyReadyAt || data.lobby.botsFillAt) ? (
+                <>
+                  <span>·</span>
+                  <LobbyReadyTimer
+                    readyAt={(data.lobby.lobbyReadyAt || data.lobby.botsFillAt)!}
+                    isBotLobby={String(data.game.gameType).endsWith("_BOT")}
+                    onReady={onPhaseExpired}
+                  />
+                </>
+              ) : null}
             </>
           ) : data.game.state === "COMPLETED" ? (
             <>Game ended · Final placements below</>

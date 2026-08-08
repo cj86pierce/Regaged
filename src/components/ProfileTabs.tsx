@@ -6,6 +6,7 @@ import Avatar, { AvatarConfig, type SlotDesignType } from "@/components/Avatar";
 import StatusBadges from "@/components/StatusBadges";
 import { formatLastSeen } from "@/lib/lastSeenLabel";
 import { renderBioContent } from "@/lib/renderBio";
+import DailyLoginCard from "@/components/DailyLoginCard";
 
 export type ProfileGameBubble = {
   gameId: string;
@@ -494,6 +495,8 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
               </div>
 
               <div style={{ marginTop: 6, fontSize: 12, color: "var(--muted-gray-2)" }}>Joined {joinedLabel}</div>
+
+              {data.isOwnProfile ? <DailyLoginCard /> : null}
             </div>
 
             {/* ✅ Swatch sits here; bar spans under it because the bar uses full width (left/right) */}

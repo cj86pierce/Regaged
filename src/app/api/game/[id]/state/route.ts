@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/getCurrentUserId";
 import { touchUser } from "@/lib/touchUser";
 import { getSlotDesignsForUserIds, type SlotDesignsMap } from "@/lib/avatarSlotDesigns";
+import { lobbyReadyAtFromCreated } from "@/lib/lobbyTiming";
 
 const presenceTouchAt = new Map<string, number>();
 const PRESENCE_TOUCH_EVERY_MS = 60_000;
@@ -28,6 +29,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       state: true,
       roundNumber: true,
       stateEndsAt: true,
+      createdAt: true,
       povUserId: true,
       hohUserId: true,
       povSavedUserId: true,
@@ -255,6 +257,13 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       ? {
           current: activeCount,
           needed: Math.max(0, lobbyCap - activeCount),
+          lobbyReadyAt: !game.survivorIsMerge
+            ? lobbyReadyAtFromCreated(game.createdAt).toISOString()
+            : null,
+          /** @deprecated use lobbyReadyAt */
+          botsFillAt: !game.survivorIsMerge
+            ? lobbyReadyAtFromCreated(game.createdAt).toISOString()
+            : null,
         }
       : null;
 

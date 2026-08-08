@@ -3,16 +3,14 @@ import { advanceFastingIfDue } from "@/lib/fastingAdvance";
 import { advanceFastingBotIfDue } from "@/lib/fastingBotAdvance";
 import { advanceCastingIfDue } from "@/lib/castingAdvance";
 import { advanceCastingBotIfDue } from "@/lib/castingBotAdvance";
-import { tryStartFastingBotGame, tryStartFastingStyleBotGame, tryStartCastingBotGame } from "@/lib/gameEngineBot";
 import { maybeSpawnCastingsDrops } from "@/lib/castingsDrops";
 import { applyCastingsPeriodicDecay } from "@/lib/castingsPeriodicDecay";
 import { createAuctionsFromDesigns } from "@/lib/createAuctionsFromDesigns";
 import { resolveEndedAuctions } from "@/lib/resolveAuctions";
-import { tryStartSurvivorGame } from "@/lib/survivor/start";
 import { advanceSurvivorIfDue } from "@/lib/survivor/advance";
 import { healBadSurvivorMerges } from "@/lib/survivor/repair";
-import { fillGameWithBots } from "@/lib/botUsers";
-import { SURVIVOR_MAX } from "@/lib/survivor/timing";
+import { maybeStartEnrollingLobby } from "@/lib/lobbyTiming";
+import { performBotActions } from "@/lib/botActions";
 
 export type TickResult =
   | { skipped: true; reason: "locked" }
@@ -48,30 +46,49 @@ export async function runTick(): Promise<TickResult> {
 
   try {
     // -----------------------
-    // Start full ENROLLING bot games (safety net)
+    // All ENROLLING lobbies: 15m wait, then start (bots fill empty seats)
     // -----------------------
-    const enrollingBots = await prisma.game.findMany({
+    const enrollingLobbies = await prisma.game.findMany({
       where: {
-        gameType: { in: ["FASTING_BOT", "CASTING_BOT", "FROOKIES_BOT", "ROOKIES_BOT", "SURVIVOR_BOT"] },
+        gameType: {
+          in: [
+            "FASTING",
+            "CASTING",
+            "FROOKIES",
+            "ROOKIES",
+            "SURVIVOR",
+            "FASTING_BOT",
+            "CASTING_BOT",
+            "FROOKIES_BOT",
+            "ROOKIES_BOT",
+            "SURVIVOR_BOT",
+          ],
+        },
         state: "ENROLLING",
       },
-      select: { id: true, gameType: true, survivorIsMerge: true },
-      take: 20,
+      select: { id: true },
+      take: 60,
     });
-    for (const g of enrollingBots) {
+    let lobbiesStarted = 0;
+    for (const g of enrollingLobbies) {
       try {
-        if (g.gameType === "FASTING_BOT") await tryStartFastingBotGame(g.id);
-        else if (g.gameType === "FROOKIES_BOT" || g.gameType === "ROOKIES_BOT") await tryStartFastingStyleBotGame(g.id, g.gameType);
-        else if (g.gameType === "SURVIVOR_BOT") {
-          // Merge lobbies are auto-seated from tribal — never pad them to 20 (that made merge run forever).
-          // Bot tribal seasons also end at merge, so merge ENROLLING bots should be rare.
-          if (g.survivorIsMerge) {
-            await tryStartSurvivorGame(g.id, "SURVIVOR_BOT");
-          } else {
-            await fillGameWithBots(g.id, SURVIVOR_MAX);
-            await tryStartSurvivorGame(g.id, "SURVIVOR_BOT");
-          }
-        } else await tryStartCastingBotGame(g.id);
+        const r = await maybeStartEnrollingLobby(g.id);
+        if (r.ok && ("filled" in r || "started" in r || "attempted" in r)) lobbiesStarted++;
+      } catch {}
+    }
+
+    // Mid-phase: bots nominate / vote / chat before the clock ends
+    const activeBotGames = await prisma.game.findMany({
+      where: {
+        gameType: { in: ["FASTING_BOT", "CASTING_BOT", "FROOKIES_BOT", "ROOKIES_BOT", "SURVIVOR_BOT"] },
+        state: { in: ["ROUND_NOMINATE", "ROUND_VOTE", "JURY_VOTE"] },
+      },
+      select: { id: true },
+      take: 40,
+    });
+    for (const g of activeBotGames) {
+      try {
+        await performBotActions(g.id);
       } catch {}
     }
 
@@ -245,6 +262,8 @@ export async function runTick(): Promise<TickResult> {
       castingBot: { due: castingBotDue.length, advanced: castingBotAdvanced },
       casting: { due: castingDue.length, advanced: castingAdvanced },
       survivor: { due: survivorDue.length, advanced: survivorAdvanced },
+      lobbiesStarted,
+      botActionsGames: activeBotGames.length,
     };
 
     // Auctions don't need to run every 15s — throttle to every 5 minutes.

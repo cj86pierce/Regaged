@@ -201,9 +201,17 @@ export async function advanceFastingBotIfDue(gameId: string) {
           const minigameId = pickMinigameForDay(gameId, game.roundNumber ?? 1);
           const actives = await prisma.gamePlayer.findMany({
             where: { gameId, status: "ACTIVE" },
-            select: { userId: true },
+            select: {
+              userId: true,
+              castingDayMiniGameScore: true,
+              user: { select: { email: true, usernameLower: true } },
+            },
           });
           for (const p of actives) {
+            const isBot =
+              p.user.email?.endsWith("@regaged.bot") || p.user.usernameLower.startsWith("bot_");
+            if (!isBot) continue;
+            if ((p.castingDayMiniGameScore ?? 0) > 0) continue;
             await prisma.gamePlayer.update({
               where: { gameId_userId: { gameId, userId: p.userId } },
               data: { castingDayMiniGameScore: sampleBotChallengeScore(minigameId) },

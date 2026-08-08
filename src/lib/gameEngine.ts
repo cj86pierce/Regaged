@@ -4,6 +4,7 @@ import { assignRookiesHoh } from "@/lib/rookiesHoh";
 import { assignFrookiesHoh } from "@/lib/frookiesHoh";
 
 import { getFastingNomMs } from "@/lib/fastingTiming";
+import { notifyGameStarted } from "@/lib/email/notifyGameStarted";
 
 const FASTING_MAX = 15;
 const ROOKIES_DAY_MS = 24 * 60 * 60 * 1000;
@@ -75,5 +76,6 @@ export async function tryStartFastingStyleGame(
     }
   }
 
+  void notifyGameStarted(gameId);
   return { ok: true };
 }

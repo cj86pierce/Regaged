@@ -3,6 +3,7 @@ import { getSystemUserId } from "@/lib/systemUser";
 import { initCampOnStart, personalMetersFromHealth } from "@/lib/survivor/camp";
 import { assignEqualSitOuts } from "@/lib/survivor/sitOuts";
 import { SURVIVOR_MAX, SURVIVOR_MERGE_MAX, survivorPhaseMs } from "@/lib/survivor/timing";
+import { notifyGameStarted } from "@/lib/email/notifyGameStarted";
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -144,6 +145,7 @@ async function startMergeSurvivor(gameId: string, gameType: "SURVIVOR" | "SURVIV
 
   await initCampOnStart(gameId);
   await assignEqualSitOuts(gameId);
+  void notifyGameStarted(gameId);
   return { ok: true as const, started: true as const, merge: true as const };
 }
 
@@ -220,6 +222,7 @@ async function startTribalSurvivor(gameId: string, gameType: "SURVIVOR" | "SURVI
 
   await initCampOnStart(gameId);
   await assignEqualSitOuts(gameId);
+  void notifyGameStarted(gameId);
 
   return { ok: true as const, started: true as const };
 }

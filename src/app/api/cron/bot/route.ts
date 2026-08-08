@@ -1,12 +1,13 @@
 /**
- * Cron tick for bot games: advance rounds + trigger bot actions.
- * Handles FASTING_BOT and CASTING_BOT games.
+ * Cron tick for bot games: fill lobbies after 15m, advance rounds, bot actions.
  */
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { advanceFastingBotIfDue } from "@/lib/fastingBotAdvance";
 import { advanceCastingBotIfDue } from "@/lib/castingBotAdvance";
-import { tryStartFastingBotGame, tryStartFastingStyleBotGame, tryStartCastingBotGame } from "@/lib/gameEngineBot";
+import { advanceSurvivorIfDue } from "@/lib/survivor/advance";
+import { maybeStartEnrollingLobby } from "@/lib/lobbyTiming";
+import { performBotActions } from "@/lib/botActions";
 import { applyCastingsPeriodicDecay } from "@/lib/castingsPeriodicDecay";
 import { maybeSpawnCastingsDrops } from "@/lib/castingsDrops";
 import { requireCronAuth } from "@/lib/cronAuth";
@@ -20,32 +21,56 @@ async function runBotTick() {
   if (!lockRows?.[0]?.locked) return { skipped: true, reason: "locked" as const };
 
   try {
-    // Start full ENROLLING bot games (safety net)
-    const enrollingBots = await prisma.game.findMany({
+    const enrolling = await prisma.game.findMany({
       where: {
-        gameType: { in: ["FASTING_BOT", "CASTING_BOT", "FROOKIES_BOT", "ROOKIES_BOT"] },
+        gameType: {
+          in: [
+            "FASTING",
+            "CASTING",
+            "FROOKIES",
+            "ROOKIES",
+            "SURVIVOR",
+            "FASTING_BOT",
+            "CASTING_BOT",
+            "FROOKIES_BOT",
+            "ROOKIES_BOT",
+            "SURVIVOR_BOT",
+          ],
+        },
         state: "ENROLLING",
       },
-      select: { id: true, gameType: true },
-      take: 20,
+      select: { id: true },
+      take: 60,
     });
-    for (const g of enrollingBots) {
+    let filled = 0;
+    for (const g of enrolling) {
       try {
-        if (g.gameType === "FASTING_BOT") await tryStartFastingBotGame(g.id);
-        else if (g.gameType === "FROOKIES_BOT" || g.gameType === "ROOKIES_BOT") await tryStartFastingStyleBotGame(g.id, g.gameType);
-        else await tryStartCastingBotGame(g.id);
+        const r = await maybeStartEnrollingLobby(g.id);
+        if (r.ok && ("filled" in r || "started" in r || "attempted" in r)) filled++;
       } catch {}
     }
 
-    // FASTING_BOT: advance games that are due or stuck (same logic as main tick)
+    const activeBotGames = await prisma.game.findMany({
+      where: {
+        gameType: {
+          in: ["FASTING_BOT", "CASTING_BOT", "FROOKIES_BOT", "ROOKIES_BOT", "SURVIVOR_BOT"],
+        },
+        state: { in: ["ROUND_NOMINATE", "ROUND_VOTE", "JURY_VOTE"] },
+      },
+      select: { id: true },
+      take: 40,
+    });
+    for (const g of activeBotGames) {
+      try {
+        await performBotActions(g.id);
+      } catch {}
+    }
+
     const fastingBotDue = await prisma.game.findMany({
       where: {
         gameType: { in: ["FASTING_BOT", "FROOKIES_BOT", "ROOKIES_BOT"] },
-        state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] },
-        OR: [
-          { stateEndsAt: { not: null, lte: now } },
-          { stateEndsAt: null },
-        ],
+        state: { in: ["ROUND_NOMINATE", "ROUND_VOTE", "JURY_VOTE", "FINAL3"] },
+        OR: [{ stateEndsAt: { not: null, lte: now } }, { stateEndsAt: null }],
       },
       select: { id: true },
       take: 50,
@@ -61,15 +86,11 @@ async function runBotTick() {
       }
     }
 
-    // CASTING_BOT: Fasting-style day rolling
     const castingBotDue = await prisma.game.findMany({
       where: {
         gameType: "CASTING_BOT",
         state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] },
-        OR: [
-          { stateEndsAt: { not: null, lte: now } },
-          { stateEndsAt: null },
-        ],
+        OR: [{ stateEndsAt: { not: null, lte: now } }, { stateEndsAt: null }],
       },
       select: { id: true },
       take: 50,
@@ -82,6 +103,27 @@ async function runBotTick() {
         if ((r as any)?.advanced || (r as any)?.fixed) castingAdvanced++;
       } catch (e) {
         console.error("CASTING_BOT advance failed", { gameId: g.id, err: String(e) });
+      }
+    }
+
+    const survivorBotDue = await prisma.game.findMany({
+      where: {
+        gameType: "SURVIVOR_BOT",
+        state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] },
+        OR: [{ stateEndsAt: { not: null, lte: now } }, { stateEndsAt: null }],
+      },
+      select: { id: true },
+      take: 30,
+    });
+    let survivorAdvanced = 0;
+    for (const g of survivorBotDue) {
+      try {
+        const r = await advanceSurvivorIfDue(g.id);
+        if ((r as { advanced?: boolean; fixed?: boolean }).advanced || (r as { fixed?: boolean }).fixed) {
+          survivorAdvanced++;
+        }
+      } catch (e) {
+        console.error("SURVIVOR_BOT advance failed", { gameId: g.id, err: String(e) });
       }
     }
 
@@ -108,8 +150,10 @@ async function runBotTick() {
     }
 
     return {
+      filled,
       fasting: { due: fastingBotDue.length, advanced: fastingAdvanced },
       casting: { due: castingBotDue.length, advanced: castingAdvanced },
+      survivor: { due: survivorBotDue.length, advanced: survivorAdvanced },
     };
   } finally {
     await prisma.$queryRaw`SELECT pg_advisory_unlock(hashtext('cron_bot'))`;

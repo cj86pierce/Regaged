@@ -2,12 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUserId } from "@/lib/getCurrentUserId";
 import { prisma } from "@/lib/prisma";
 import { isEmailVerified } from "@/lib/emailVerification";
-import { tryStartFastingGame, tryStartFastingStyleGame } from "@/lib/gameEngine";
-import { tryStartCastingsGame } from "@/lib/gameEngineCastings";
-import { tryStartFastingBotGame, tryStartFastingStyleBotGame } from "@/lib/gameEngineBot";
-import { tryStartCastingBotGame } from "@/lib/gameEngineBot";
-import { fillGameWithBots } from "@/lib/botUsers";
-import { tryStartSurvivorGame } from "@/lib/survivor/start";
+import { maybeFillAndStartBotLobby, maybeStartLiveLobby } from "@/lib/lobbyTiming";
 import { SURVIVOR_MAX, SURVIVOR_MERGE_MAX } from "@/lib/survivor/timing";
 
 const FASTING_MAX = 15;
@@ -239,24 +234,12 @@ export async function POST(req: Request) {
     }
   }
 
+  // All lobbies wait 15 minutes before auto-start (merge Survivor starts ASAP).
+  // Bot modes fill empty seats after the wait; live modes start when full after the wait.
   if (isBotMode) {
-    await fillGameWithBots(lobby.id, MAX);
-  }
-
-  if (gameType === "FASTING") {
-    await tryStartFastingGame(lobby.id);
-  } else if (gameType === "FROOKIES" || gameType === "ROOKIES") {
-    await tryStartFastingStyleGame(lobby.id, gameType);
-  } else if (gameType === "CASTING") {
-    await tryStartCastingsGame(lobby.id);
-  } else if (gameType === "FASTING_BOT") {
-    await tryStartFastingBotGame(lobby.id);
-  } else if (gameType === "FROOKIES_BOT" || gameType === "ROOKIES_BOT") {
-    await tryStartFastingStyleBotGame(lobby.id, gameType);
-  } else if (gameType === "SURVIVOR" || gameType === "SURVIVOR_BOT") {
-    await tryStartSurvivorGame(lobby.id, gameType);
+    await maybeFillAndStartBotLobby(lobby.id);
   } else {
-    await tryStartCastingBotGame(lobby.id);
+    await maybeStartLiveLobby(lobby.id);
   }
 
   return NextResponse.json({ ok: true, gameId: lobby.id });

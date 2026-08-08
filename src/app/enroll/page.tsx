@@ -127,17 +127,17 @@ export default function EnrollHub() {
         Enroll
       </h1>
       <div className="theme-text-muted" style={{ fontSize: 13, marginBottom: 16, lineHeight: 1.4 }}>
-        Pick a mode. Free: Fastings & Castings. Yellow + fee: Frookies, Rookies & Survivor. Bot rooms use the same rules with ~2 minute phases and bots filling seats.
+        Pick a mode. Free: Fastings & Castings. Yellow + fee: Frookies, Rookies & Survivor. Every lobby waits 15 minutes before starting; bot rooms fill empty seats after that wait.
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
         <section>
           <div style={{ fontWeight: 1000, fontSize: 13, marginBottom: 10, opacity: 0.85 }}>Free modes</div>
           <div className="enrollGrid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 14 }}>
-            <GameCard title="Fastings" desc="Fast rounds. POV → nominate → evict. Final 3 gets a 12-hour clock." href="/enroll/fasting" accent="blue" />
-            <GameCard title="Castings" desc="12-hour days. Keys, apples, challenges, and votes." href="/enroll/casting" accent="blue" />
-            <GameCard title="Fastings (Bot)" desc="Same Fastings rules, ~2 min phases. Bots fill seats." href="/enroll/fasting-bot" accent="blue" />
-            <GameCard title="Castings (Bot)" desc="Same Castings rules, ~2 min days. Bots fill seats." href="/enroll/casting-bot" accent="blue" />
+            <GameCard title="Fastings" desc="Fast rounds. POV → nominate → evict. 15 min lobby, then starts when full." href="/enroll/fasting" accent="blue" />
+            <GameCard title="Castings" desc="12-hour days. Keys, apples, challenges. 15 min lobby, then starts when full." href="/enroll/casting" accent="blue" />
+            <GameCard title="Fastings (Bot)" desc="Same Fastings rules, ~2 min phases. 15 min lobby, then bots fill." href="/enroll/fasting-bot" accent="blue" />
+            <GameCard title="Castings (Bot)" desc="Same Castings rules, ~2 min days. 15 min lobby, then bots fill." href="/enroll/casting-bot" accent="blue" />
           </div>
         </section>
 
@@ -146,18 +146,18 @@ export default function EnrollHub() {
           <div className="enrollGrid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 14 }}>
             <GameCard
               title="Frookies"
-              desc="T$10 entry. HOH + POV. Jury (9th–3rd) picks the winner."
+              desc="T$10 entry. HOH + POV. 15 min lobby, then starts when full."
               href="/enroll/frookies"
               accent="pink"
             />
             <GameCard
               title="Rookies"
-              desc="T$15 entry. Week-long. Ranking votes + secret POV."
+              desc="T$15 entry. Ranking votes + secret POV. 15 min lobby, then starts when full."
               href="/enroll/rookies"
               accent="pink"
             />
-            <GameCard title="Frookies (Bot)" desc="Same Frookies rules, ~2 min phases. Bots fill seats." href="/enroll/frookies-bot" accent="pink" />
-            <GameCard title="Rookies (Bot)" desc="Same Rookies rules, ~2 min days. Bots fill seats." href="/enroll/rookies-bot" accent="pink" />
+            <GameCard title="Frookies (Bot)" desc="Same Frookies rules, ~2 min phases. 15 min lobby, then bots fill." href="/enroll/frookies-bot" accent="pink" />
+            <GameCard title="Rookies (Bot)" desc="Same Rookies rules, ~2 min days. 15 min lobby, then bots fill." href="/enroll/rookies-bot" accent="pink" />
           </div>
         </section>
 
@@ -166,13 +166,13 @@ export default function EnrollHub() {
           <div className="enrollGrid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 14 }}>
             <GameCard
               title="Survivor"
-              desc="T$10 entry. 20 castaways, 2 tribes, challenges, tribal council."
+              desc="T$10 entry. 20 castaways, 2 tribes. 15 min lobby, then starts when full."
               href="/enroll/survivor"
               accent="green"
             />
             <GameCard
               title="Survivor (Bot)"
-              desc="Same Survivor rules, ~2 min days. Bots fill seats."
+              desc="Same Survivor rules, ~2 min days. 15 min lobby, then bots fill."
               href="/enroll/survivor-bot"
               accent="green"
             />

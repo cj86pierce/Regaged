@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getCastingDayMs } from "@/lib/castingDayLength";
+import { notifyGameStarted } from "@/lib/email/notifyGameStarted";
 
 const CASTING_MAX = 20;
 
@@ -30,4 +31,6 @@ export async function tryStartCastingsGame(gameId: string) {
       stateEndsAt: new Date(now.getTime() + getCastingDayMs()),
     },
   });
+
+  void notifyGameStarted(gameId);
 }

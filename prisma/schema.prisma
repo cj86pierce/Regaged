@@ -119,6 +119,12 @@ model User {
   blogRResetDate    String?  // YYYY-MM-DD
   lastSeenAt DateTime @default(now())
 
+  // Daily login rewards (UTC calendar day)
+  lastLoginAt          DateTime?
+  loginStreak          Int       @default(0)
+  longestLoginStreak   Int       @default(0)
+  lastLoginRewardDate  String?   // YYYY-MM-DD
+
   // ✅ Email verification (beta)
   email                String?   @unique
   emailVerifiedAt      DateTime?
@@ -472,9 +478,11 @@ model Game {
   state       GameState @default(ENROLLING)
   roundNumber Int       @default(0)
 
-  startsAt       DateTime?
-  stateEndsAt    DateTime?
-  roundStartedAt DateTime?
+  startsAt          DateTime?
+  stateEndsAt       DateTime?
+  roundStartedAt    DateTime?
+  /** Set when game-start emails were sent (idempotent). */
+  startEmailSentAt  DateTime?
 
   povUserId       String?  // POV holder (veto); in FASTING = nominator
   hohUserId       String?  // HOH (nominates 2) for FROOKIES / ROOKIES
