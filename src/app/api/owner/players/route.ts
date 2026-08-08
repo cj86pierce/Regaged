@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/requireOwner";
+import { humanUserWhere } from "@/lib/onlineUsers";
+
+export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 10;
 
@@ -13,10 +16,7 @@ export async function GET(req: Request) {
 
   const url = new URL(req.url);
   const page = Math.max(1, Number(url.searchParams.get("page") ?? "1") || 1);
-
-  const where = {
-    NOT: [{ username: { startsWith: "Bot_" } }, { email: { endsWith: "@regaged.bot" } }],
-  };
+  const where = humanUserWhere();
 
   const [total, users] = await Promise.all([
     prisma.user.count({ where }),

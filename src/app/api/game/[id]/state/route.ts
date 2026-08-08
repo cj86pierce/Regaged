@@ -129,12 +129,13 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     const nowMs = Date.now();
     if (nowMs - last >= PRESENCE_TOUCH_EVERY_MS) {
       presenceTouchAt.set(touchKey, nowMs);
+      // Always bump User.lastSeenAt (owner online); game seat activity is separate.
+      void touchUser(meUserId).catch(() => {});
       void prisma.gamePlayer
         .updateMany({
           where: { gameId, userId: meUserId, status: "ACTIVE" },
           data: { lastActiveAt: new Date() },
         })
-        .then(() => touchUser(meUserId))
         .catch(() => {});
     }
   }
