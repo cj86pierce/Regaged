@@ -199,11 +199,14 @@ function AvatarInner({
   width = 200,
   grayscale = false,
   slotDesigns,
+  /** Tengaged-style: square corners, hairline edge for flush seat rows */
+  flush = false,
 }: {
   config: AvatarConfig;
   width?: number;
   grayscale?: boolean;
   slotDesigns?: Partial<Record<SlotDesignType, string>>;
+  flush?: boolean;
 }) {
   const w = width;
   const h = Math.round(width * ASPECT);
@@ -367,12 +370,13 @@ function AvatarInner({
         width: w,
         height: h,
         position: "relative",
-        borderRadius: 6,
+        borderRadius: flush ? 0 : 6,
         overflow: "hidden",
-        border: "1px solid rgba(0,0,0,0.12)",
-        boxShadow: "0 1px 2px rgba(0,0,0,0.06)",
+        border: flush ? "1px solid rgba(0,0,0,0.22)" : "1px solid rgba(0,0,0,0.12)",
+        boxShadow: flush ? "none" : "0 1px 2px rgba(0,0,0,0.06)",
         background: safe.backgroundColor,
         flexShrink: 0,
+        boxSizing: "border-box",
       }}
     >
       <canvas
@@ -394,6 +398,7 @@ const Avatar = memo(AvatarInner, (prev, next) => {
   return (
     prev.width === next.width &&
     prev.grayscale === next.grayscale &&
+    prev.flush === next.flush &&
     avatarPropsKey(prev.config, prev.slotDesigns) === avatarPropsKey(next.config, next.slotDesigns)
   );
 });

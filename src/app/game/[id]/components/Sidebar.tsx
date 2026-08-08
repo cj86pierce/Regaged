@@ -422,7 +422,7 @@ export default function Sidebar(props: {
             </>
           ) : (
             <>
-              <b>Fasting:</b> POV is awarded first (immune). Pick 2 nominees. Then vote to evict one nominee. Final 3 starts a 12-hour clock before placements.
+              <b>Fasting:</b> POV is awarded first (immune). Pick 2 nominees. Then vote to evict one nominee. Final 3 starts a 30-minute clock before placements.
               <br /><br />
             </>
           )}

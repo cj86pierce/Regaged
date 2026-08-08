@@ -107,7 +107,7 @@ export async function resolveFastingEviction(gameId: string, opts?: { skipLock?:
       await enterFrookiesJuryPhase(gameId);
       return { ok: true, finished: true as const };
     }
-    // Fastings FAQ: final 3 starts a 12-hour clock, then placements
+    // Fastings: final 3 starts a 30-minute clock, then placements
     const isFastingType = game.gameType === "FASTING" || game.gameType === "FASTING_BOT";
     if (isFastingType && result.remainingActive <= 3) {
       await enterFastingFinal3(gameId, game.gameType);
@@ -155,7 +155,7 @@ export async function resolveFastingEviction(gameId: string, opts?: { skipLock?:
   }
 }
 
-/** Fastings final 3: 12-hour clock, then place top 3 (FAQ). */
+/** Fastings final 3: 30-minute clock, then place top 3. */
 export async function enterFastingFinal3(gameId: string, gameType: string) {
   const isBot = gameType === "FASTING_BOT";
   const systemUserId = await getSystemUserId();
@@ -181,7 +181,7 @@ export async function enterFastingFinal3(gameId: string, gameType: string) {
         gameId,
         userId: systemUserId,
         channel: "PUBLIC",
-        body: `[SYSTEM] Final 3: ${names}. A 12-hour clock has started — placements resolve when it ends.`,
+        body: `[SYSTEM] Final 3: ${names}. A 30-minute clock has started — placements resolve when it ends.`,
       },
     });
   });

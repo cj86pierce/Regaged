@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Avatar from "@/components/Avatar";
 import type { AvatarConfig } from "@/components/Avatar";
@@ -43,6 +43,23 @@ export default function CastingPlayerStrip(props: {
 }) {
   const { players, me, gameState } = props;
   const isCompleted = gameState === "COMPLETED";
+  const columns = 10;
+  const stripRef = useRef<HTMLDivElement>(null);
+  const [avatarW, setAvatarW] = useState(72);
+
+  useEffect(() => {
+    const el = stripRef.current;
+    if (!el) return;
+    const update = () => {
+      const w = el.clientWidth;
+      if (w <= 0) return;
+      setAvatarW(Math.max(40, Math.min(88, Math.floor(w / columns))));
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   // When completed, build display place for each player (use eliminatedPlace when set; else final-4 get 1–4 by order)
   const placeByUserId = useMemo(() => {
@@ -64,12 +81,14 @@ export default function CastingPlayerStrip(props: {
     >
       <div className="gameCastingStripLayout" style={{ display: "grid", gridTemplateColumns: "1fr 240px", gap: 12, alignItems: "start" }}>
         <div
+          ref={stripRef}
           className="gameCastingStripPlayers"
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(10, minmax(0, 1fr))",
-            gap: 8,
+            gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+            gap: 0,
             alignItems: "start",
+            minWidth: 0,
           }}
         >
           {players.map((p) => {
@@ -92,16 +111,20 @@ export default function CastingPlayerStrip(props: {
                 key={p.userId}
                 className="gameCastingStripItem"
                 style={{
-                  padding: 8,
+                  padding: 0,
                   background: "transparent",
                   opacity: grayscale ? 0.7 : out && !isCompleted ? 0.45 : 1,
                   filter: grayscale ? "grayscale(100%)" : undefined,
                   WebkitFilter: grayscale ? "grayscale(100%)" : undefined,
                   transition: "filter 0.2s ease, opacity 0.2s ease",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "stretch",
+                  minWidth: 0,
                 }}
               >
-                <div style={{ display: "grid", placeItems: "center" }}>
-                  <Avatar config={p.avatar} width={72} grayscale={grayscale} slotDesigns={p.slotDesigns} />
+                <div style={{ lineHeight: 0 }}>
+                  <Avatar config={p.avatar} width={avatarW} grayscale={grayscale} slotDesigns={p.slotDesigns} flush />
                 </div>
 
                 <Link
@@ -109,8 +132,9 @@ export default function CastingPlayerStrip(props: {
                   className="theme-username"
                   style={{
                     display: "block",
-                    marginTop: 6,
-                    fontSize: 12,
+                    marginTop: 4,
+                    padding: "0 2px",
+                    fontSize: 11,
                     textAlign: "center",
                     whiteSpace: "nowrap",
                     overflow: "hidden",

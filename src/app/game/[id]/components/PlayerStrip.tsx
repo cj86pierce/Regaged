@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Avatar, { AvatarConfig } from "@/components/Avatar";
 import { formatLastSeen } from "@/lib/lastSeenLabel";
@@ -78,6 +79,25 @@ export default function PlayerStrip(props: {
   const iAmPov = meUserId != null && povUserId === meUserId;
   const povSaveUsed = povSavedUserId != null;
 
+  const stripRef = useRef<HTMLDivElement>(null);
+  const [avatarW, setAvatarW] = useState(72);
+
+  // Tengaged-style: seats fill the row flush (0 gap), avatar width = column width.
+  useEffect(() => {
+    const el = stripRef.current;
+    if (!el) return;
+    const update = () => {
+      const w = el.clientWidth;
+      if (w <= 0) return;
+      const next = Math.max(40, Math.min(88, Math.floor(w / columns)));
+      setAvatarW(next);
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [columns]);
+
   const nomMax = frookiesPhase === "HOH_RENOM" ? 1 : 2;
   function toggleNomPick(userId: string) {
     const has = nomSelected.includes(userId);
@@ -91,13 +111,14 @@ export default function PlayerStrip(props: {
   }
 
   return (
-    <div className="theme-sidebar-panel" style={{ borderRadius: 4, padding: "6px 8px", overflow: "hidden" }}>
+    <div className="theme-sidebar-panel" style={{ borderRadius: 4, padding: "6px 0 8px", overflow: "hidden" }}>
       <div
+        ref={stripRef}
         className="gamePlayerStrip"
         style={{
           display: "grid",
           gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
-          gap: 4,
+          gap: 0,
           alignItems: "start",
         }}
       >
@@ -229,19 +250,31 @@ export default function PlayerStrip(props: {
           }
 
           return (
-            <div key={p.userId} className="gamePlayerStripItem" style={{ minWidth: 0 }}>
-              {/* ✅ avatar clickable */}
-              <Link href={`/u/${encodeURIComponent(p.username)}`} style={{ display: "grid", placeItems: "center", textDecoration: "none" }}>
-                <Avatar config={p.avatar} width={72} grayscale={grayscale} slotDesigns={p.slotDesigns} />
+            <div
+              key={p.userId}
+              className="gamePlayerStripItem"
+              style={{
+                minWidth: 0,
+                width: "100%",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "stretch",
+              }}
+            >
+              <Link
+                href={`/u/${encodeURIComponent(p.username)}`}
+                style={{ display: "block", lineHeight: 0, textDecoration: "none" }}
+              >
+                <Avatar config={p.avatar} width={avatarW} grayscale={grayscale} slotDesigns={p.slotDesigns} flush />
               </Link>
 
-              {/* ✅ name is black */}
               <Link
                 href={`/u/${encodeURIComponent(p.username)}`}
                 className="theme-username"
                 style={{
                   display: "block",
-                  marginTop: 4,
+                  marginTop: 3,
+                  padding: "0 2px",
                   fontSize: 10,
                   textDecoration: "none",
                   textAlign: "center",
@@ -254,11 +287,11 @@ export default function PlayerStrip(props: {
                 {trunc(p.username, 10)}
               </Link>
 
-              <div style={{ fontSize: 10, opacity: 0.85, textAlign: "center", marginTop: 2 }}>
+              <div style={{ fontSize: 10, opacity: 0.85, textAlign: "center", marginTop: 2, padding: "0 2px" }}>
                 {lastSeenLabel}
               </div>
 
-              <div style={{ marginTop: 3, height: 18, display: "grid", placeItems: "center" }}>
+              <div style={{ marginTop: 3, height: 18, display: "grid", placeItems: "center", padding: "0 2px" }}>
                 {slot}
               </div>
             </div>

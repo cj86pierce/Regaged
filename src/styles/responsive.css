@@ -241,20 +241,15 @@ body {
     font-size: 18px !important;
   }
   .gamePlayerStrip {
-    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)) !important;
-    gap: 6px !important;
-  }
-  .gamePlayerStripItem {
-    min-width: 70px;
+    /* Keep flush equal columns; avatars resize via ResizeObserver */
+    gap: 0 !important;
+    min-width: 0 !important;
   }
   .gameCastingStripLayout {
     grid-template-columns: 1fr !important;
   }
   .gameCastingStripPlayers {
-    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)) !important;
-  }
-  .gameCastingStripItem {
-    min-width: 70px;
+    gap: 0 !important;
   }
   .gamePageGrid {
     gap: 10px !important;

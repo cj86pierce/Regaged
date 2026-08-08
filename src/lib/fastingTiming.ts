@@ -1,14 +1,13 @@
 /**
  * Fastings / Frookies round phase lengths.
  *
- * Tengaged FAQ does not publish exact Fastings round minutes (only the
- * final-3 12-hour clock). Defaults are production-friendly "fast" pacing;
- * override with FASTING_NOM_SECONDS / FASTING_VOTE_SECONDS for testing.
+ * Final-3 uses a short clock (30 min). Override with FASTING_NOM_SECONDS /
+ * FASTING_VOTE_SECONDS / FASTING_FINAL3_SECONDS for testing.
  */
 
 const DEFAULT_NOM_MS = 3 * 60 * 1000;
 const DEFAULT_VOTE_MS = 3 * 60 * 1000;
-export const FINAL3_MS = 12 * 60 * 60 * 1000;
+export const FINAL3_MS = 30 * 60 * 1000;
 export const BOT_ROUND_MS = 2 * 60 * 1000;
 
 function envMs(name: string, fallback: number): number {

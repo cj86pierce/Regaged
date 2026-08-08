@@ -38,7 +38,7 @@ const FAQS: { q: string; a: ReactNode }[] = [
     a: (
       <ul style={{ margin: "8px 0 0", paddingLeft: 18 }}>
         <li>
-          <b>Fastings</b> — POV → nominate → vote. Free. Final 3 gets a longer clock.
+          <b>Fastings</b> — POV → nominate → vote. Free. Final 3 gets a 30-minute clock.
         </li>
         <li>
           <b>Castings</b> — longer days with keys, challenges, and point votes. Free.
