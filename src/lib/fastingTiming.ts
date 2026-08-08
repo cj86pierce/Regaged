@@ -6,8 +6,8 @@
  * override with FASTING_NOM_SECONDS / FASTING_VOTE_SECONDS for testing.
  */
 
-const DEFAULT_NOM_MS = 8 * 60 * 1000;
-const DEFAULT_VOTE_MS = 5 * 60 * 1000;
+const DEFAULT_NOM_MS = 3 * 60 * 1000;
+const DEFAULT_VOTE_MS = 3 * 60 * 1000;
 export const FINAL3_MS = 12 * 60 * 60 * 1000;
 export const BOT_ROUND_MS = 2 * 60 * 1000;
 
