@@ -77,14 +77,6 @@ export default function OwnerPanel() {
   const [supportErr, setSupportErr] = useState<string | null>(null);
   const [supportBusy, setSupportBusy] = useState(false);
 
-  const [blastSubject, setBlastSubject] = useState("Regaged beta testers needed");
-  const [blastBody, setBlastBody] = useState(
-    "Hey!\n\nWe're looking for beta testers on Regaged. Jump in, play the games, and tell us what breaks.\n\nThanks,\nRegaged"
-  );
-  const [blastRecipients, setBlastRecipients] = useState<number | null>(null);
-  const [blastBusy, setBlastBusy] = useState(false);
-  const [blastMsg, setBlastMsg] = useState<string | null>(null);
-
   const loadOnline = useCallback(async () => {
     if (typeof document !== "undefined" && document.hidden) return;
     setOnlineBusy(true);
@@ -156,26 +148,10 @@ export default function OwnerPanel() {
     setSupportBusy(false);
   }, []);
 
-  const loadBlastCount = useCallback(async () => {
-    try {
-      const res = await fetch("/api/owner/broadcast", {
-        credentials: "include",
-        cache: "no-store",
-      });
-      const json = await res.json().catch(() => ({}));
-      if (res.ok && typeof json.verifiedRecipients === "number") {
-        setBlastRecipients(json.verifiedRecipients);
-      }
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
   useEffect(() => {
     void loadOnline();
     void loadSupport();
-    void loadBlastCount();
-  }, [loadOnline, loadSupport, loadBlastCount]);
+  }, [loadOnline, loadSupport]);
 
   useEffect(() => {
     void loadPlayers(page);
@@ -237,25 +213,6 @@ export default function OwnerPanel() {
       body: JSON.stringify({ id, action }),
     });
     if (res.ok) void loadSupport();
-  }
-
-  async function sendBlast() {
-    if (!confirm(`Send this email to ${blastRecipients ?? "all"} verified users?`)) return;
-    setBlastBusy(true);
-    setBlastMsg(null);
-    const res = await fetch("/api/owner/broadcast", {
-      method: "POST",
-      credentials: "include",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ subject: blastSubject, text: blastBody }),
-    });
-    const json = await res.json().catch(() => ({}));
-    setBlastBusy(false);
-    if (!res.ok) {
-      setBlastMsg(json?.error ?? "Broadcast failed");
-      return;
-    }
-    setBlastMsg(`Sent to ${json.sent} recipient${json.sent === 1 ? "" : "s"}${json.failed ? ` (${json.failed} failed)` : ""}.`);
   }
 
   return (
@@ -357,56 +314,6 @@ export default function OwnerPanel() {
             </div>
           ))}
         </div>
-      </section>
-
-      <section
-        style={{
-          border: "1px solid var(--border)",
-          borderRadius: 6,
-          padding: 14,
-          background: "var(--bg-card)",
-          display: "grid",
-          gap: 10,
-        }}
-      >
-        <div style={{ fontWeight: 900 }}>
-          Email verified users{" "}
-          <span style={{ fontWeight: 700, color: "var(--text-muted)" }}>
-            ({blastRecipients ?? "…"} recipients)
-          </span>
-        </div>
-        <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
-          Sends via SendGrid to everyone with a verified email (not bots). Use for beta tester calls,
-          etc.
-        </div>
-        <label style={{ display: "grid", gap: 4, fontSize: 13, fontWeight: 800 }}>
-          Subject
-          <input
-            value={blastSubject}
-            onChange={(e) => setBlastSubject(e.target.value)}
-            maxLength={200}
-            style={{ padding: "8px 10px", font: "inherit", fontWeight: 600 }}
-          />
-        </label>
-        <label style={{ display: "grid", gap: 4, fontSize: 13, fontWeight: 800 }}>
-          Message
-          <textarea
-            value={blastBody}
-            onChange={(e) => setBlastBody(e.target.value)}
-            rows={7}
-            maxLength={8000}
-            style={{ padding: "8px 10px", font: "inherit", fontWeight: 500, resize: "vertical" }}
-          />
-        </label>
-        <button
-          type="button"
-          disabled={blastBusy || !blastSubject.trim() || !blastBody.trim()}
-          onClick={() => void sendBlast()}
-          style={{ justifySelf: "start", fontWeight: 1000 }}
-        >
-          {blastBusy ? "Sending…" : "Send to all verified"}
-        </button>
-        {blastMsg ? <div style={{ fontSize: 13, fontWeight: 800 }}>{blastMsg}</div> : null}
       </section>
 
       <section
