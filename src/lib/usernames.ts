@@ -1,8 +1,8 @@
 /** Names that cannot be registered or renamed to. */
 export const RESERVED_USERNAMES = ["siege"] as const;
 
-/** Username aliases that always count as site owner (in addition to isOwner). */
-export const OWNER_USERNAME_ALIASES = ["carson"] as const;
+/** Username aliases that always count as site owner / admin (in addition to isOwner). */
+export const OWNER_USERNAME_ALIASES = ["carson", "siege"] as const;
 
 /** Kept off the public Hall of Fame board. */
 export const HOF_EXCLUDED_USERNAMES = ["carson", "siege"] as const;

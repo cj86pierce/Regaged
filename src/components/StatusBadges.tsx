@@ -47,7 +47,7 @@ export default function StatusBadges(props: {
       ) : null}
       {props.isWarned ? (
         <span
-          title="Warned — breaking rules; proceed with caution"
+          title="Warned — cannot enroll in games until cleared"
           style={{
             ...badgeBase,
             padding: pad,

@@ -5,6 +5,7 @@ import NavBar from "@/components/NavBar";
 import RightRailClient from "@/components/RightRailClient";
 import OnlineCount from "@/components/OnlineCount";
 import SiteFooter from "@/components/SiteFooter";
+import DeviceIdInit from "@/components/DeviceIdInit";
 import { ThemeInitScript } from "@/app/theme-init";
 import { getCurrentUserIdFromHeaders } from "@/lib/getCurrentUserId";
 import { touchUser } from "@/lib/touchUser";
@@ -33,6 +34,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="theme-body">
         <ThemeInitScript />
         <Providers>
+          <DeviceIdInit />
           <OnlineCount />
           <NavBar />
 

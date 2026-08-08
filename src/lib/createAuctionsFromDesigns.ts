@@ -15,6 +15,8 @@ export async function createAuctionsFromDesigns(): Promise<{ created: number }> 
   const designs = await prisma.design.findMany({
     where: {
       createdAt: { lt: new Date(now.getTime() - DESIGN_VOTING_MS) },
+      // Official shop listings are not community auction fodder
+      regagedShopItem: { is: null },
     },
     include: { votes: true },
     orderBy: { createdAt: "asc" },

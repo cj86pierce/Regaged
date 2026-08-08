@@ -12,6 +12,7 @@ function votingEndsAt(createdAt: Date): Date {
 export async function GET(req: Request) {
   const userId = await getCurrentUserId(req);
   const designs = await prisma.design.findMany({
+    where: { regagedShopItem: { is: null } },
     include: {
       user: { select: { username: true } },
       votes: true,

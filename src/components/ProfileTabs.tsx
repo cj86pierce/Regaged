@@ -496,6 +496,22 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
 
               <div style={{ marginTop: 6, fontSize: 12, color: "var(--muted-gray-2)" }}>Joined {joinedLabel}</div>
 
+              {data.isOwnProfile && data.isWarned ? (
+                <div
+                  style={{
+                    marginTop: 10,
+                    padding: "10px 12px",
+                    borderRadius: 6,
+                    border: "1px solid #c9a227",
+                    background: "rgba(201, 162, 39, 0.12)",
+                    fontSize: 13,
+                    lineHeight: 1.4,
+                  }}
+                >
+                  Your account is warned. You cannot enroll in games until an owner clears the warning.
+                </div>
+              ) : null}
+
               {data.isOwnProfile ? <DailyLoginCard /> : null}
             </div>
 

@@ -44,6 +44,20 @@ export async function POST(req: Request) {
     );
   }
 
+  const warned = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { warnedAt: true },
+  });
+  if (warned?.warnedAt) {
+    return NextResponse.json(
+      {
+        error:
+          "Your account is warned. You cannot enroll in games until an owner clears the warning.",
+      },
+      { status: 403 }
+    );
+  }
+
   const body = await req.json().catch(() => null);
   const gameType = (body?.gameType ?? "FASTING") as GameType;
 

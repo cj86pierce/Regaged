@@ -1,6 +1,8 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
+import { getCurrentUserIdFromHeaders } from "@/lib/getCurrentUserId";
+import { prisma } from "@/lib/prisma";
 
 type Accent = "blue" | "pink" | "green" | "blackGold" | "black" | "blackSilver" | "goldNavy";
 
@@ -120,12 +122,38 @@ function GameCard({
   );
 }
 
-export default function EnrollHub() {
+export default async function EnrollHub() {
+  const userId = await getCurrentUserIdFromHeaders();
+  const warned =
+    userId != null
+      ? !!(
+          await prisma.user.findUnique({
+            where: { id: userId },
+            select: { warnedAt: true },
+          })
+        )?.warnedAt
+      : false;
+
   return (
     <main className="pageShell">
       <h1 style={{ marginTop: 0, marginBottom: 6, color: "var(--brand)", fontSize: "clamp(22px, 5vw, 28px)" }}>
         Enroll
       </h1>
+      {warned ? (
+        <div
+          style={{
+            marginBottom: 14,
+            padding: "10px 12px",
+            borderRadius: 6,
+            border: "1px solid #c9a227",
+            background: "rgba(201, 162, 39, 0.12)",
+            fontSize: 13,
+            lineHeight: 1.4,
+          }}
+        >
+          Your account is warned. You cannot enroll in games until an owner clears the warning.
+        </div>
+      ) : null}
       <div className="theme-text-muted" style={{ fontSize: 13, marginBottom: 16, lineHeight: 1.4 }}>
         Pick a mode. Free: Fastings & Castings. Yellow + fee: Frookies, Rookies & Survivor. Live lobbies bot-fill after 15 minutes if seats are still open. Practice bot rooms fill instantly.
       </div>

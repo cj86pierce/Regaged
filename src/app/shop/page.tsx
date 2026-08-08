@@ -17,7 +17,7 @@ export default async function ShopPage() {
   }
 
   const banners = [
-    { label: "Game Shops", desc: "Avatar items and cosmetics. (Coming soon)", href: "/shop/game", accent: "linear-gradient(135deg,#ffd85a,#ffb703)", emoji: "👕" },
+    { label: "Game Shops", desc: "Official Regaged Shop — avatar designs at fixed R$ prices.", href: "/shop/game", accent: "linear-gradient(135deg,#ffd85a,#ffb703)", emoji: "👕" },
     { label: "Auctions", desc: "Bid on designs. Latest designs from the community.", href: "/shop/auctions", accent: "linear-gradient(135deg,#e53935,#b71c1c)", emoji: "🔨" },
     { label: "Color Levels Shop", desc: "Obtain higher color levels for vote weight and game access.", href: "/shop/colors", accent: "linear-gradient(135deg,#8e24aa,#4a148c)", emoji: "🎨" },
     { label: "Ads Shop", desc: "Promotional tools. (Coming soon)", href: "/shop/ads", accent: "linear-gradient(135deg,#1e88e5,#0d47a1)", emoji: "📢" },

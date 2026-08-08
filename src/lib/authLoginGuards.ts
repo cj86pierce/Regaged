@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { ipsMatch, normalizeIp } from "@/lib/clientIp";
 import { isOwnerUsername } from "@/lib/usernames";
+import { trackDeviceLogin } from "@/lib/deviceMultiAccount";
 
 type GuardUser = {
   id: string;
@@ -12,12 +13,12 @@ type GuardUser = {
 
 /**
  * Ban + IP lock checks after password/Steam identity is verified.
- * Ensures owner alias accounts are owner; applies OWNER_LOCKED_IP or first-login capture.
- * Returns null if login should proceed, or an error message if blocked.
+ * Tracks device cookie for multi-account auto-warn.
  */
 export async function enforceLoginGuards(
   user: GuardUser,
-  clientIp: string | null
+  clientIp: string | null,
+  deviceId?: string | null
 ): Promise<{ ok: true; userId: string; username: string; isOwner: boolean } | { ok: false; reason: string }> {
   if (user.bannedAt) {
     return { ok: false, reason: "This account is banned." };
@@ -60,6 +61,12 @@ export async function enforceLoginGuards(
     if (!clientIp || !ipsMatch(clientIp, lockedIp)) {
       return { ok: false, reason: "Login blocked: IP not allowed for this account." };
     }
+  }
+
+  try {
+    await trackDeviceLogin(deviceId, user.id);
+  } catch (e) {
+    console.error("trackDeviceLogin failed", e);
   }
 
   const full = await prisma.user.findUnique({

@@ -135,6 +135,12 @@ export async function POST(req: Request) {
   }
 
   if (action === "warn") {
+    {
+      const { isOwnerUsername } = await import("@/lib/usernames");
+      if (target.isOwner || isOwnerUsername(target.username)) {
+        return NextResponse.json({ error: "Cannot warn an owner/admin" }, { status: 400 });
+      }
+    }
     const updated = await prisma.user.update({
       where: { id: target.id },
       data: { warnedAt: new Date() },

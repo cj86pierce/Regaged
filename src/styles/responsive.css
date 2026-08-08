@@ -150,6 +150,12 @@ body {
     height: auto !important;
     aspect-ratio: 200 / 230;
   }
+  .shopRegagedGrid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important;
+  }
+  .shopRegagedThumb {
+    aspect-ratio: 200 / 230;
+  }
 }
 
 /* Games / enroll */

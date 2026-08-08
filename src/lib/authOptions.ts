@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { getClientIpFromHeaders } from "@/lib/clientIp";
 import { enforceLoginGuards } from "@/lib/authLoginGuards";
+import { parseDeviceIdFromHeaders } from "@/lib/deviceId";
 
 // Required for NextAuth (VPS: set in .env). Generate with: openssl rand -base64 32
 export const authOptions: NextAuthOptions = {
@@ -52,6 +53,7 @@ export const authOptions: NextAuthOptions = {
             ? ((req as { headers: Headers | Record<string, string | string[] | undefined> }).headers)
             : new Headers();
         const clientIp = getClientIpFromHeaders(headers);
+        const deviceId = parseDeviceIdFromHeaders(headers);
 
         const guard = await enforceLoginGuards(
           {
@@ -61,7 +63,8 @@ export const authOptions: NextAuthOptions = {
             lockedLoginIp: user.lockedLoginIp,
             bannedAt: user.bannedAt,
           },
-          clientIp
+          clientIp,
+          deviceId
         );
 
         if (!guard.ok) {

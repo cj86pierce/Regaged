@@ -194,6 +194,7 @@ model User {
   auctionsLeading   Auction[]    @relation("AuctionHighBidder")
 
   designOwnerships DesignOwner[]
+  regagedShopPurchases RegagedShopPurchase[]
 
   equippedShirtDesignId     String?
   equippedHairDesignId      String?
@@ -220,7 +221,24 @@ model User {
   friendsAsUser   Friendship[] @relation("UserFriends")
   friendsAsFriend Friendship[] @relation("FriendOf")
 
+  deviceAccounts DeviceAccount[]
+
   @@index([usernameLower])
+}
+
+/** Browser/device cookie → accounts that have logged in on it (multi-account detection). */
+model DeviceAccount {
+  id         String   @id @default(cuid())
+  deviceId   String
+  userId     String
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([deviceId, userId])
+  @@index([deviceId])
+  @@index([userId])
 }
 
 model Friendship {
@@ -326,6 +344,7 @@ model Design {
   comments DesignComment[]
   auctions Auction[]
   owners   DesignOwner[]
+  regagedShopItem RegagedShopItem?
 
   equippedByShirt         User[] @relation("EquippedShirt")
   equippedByHair          User[] @relation("EquippedHair")
@@ -430,6 +449,41 @@ model AuctionBid {
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([auctionId])
+}
+
+/** Official owner catalog — fixed-price equippable designs with stock. */
+model RegagedShopItem {
+  id          String     @id @default(cuid())
+  title       String
+  description String     @default("")
+  designType  DesignType
+  designId    String     @unique
+  priceT      Int
+  stock       Int
+  active      Boolean    @default(true)
+  sortOrder   Int        @default(0)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  design    Design                @relation(fields: [designId], references: [id], onDelete: Cascade)
+  purchases RegagedShopPurchase[]
+
+  @@index([active, sortOrder])
+}
+
+model RegagedShopPurchase {
+  id        String   @id @default(cuid())
+  itemId    String
+  userId    String
+  pricePaid Int
+  createdAt DateTime @default(now())
+
+  item RegagedShopItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  user User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, itemId])
+  @@index([userId])
+  @@index([itemId])
 }
 
 model ColorLevel {
