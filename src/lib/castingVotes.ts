@@ -5,36 +5,16 @@
  * Day 2+: evict the nominee with the highest vote points (1 per day).
  * When ≤5 remain, finalize by keys, then challenge score, then activity.
  *
- * After eviction, advance into the next day's ROUND_NOMINATE window and do NOT
- * immediately pick nominees — that would skip the voting window for the next day.
+ * After eviction, immediately open the next day's noms/vote (no compete-only gap).
+ * Challenge scores earned during the vote day feed the next nominees.
  */
 import { prisma } from "@/lib/prisma";
 import { getSystemUserId } from "@/lib/systemUser";
-import { getDayMsForGame } from "@/lib/castingDayLength";
 import { finalizeCastingGame } from "@/lib/castingEngine";
-import { castingNomineeCount } from "./castingNoms";
+import { castingNomineeCount, openCastingVoteDay } from "./castingNoms";
 
 function netChecks(plus: number | null, minus: number | null) {
   return (plus ?? 0) - (minus ?? 0);
-}
-
-async function startNextNominateDay(gameId: string, nextDay: number) {
-  const dayMs = await getDayMsForGame(gameId);
-  await prisma.$transaction([
-    prisma.game.update({
-      where: { id: gameId },
-      data: {
-        state: "ROUND_NOMINATE",
-        roundNumber: nextDay,
-        stateEndsAt: new Date(Date.now() + dayMs),
-      },
-    }),
-    // Fresh challenge scores for the new day
-    prisma.gamePlayer.updateMany({
-      where: { gameId, status: "ACTIVE" },
-      data: { castingDayMiniGameScore: 0 },
-    }),
-  ]);
 }
 
 export async function resolveCastingEviction(gameId: string) {
@@ -66,7 +46,7 @@ export async function resolveCastingEviction(gameId: string) {
       return { ok: true, finished: true as const };
     }
 
-    await startNextNominateDay(gameId, 2);
+    await openCastingVoteDay(gameId, 2);
     return { ok: true, advancedToDay: 2 as const };
   }
 
@@ -164,6 +144,6 @@ export async function resolveCastingEviction(gameId: string) {
   }
 
   const nextDay = dayNum + 1;
-  await startNextNominateDay(gameId, nextDay);
+  await openCastingVoteDay(gameId, nextDay);
   return { ok: true, advancedToDay: nextDay as number };
 }

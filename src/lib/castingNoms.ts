@@ -1,10 +1,12 @@
 /**
- * Resolve ROUND_NOMINATE for Casting day 2+.
+ * Resolve nominations for Casting day 2+.
  *
  * Nominees from challenge score + activity (net checks).
  * Keys are NOT used for nomination risk — they matter for final placements.
  * Normal days: 3 nominees; at final 7 (≤7 active): 2 nominees
  * Final ranking day begins at 5 remaining (handled in castingVotes / finalize)
+ *
+ * Flow: Day 1 compete only → Day 2+ always open vote with noms (no gap days).
  */
 import { prisma } from "@/lib/prisma";
 import { getSystemUserId } from "@/lib/systemUser";
@@ -58,7 +60,12 @@ export async function resolveCastingNominations(gameId: string) {
 
   const activeCount = await prisma.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
   const nomCount = castingNomineeCount(activeCount);
-  if (nomCount === 0) return;
+  if (nomCount === 0) {
+    // ≤5 left → finals, don't leave the day spinning in nominate forever
+    const { finalizeCastingGame } = await import("@/lib/castingEngine");
+    await finalizeCastingGame(gameId);
+    return;
+  }
 
   const rows = await prisma.gamePlayer.findMany({
     where: { gameId, status: "ACTIVE" },
@@ -99,4 +106,40 @@ export async function resolveCastingNominations(gameId: string) {
       },
     });
   });
+}
+
+/**
+ * Bump to `dayNumber`, pick nominees from current challenge scores, open ROUND_VOTE.
+ * Resets challenge scores after picking so competition during the vote feeds the next cycle.
+ */
+export async function openCastingVoteDay(
+  gameId: string,
+  dayNumber: number
+): Promise<"vote" | "finalized" | "noop"> {
+  if (dayNumber <= 1) return "noop";
+
+  await prisma.game.update({
+    where: { id: gameId },
+    data: { roundNumber: dayNumber, state: "ROUND_NOMINATE" },
+  });
+
+  await resolveCastingNominations(gameId);
+
+  const after = await prisma.game.findUnique({
+    where: { id: gameId },
+    select: { state: true, completedAt: true },
+  });
+
+  if (after?.completedAt || after?.state === "COMPLETED") return "finalized";
+
+  if (after?.state === "ROUND_VOTE") {
+    // Fresh scores for competition during this vote day → next day's noms
+    await prisma.gamePlayer.updateMany({
+      where: { gameId, status: "ACTIVE" },
+      data: { castingDayMiniGameScore: 0 },
+    });
+    return "vote";
+  }
+
+  return "noop";
 }

@@ -39,7 +39,7 @@ export default function GamesHubClient(props: { initial: Feed }) {
   }, []);
 
   useEffect(() => {
-    const id = window.setInterval(poll, 9000);
+    const id = window.setInterval(poll, 20_000);
     const onVis = () => {
       if (!document.hidden) void poll();
     };

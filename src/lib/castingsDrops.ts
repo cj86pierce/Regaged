@@ -1,12 +1,15 @@
 /**
  * Casting drop system:
- * - NORMAL: public, fixed layout (☠️ ☠️ 🍏/🔑 ☠️ ☠️), 70% apple / 30% key in center. Do not expire.
- * - CARE_PACKAGE: private, randomized slots, every 3000 checks. Only recipient sees/claims.
+ * - NORMAL: public, fixed layout (☠️ ☠️ 🍏/🔑 ☠️ ☠️). Live: 1 drop/hour, ≥3 keys/day.
+ * - CARE_PACKAGE: private, randomized slots, every 3000 checks.
  */
 import { prisma } from "@/lib/prisma";
 import { getSystemUserId } from "@/lib/systemUser";
 
-const APPLE_CHANCE = 0.7;
+const APPLE_CHANCE_AFTER_KEY_GUARANTEE = 0.75;
+const KEYS_GUARANTEED_PER_DAY = 3;
+/** Keep chat tidy — at most one unclaimed public drop sits in a game. */
+const MAX_UNCLAIMED_NORMAL = 1;
 
 function hourKey(d: Date) {
   const y = d.getUTCFullYear();
@@ -16,9 +19,12 @@ function hourKey(d: Date) {
   return `${y}-${m}-${day}T${h}`;
 }
 
-/** Normal drop: fixed layout. Slot 2 = reward (70% apple, 30% key), slots 0,1,3,4 = poison. */
-async function spawnNormalDrop(gameId: string, dayNumber: number): Promise<string> {
-  const rewardKind: "APPLE" | "KEY" = Math.random() < APPLE_CHANCE ? "APPLE" : "KEY";
+/** Normal drop: fixed layout. Slot 2 = reward, slots 0,1,3,4 = poison. */
+async function spawnNormalDrop(
+  gameId: string,
+  dayNumber: number,
+  rewardKind: "APPLE" | "KEY"
+): Promise<string> {
   const systemUserId = await getSystemUserId();
 
   const slotKinds: ("APPLE" | "KEY" | "POISON")[] = [
@@ -67,7 +73,62 @@ async function spawnNormalDrop(gameId: string, dayNumber: number): Promise<strin
   return ev;
 }
 
-/** Spawn normal drops (public). Drops do not expire. */
+/** Remove excess unclaimed public drops (and their chat messages) so old floods clear. */
+export async function pruneExcessUnclaimedDrops(gameId: string): Promise<number> {
+  const unclaimed = await prisma.castingDropEvent.findMany({
+    where: { gameId, dropType: "NORMAL", claimedAt: null },
+    select: { id: true, messageId: true },
+    orderBy: { createdAt: "desc" },
+  });
+  if (unclaimed.length <= MAX_UNCLAIMED_NORMAL) return 0;
+
+  const remove = unclaimed.slice(MAX_UNCLAIMED_NORMAL);
+  const messageIds = remove.map((r) => r.messageId).filter((id): id is string => !!id);
+  const eventIds = remove.map((r) => r.id);
+
+  await prisma.$transaction(async (tx) => {
+    if (messageIds.length) {
+      await tx.gameMessage.deleteMany({ where: { id: { in: messageIds } } });
+    }
+    await tx.castingDropEvent.deleteMany({ where: { id: { in: eventIds } } });
+  });
+
+  return remove.length;
+}
+
+/** Heal all active casting lobbies that still have drop spam from older rates. */
+export async function pruneAllActiveCastingDrops(): Promise<number> {
+  const games = await prisma.game.findMany({
+    where: {
+      gameType: { in: ["CASTING", "CASTING_BOT"] },
+      state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] },
+    },
+    select: { id: true },
+    take: 40,
+  });
+  let removed = 0;
+  for (const g of games) {
+    removed += await pruneExcessUnclaimedDrops(g.id);
+  }
+  // Enforce 5-key cap on anyone already over (safe for live games).
+  if (games.length) {
+    await prisma.gamePlayer.updateMany({
+      where: {
+        gameId: { in: games.map((g) => g.id) },
+        keys: { gt: 5 },
+      },
+      data: { keys: 5 },
+    });
+  }
+  return removed;
+}
+
+function pickRewardKind(keysSpawnedToday: number): "APPLE" | "KEY" {
+  if (keysSpawnedToday < KEYS_GUARANTEED_PER_DAY) return "KEY";
+  return Math.random() < APPLE_CHANCE_AFTER_KEY_GUARANTEE ? "APPLE" : "KEY";
+}
+
+/** Spawn normal drops (public). Live: exactly one per UTC hour. */
 export async function maybeSpawnCastingsDrops(gameId: string) {
   const g = await prisma.game.findUnique({
     where: { id: gameId },
@@ -82,8 +143,9 @@ export async function maybeSpawnCastingsDrops(gameId: string) {
   });
 
   if (!g || (g.gameType !== "CASTING" && g.gameType !== "CASTING_BOT")) return;
-  // Keys/apples should drop during both compete (nominate) and vote windows
   if (g.state !== "ROUND_NOMINATE" && g.state !== "ROUND_VOTE") return;
+
+  await pruneExcessUnclaimedDrops(gameId);
 
   const dayNum = g.roundNumber ?? 1;
   const now = new Date();
@@ -95,31 +157,34 @@ export async function maybeSpawnCastingsDrops(gameId: string) {
       select: { id: true },
     });
     if (!existingForDay) {
-      await spawnNormalDrop(gameId, dayNum);
+      const keysToday = await prisma.castingDropEvent.count({
+        where: { gameId, dayNumber: dayNum, dropType: "NORMAL", kind: "KEY" },
+      });
+      await spawnNormalDrop(gameId, dayNum, pickRewardKind(keysToday));
     }
     return;
   }
 
   if (g.gameType === "CASTING") {
-    // At most one public drop per UTC hour (was ~2/hour when both gates could fire).
-    // Retry within the hour until it lands, then stamp both keys so a second can't spawn.
     const alreadyThisHour = g.castingLastAppleHourKey === hk || g.castingLastKeyHourKey === hk;
     if (alreadyThisHour) return;
 
-    // ~35% per minute attempt → usually lands once in the hour, but not instantly every hour.
-    if (Math.random() < 0.35) {
-      await spawnNormalDrop(gameId, dayNum);
-      await prisma.game.update({
-        where: { id: gameId },
-        data: { castingLastAppleHourKey: hk, castingLastKeyHourKey: hk },
-      });
-    }
+    const keysToday = await prisma.castingDropEvent.count({
+      where: { gameId, dayNumber: dayNum, dropType: "NORMAL", kind: "KEY" },
+    });
+    const rewardKind = pickRewardKind(keysToday);
+
+    await spawnNormalDrop(gameId, dayNum, rewardKind);
+    await prisma.game.update({
+      where: { id: gameId },
+      data: { castingLastAppleHourKey: hk, castingLastKeyHourKey: hk },
+    });
   }
 }
 
 const CARE_PACKAGE_THRESHOLD = 3000;
 
-/** Called when a player's checks (plusCount - minusCount) may have crossed 3000. Spawn care package if needed. */
+/** Called when a player's checks may have crossed 3000. Spawn care package if needed. */
 export async function trySpawnCarePackage(
   gameId: string,
   recipientUserId: string,
@@ -147,7 +212,7 @@ export async function trySpawnCarePackage(
   const newThreshold = Math.floor(checks / CARE_PACKAGE_THRESHOLD) * CARE_PACKAGE_THRESHOLD;
 
   const rewardSlot = Math.floor(Math.random() * 5);
-  const rewardKind: "APPLE" | "KEY" = Math.random() < APPLE_CHANCE ? "APPLE" : "KEY";
+  const rewardKind: "APPLE" | "KEY" = Math.random() < 0.7 ? "APPLE" : "KEY";
 
   function rollSlot(idx: number): "APPLE" | "KEY" | "POISON" {
     if (idx === rewardSlot) return rewardKind;

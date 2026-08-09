@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-const POLL_MS = 30 * 1000;
+const POLL_MS = 60 * 1000;
 
 export default function OnlineCount() {
   const [count, setCount] = useState<number | null>(null);

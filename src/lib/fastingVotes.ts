@@ -302,13 +302,13 @@ export async function finishFastingGame(gameId: string, gameType?: string) {
       select: { userId: true, eliminatedPlace: true },
     });
 
+    const { applyPlacementPayout, isGameBotFilled } = await import("@/lib/botFillPayout");
+    const botFilled = await isGameBotFilled(gameId);
+
     for (const p of payout) {
       const u = allPlaced.find((x) => x.eliminatedPlace === p.place);
       if (!u) continue;
-      await prisma.user.update({
-        where: { id: u.userId },
-        data: { karma: { increment: p.karma }, tMoney: { increment: p.t } },
-      });
+      await applyPlacementPayout(u.userId, p.karma, p.t, { botFilled });
     }
   }
 

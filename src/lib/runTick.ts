@@ -3,7 +3,7 @@ import { advanceFastingIfDue } from "@/lib/fastingAdvance";
 import { advanceFastingBotIfDue } from "@/lib/fastingBotAdvance";
 import { advanceCastingIfDue } from "@/lib/castingAdvance";
 import { advanceCastingBotIfDue } from "@/lib/castingBotAdvance";
-import { maybeSpawnCastingsDrops } from "@/lib/castingsDrops";
+import { maybeSpawnCastingsDrops, pruneAllActiveCastingDrops } from "@/lib/castingsDrops";
 import { applyCastingsPeriodicDecay } from "@/lib/castingsPeriodicDecay";
 import { createAuctionsFromDesigns } from "@/lib/createAuctionsFromDesigns";
 import { resolveEndedAuctions } from "@/lib/resolveAuctions";
@@ -29,12 +29,18 @@ declare global {
   var __regagedLastCastingDecayAt: number | undefined;
   // eslint-disable-next-line no-var
   var __regagedLastCastingDropsAt: number | undefined;
+  // eslint-disable-next-line no-var
+  var __regagedLastSurvivorHealAt: number | undefined;
+  // eslint-disable-next-line no-var
+  var __regagedLastCastingDropPruneAt: number | undefined;
 }
 
 const AUCTION_EVERY_MS = 5 * 60 * 1000;
 const BOT_ACTIONS_EVERY_MS = 60_000;
 const CASTING_DECAY_EVERY_MS = 5 * 60 * 1000;
 const CASTING_DROPS_EVERY_MS = 60_000;
+const SURVIVOR_HEAL_EVERY_MS = 5 * 60 * 1000;
+const CASTING_DROP_PRUNE_EVERY_MS = 2 * 60 * 1000;
 
 /**
  * Run the main game tick: advance fasting/casting rounds, bot games, auctions, etc.
@@ -202,7 +208,12 @@ export async function runTick(): Promise<TickResult> {
       where: {
         gameType: "CASTING",
         state: { in: ["ROUND_NOMINATE", "ROUND_VOTE"] },
-        stateEndsAt: { not: null, lte: now },
+        OR: [
+          { stateEndsAt: { lte: now } },
+          { stateEndsAt: null },
+          // Heal: day 2+ must never linger in compete-only nominate
+          { state: "ROUND_NOMINATE", roundNumber: { gte: 2 } },
+        ],
       },
       select: { id: true },
       take: 15,
@@ -215,6 +226,16 @@ export async function runTick(): Promise<TickResult> {
         if (r.ok && ((r as any).advanced || (r as any).fixed)) castingAdvanced++;
       } catch (e) {
         console.error("CASTING advance failed", { gameId: g.id, err: String(e) });
+      }
+    }
+
+    const lastDropPruneAt = globalThis.__regagedLastCastingDropPruneAt ?? 0;
+    if (Date.now() - lastDropPruneAt >= CASTING_DROP_PRUNE_EVERY_MS) {
+      globalThis.__regagedLastCastingDropPruneAt = Date.now();
+      try {
+        await pruneAllActiveCastingDrops();
+      } catch (e) {
+        console.error("CASTING drop prune failed", { err: String(e) });
       }
     }
 
@@ -256,10 +277,14 @@ export async function runTick(): Promise<TickResult> {
     // -----------------------
     // SURVIVOR / SURVIVOR_BOT
     // -----------------------
-    try {
-      await healBadSurvivorMerges();
-    } catch (e) {
-      console.error("Survivor merge heal failed", { err: String(e) });
+    const lastSurvivorHealAt = globalThis.__regagedLastSurvivorHealAt ?? 0;
+    if (Date.now() - lastSurvivorHealAt >= SURVIVOR_HEAL_EVERY_MS) {
+      globalThis.__regagedLastSurvivorHealAt = Date.now();
+      try {
+        await healBadSurvivorMerges();
+      } catch (e) {
+        console.error("Survivor merge heal failed", { err: String(e) });
+      }
     }
 
     const survivorDue = await prisma.game.findMany({

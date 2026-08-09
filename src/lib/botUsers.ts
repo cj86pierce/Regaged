@@ -115,5 +115,13 @@ export async function fillGameWithBots(gameId: string, maxPlayers: number): Prom
       break;
     }
   }
+
+  if (added > 0) {
+    await prisma.game.update({
+      where: { id: gameId },
+      data: { botFilled: true },
+    });
+  }
+
   return added;
 }

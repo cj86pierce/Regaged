@@ -152,8 +152,17 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
   const isSurvivor = game.gameType === "SURVIVOR" || game.gameType === "SURVIVOR_BOT";
   if (isSurvivor && game.state !== "ENROLLING" && game.state !== "COMPLETED") {
-    const { syncCampTimers } = await import("@/lib/survivor/camp");
-    await syncCampTimers(gameId).catch(() => null);
+    // Don't rewrite camp timers on every 12–25s poll — throttle per game.
+    const g = globalThis as typeof globalThis & {
+      __regagedCampSyncAt?: Map<string, number>;
+    };
+    if (!g.__regagedCampSyncAt) g.__regagedCampSyncAt = new Map();
+    const last = g.__regagedCampSyncAt.get(gameId) ?? 0;
+    if (Date.now() - last >= 30_000) {
+      g.__regagedCampSyncAt.set(gameId, Date.now());
+      const { syncCampTimers } = await import("@/lib/survivor/camp");
+      await syncCampTimers(gameId).catch(() => null);
+    }
     const camp = await prisma.game.findUnique({
       where: { id: gameId },
       select: {

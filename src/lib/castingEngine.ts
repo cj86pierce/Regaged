@@ -103,6 +103,8 @@ export async function finalizeCastingGame(gameId: string) {
 
   // payouts for places 1..13 only - block for CASTING_BOT
   if (!skipPayout) {
+    const { applyPlacementPayout, isGameBotFilled } = await import("@/lib/botFillPayout");
+    const botFilled = await isGameBotFilled(gameId);
     const placements = await prisma.gamePlayer.findMany({
       where: { gameId },
       select: { userId: true, eliminatedPlace: true },
@@ -113,13 +115,7 @@ export async function finalizeCastingGame(gameId: string) {
       const pay = CASTING_SLOW_PAYOUT[place];
       if (!pay) continue;
 
-      await prisma.user.update({
-        where: { id: p.userId },
-        data: {
-          karma: { increment: pay.karma },
-          tMoney: { increment: pay.tMoney },
-        },
-      });
+      await applyPlacementPayout(p.userId, pay.karma, pay.tMoney, { botFilled });
     }
   }
 }

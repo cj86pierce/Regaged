@@ -25,6 +25,12 @@ export default function CastingSidebar(props: {
   meUserId?: string | null;
 }) {
   const showVote = props.state === "ROUND_VOTE" && props.nominees.length >= 2;
+  const dayLabel =
+    props.dayNumber <= 1 && props.state === "ROUND_NOMINATE"
+      ? "Day 1 — settle in: talk, compete, grab keys. No noms today. Day 2 opens with nominations."
+      : props.state === "ROUND_VOTE"
+        ? `Day ${props.dayNumber} — nominees are up. Vote (1/2/3). Keep competing for keys — that fuels tomorrow's noms.`
+        : `Day ${props.dayNumber} — opening nominations…`;
 
   return (
     <div
@@ -36,6 +42,14 @@ export default function CastingSidebar(props: {
         minHeight: 0,
       }}
     >
+      <div
+        className="theme-sidebar-panel"
+        style={{ borderRadius: 4, padding: 12, flexShrink: 0, borderLeft: "3px solid #2e7d32" }}
+      >
+        <div style={{ fontWeight: 1000, marginBottom: 4 }}>Right now</div>
+        <div style={{ fontSize: 12, lineHeight: 1.35 }}>{dayLabel}</div>
+      </div>
+
       {/* CARE PACKAGES */}
       {props.carePackages && props.carePackages.length > 0 && props.onReload && (
         <CarePackagePanel
@@ -65,10 +79,10 @@ export default function CastingSidebar(props: {
         <div style={{ fontWeight: 1000, marginBottom: 8 }}>Read this</div>
         <div style={{ fontSize: 12, opacity: 0.8, lineHeight: 1.35 }}>
           <b>Castings</b> runs in 12-hour days.<br />
+          <b>Day 1:</b> compete only. <b>Day 2→finals:</b> noms every day (no gap days).<br />
           <b>Nominations:</b> lowest challenge score, then lowest activity (checks).<br />
-          <b>Keys</b> matter most at the end — final 5 ranks by <b>keys → challenge → checks</b>.<br />
-          Play the daily Competition for your best challenge score (retries keep your best).<br />
-          Public drops appear in chat about once an hour (center slot = reward).<br />
+          <b>Keys</b> win at the end (max 5). Final 5 ranks by <b>keys → challenge → checks</b>.<br />
+          Public drops: <b>1/hour</b>, at least <b>3 keys/day</b> guaranteed.<br />
           Every 3000 checks = private care package (see above).<br />
           At final 7 there are only 2 nominees.
         </div>

@@ -78,11 +78,10 @@ async function finishSurvivor(gameId: string, isBot: boolean) {
   });
 
   if (!isBot) {
+    const { applyPlacementPayout, isGameBotFilled } = await import("@/lib/botFillPayout");
+    const botFilled = await isGameBotFilled(gameId);
     for (const a of actives) {
-      await prisma.user.update({
-        where: { id: a.userId },
-        data: { karma: { increment: 50 }, tMoney: { increment: 40 } },
-      });
+      await applyPlacementPayout(a.userId, 50, 40, { botFilled });
     }
   }
 }

@@ -57,7 +57,11 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     if (opt.kind === "KEY") deltaKeys = +1;
 
     const newHealth = Math.max(0, Math.min(100, (gp.health ?? 70) + deltaHp));
-    const newKeys = (gp.keys ?? 0) + deltaKeys;
+    // Hard cap: 5 keys max per player in a casting game
+    const MAX_KEYS = 5;
+    const curKeys = gp.keys ?? 0;
+    if (deltaKeys > 0 && curKeys >= MAX_KEYS) deltaKeys = 0;
+    const newKeys = Math.min(MAX_KEYS, curKeys + deltaKeys);
 
     await prisma.$transaction(async (tx) => {
       // mark claimed

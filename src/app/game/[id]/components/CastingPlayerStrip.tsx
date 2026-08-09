@@ -192,7 +192,9 @@ export default function CastingPlayerStrip(props: {
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span>🔑 Keys</span>
-                <b>{me.keys}</b>
+                <b>
+                  {me.keys}/5
+                </b>
               </div>
             </div>
           ) : (
@@ -200,7 +202,7 @@ export default function CastingPlayerStrip(props: {
           )}
 
           <div style={{ marginTop: 12, fontSize: 11, opacity: 0.65, lineHeight: 1.35 }}>
-            Nominations: low challenge score + low checks. Finals: keys decide.
+            Day 1 compete only; Day 2+ noms every day. Keys capped at 5.
           </div>
 
           <Link

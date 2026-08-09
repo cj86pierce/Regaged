@@ -116,6 +116,10 @@ model User {
   tMoney     Int      @default(0)
   blogREarnedToday  Int      @default(0)
   blogRResetDate    String?  // YYYY-MM-DD
+  /** Bot-filled live games: daily placement payout caps (UTC day). */
+  botFillPayoutGamesToday Int     @default(0)
+  botFillKarmaPaidToday   Boolean @default(false)
+  botFillPayoutResetDate  String? // YYYY-MM-DD
   lastSeenAt DateTime @default(now())
 
   // Daily login rewards (UTC calendar day)
@@ -543,6 +547,9 @@ model Game {
   frookiesPhase   String?  // FROOKIES: 'POV_SAVE' = waiting for POV after HOH noms; 'HOH_RENOM' = need 1 replacement after POV saved a nominee
   createdAt       DateTime  @default(now())
   completedAt DateTime?
+
+  /** True when lobby was padded with bots (live game after wait). Caps human placement payouts. */
+  botFilled Boolean @default(false)
 
   players       GamePlayer[]
   nominations   Nomination[]

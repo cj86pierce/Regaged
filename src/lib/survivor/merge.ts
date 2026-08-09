@@ -94,14 +94,10 @@ export async function finishTribalAndSpawnMerge(
   // Only the merge cast (≤10) move into the new lobby — never a 20-wide camp.
   const actives = activesAll.slice(0, SURVIVOR_MERGE_MAX);
 
+  const { applyPlacementPayout, isGameBotFilled } = await import("@/lib/botFillPayout");
+  const botFilled = await isGameBotFilled(tribalGameId);
   for (const a of actives) {
-    await prisma.user.update({
-      where: { id: a.userId },
-      data: {
-        karma: { increment: FIRST_PLACE.karma },
-        tMoney: { increment: FIRST_PLACE.tMoney },
-      },
-    });
+    await applyPlacementPayout(a.userId, FIRST_PLACE.karma, FIRST_PLACE.tMoney, { botFilled });
   }
 
   const mergeGame = await prisma.game.create({

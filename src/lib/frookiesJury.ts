@@ -134,18 +134,12 @@ export async function resolveFrookiesJuryVoteIfDue(gameId: string) {
     });
 
     if (!isBotGame) {
-      // 1st/2nd per the Frookies payout table; 3rd-6th were already placed
-      // during normal eviction and are paid via the shared eliminatedPlace
-      // payout pass in fastingVotes.ts.
-      await prisma.user.update({
-        where: { id: winner.userId },
-        data: { karma: { increment: 25 }, tMoney: { increment: 60 } },
-      });
-      await prisma.user.update({
-        where: { id: runnerUp.userId },
-        data: { karma: { increment: 3 }, tMoney: { increment: 20 } },
-      });
-      await payFrookiesPlacementsThreeThroughSix(gameId);
+      const { applyPlacementPayout, isGameBotFilled } = await import("@/lib/botFillPayout");
+      const botFilled = await isGameBotFilled(gameId);
+      // 1st/2nd per the Frookies payout table; 3rd–6th paid below.
+      await applyPlacementPayout(winner.userId, 25, 60, { botFilled });
+      await applyPlacementPayout(runnerUp.userId, 3, 20, { botFilled });
+      await payFrookiesPlacementsThreeThroughSix(gameId, botFilled);
     }
 
     return { ok: true, finished: true as const, winnerUserId: winner.userId };
@@ -154,13 +148,14 @@ export async function resolveFrookiesJuryVoteIfDue(gameId: string) {
   }
 }
 
-async function payFrookiesPlacementsThreeThroughSix(gameId: string) {
+async function payFrookiesPlacementsThreeThroughSix(gameId: string, botFilled: boolean) {
   const payoutByPlace: Record<number, { karma: number; tMoney: number }> = {
     3: { karma: 0, tMoney: 10 },
     4: { karma: 0, tMoney: 10 },
     5: { karma: 0, tMoney: 10 },
     6: { karma: 0, tMoney: 10 },
   };
+  const { applyPlacementPayout } = await import("@/lib/botFillPayout");
   const players = await prisma.gamePlayer.findMany({
     where: { gameId, eliminatedPlace: { in: [3, 4, 5, 6] } },
     select: { userId: true, eliminatedPlace: true },
@@ -168,9 +163,6 @@ async function payFrookiesPlacementsThreeThroughSix(gameId: string) {
   for (const p of players) {
     const pay = payoutByPlace[p.eliminatedPlace!];
     if (!pay) continue;
-    await prisma.user.update({
-      where: { id: p.userId },
-      data: { karma: { increment: pay.karma }, tMoney: { increment: pay.tMoney } },
-    });
+    await applyPlacementPayout(p.userId, pay.karma, pay.tMoney, { botFilled });
   }
 }

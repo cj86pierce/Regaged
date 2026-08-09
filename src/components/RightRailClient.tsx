@@ -31,7 +31,7 @@ function GameBtn({ href, label, sub }: { href: string; label: string; sub: strin
   );
 }
 
-const POLL_MS = 30_000;
+const POLL_MS = 60_000;
 
 export default function RightRailClient() {
   const [games, setGames] = useState<Game[] | null>(null);
