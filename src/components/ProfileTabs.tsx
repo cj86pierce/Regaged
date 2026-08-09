@@ -26,6 +26,7 @@ export type ProfileTabsData = {
   /** 1-based karma Hall of Fame rank; badge shown if ≤ 500 */
   hofRank?: number | null;
   isOwner?: boolean;
+  isAdmin?: boolean;
   isWarned?: boolean;
   isBanned?: boolean;
   /** Own profile: show verify email CTA when unset */
@@ -453,6 +454,7 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
                     {data.username}
                     <StatusBadges
                       isOwner={data.isOwner}
+                      isAdmin={data.isAdmin}
                       isWarned={data.isWarned}
                       isBanned={data.isBanned}
                       hofRank={data.hofRank}

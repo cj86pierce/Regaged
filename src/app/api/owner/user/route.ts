@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/requireOwner";
+import { resolveStaffFlags } from "@/lib/staffAccess";
 
 type Action =
   | "lookup"
@@ -10,6 +11,20 @@ type Action =
   | "clear_warn"
   | "ban"
   | "unban";
+
+const userSelect = {
+  id: true,
+  username: true,
+  usernameLower: true,
+  karma: true,
+  tMoney: true,
+  isOwner: true,
+  isAdmin: true,
+  bannedAt: true,
+  banReason: true,
+  warnedAt: true,
+  lockedLoginIp: true,
+} as const;
 
 function clampInt(n: unknown, min: number, max: number): number | null {
   const v = typeof n === "number" ? n : Number(n);
@@ -34,17 +49,7 @@ export async function POST(req: Request) {
   const usernameLower = usernameRaw.toLowerCase();
   const target = await prisma.user.findUnique({
     where: { usernameLower },
-    select: {
-      id: true,
-      username: true,
-      karma: true,
-      tMoney: true,
-      isOwner: true,
-      bannedAt: true,
-      banReason: true,
-      warnedAt: true,
-      lockedLoginIp: true,
-    },
+    select: userSelect,
   });
 
   if (!target) {
@@ -73,17 +78,7 @@ export async function POST(req: Request) {
     const updated = await prisma.user.update({
       where: { id: target.id },
       data,
-      select: {
-        id: true,
-        username: true,
-        karma: true,
-        tMoney: true,
-        isOwner: true,
-        bannedAt: true,
-        banReason: true,
-        warnedAt: true,
-        lockedLoginIp: true,
-      },
+      select: userSelect,
     });
     return NextResponse.json({ user: serialize(updated) });
   }
@@ -111,42 +106,19 @@ export async function POST(req: Request) {
     const updated = await prisma.user.update({
       where: { id: target.id },
       data: { username: newName, usernameLower: newLower },
-      select: {
-        id: true,
-        username: true,
-        karma: true,
-        tMoney: true,
-        isOwner: true,
-        bannedAt: true,
-        banReason: true,
-        warnedAt: true,
-        lockedLoginIp: true,
-      },
+      select: userSelect,
     });
     return NextResponse.json({ user: serialize(updated) });
   }
 
   if (action === "warn") {
-    {
-      const { isOwnerUsername } = await import("@/lib/usernames");
-      if (target.isOwner || isOwnerUsername(target.username)) {
-        return NextResponse.json({ error: "Cannot warn an owner/admin" }, { status: 400 });
-      }
+    if (resolveStaffFlags(target).isStaff) {
+      return NextResponse.json({ error: "Cannot warn an owner/admin" }, { status: 400 });
     }
     const updated = await prisma.user.update({
       where: { id: target.id },
       data: { warnedAt: new Date() },
-      select: {
-        id: true,
-        username: true,
-        karma: true,
-        tMoney: true,
-        isOwner: true,
-        bannedAt: true,
-        banReason: true,
-        warnedAt: true,
-        lockedLoginIp: true,
-      },
+      select: userSelect,
     });
     return NextResponse.json({ user: serialize(updated) });
   }
@@ -155,43 +127,20 @@ export async function POST(req: Request) {
     const updated = await prisma.user.update({
       where: { id: target.id },
       data: { warnedAt: null },
-      select: {
-        id: true,
-        username: true,
-        karma: true,
-        tMoney: true,
-        isOwner: true,
-        bannedAt: true,
-        banReason: true,
-        warnedAt: true,
-        lockedLoginIp: true,
-      },
+      select: userSelect,
     });
     return NextResponse.json({ user: serialize(updated) });
   }
 
   if (action === "ban") {
-    {
-      const { isOwnerUsername } = await import("@/lib/usernames");
-      if (target.isOwner || isOwnerUsername(target.username)) {
-        return NextResponse.json({ error: "Cannot ban an owner" }, { status: 400 });
-      }
+    if (resolveStaffFlags(target).isStaff) {
+      return NextResponse.json({ error: "Cannot ban an owner/admin" }, { status: 400 });
     }
     const reason = typeof body?.reason === "string" ? body.reason.trim().slice(0, 200) : null;
     const updated = await prisma.user.update({
       where: { id: target.id },
       data: { bannedAt: new Date(), banReason: reason || "Banned by owner" },
-      select: {
-        id: true,
-        username: true,
-        karma: true,
-        tMoney: true,
-        isOwner: true,
-        bannedAt: true,
-        banReason: true,
-        warnedAt: true,
-        lockedLoginIp: true,
-      },
+      select: userSelect,
     });
     return NextResponse.json({ user: serialize(updated) });
   }
@@ -200,17 +149,7 @@ export async function POST(req: Request) {
     const updated = await prisma.user.update({
       where: { id: target.id },
       data: { bannedAt: null, banReason: null },
-      select: {
-        id: true,
-        username: true,
-        karma: true,
-        tMoney: true,
-        isOwner: true,
-        bannedAt: true,
-        banReason: true,
-        warnedAt: true,
-        lockedLoginIp: true,
-      },
+      select: userSelect,
     });
     return NextResponse.json({ user: serialize(updated) });
   }
@@ -224,17 +163,21 @@ function serialize(u: {
   karma: number;
   tMoney: number;
   isOwner: boolean;
+  isAdmin: boolean;
+  usernameLower: string;
   bannedAt: Date | null;
   banReason: string | null;
   warnedAt: Date | null;
   lockedLoginIp: string | null;
 }) {
+  const staff = resolveStaffFlags(u);
   return {
     id: u.id,
     username: u.username,
     karma: u.karma,
     tMoney: u.tMoney,
-    isOwner: u.isOwner,
+    isOwner: staff.isOwner,
+    isAdmin: staff.isAdmin,
     banned: !!u.bannedAt,
     banReason: u.banReason,
     warned: !!u.warnedAt,

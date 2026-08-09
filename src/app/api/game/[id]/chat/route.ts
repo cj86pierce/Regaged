@@ -3,7 +3,7 @@ import { getCurrentUserId } from "@/lib/getCurrentUserId";
 import { prisma } from "@/lib/prisma";
 import { touchUser } from "@/lib/touchUser";
 import { checkBlockedContent } from "@/lib/contentFilter";
-import { isOwnerUsername } from "@/lib/usernames";
+import { resolveStaffFlags } from "@/lib/staffAccess";
 
 function bad(msg: string, status = 400) {
   return NextResponse.json({ error: msg }, { status });
@@ -34,10 +34,10 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   if (!isActive) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { isOwner: true, usernameLower: true, bannedAt: true },
+      select: { isOwner: true, isAdmin: true, usernameLower: true, bannedAt: true },
     });
     if (!user || user.bannedAt) return bad("Unauthorized", 401);
-    asOwner = user.isOwner || isOwnerUsername(user.usernameLower);
+    asOwner = resolveStaffFlags(user).isStaff;
     if (!asOwner) return bad("Not in this game", 403);
   }
 

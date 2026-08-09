@@ -6,19 +6,23 @@ import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { useTheme } from "@/app/ThemeProvider";
 
-type SteamMe = { userId: string; username: string; isOwner?: boolean } | null;
+type SteamMe = { userId: string; username: string; isOwner?: boolean; isAdmin?: boolean } | null;
 
 export default function NavBar() {
   const { theme, setTheme } = useTheme();
   const { data: session, status } = useSession();
   const [steamMe, setSteamMe] = useState<SteamMe>(null);
   const [dmUnread, setDmUnread] = useState(0);
-  const [isOwnerFlag, setIsOwnerFlag] = useState(false);
+  const [isStaffFlag, setIsStaffFlag] = useState(false);
+  const [staffLabel, setStaffLabel] = useState<"Owner" | "Admin">("Owner");
   const loggedIn = !!session?.user || !!steamMe;
-  const showOwner =
-    isOwnerFlag ||
-    !!(session?.user as { isOwner?: boolean } | undefined)?.isOwner ||
-    !!steamMe?.isOwner;
+  const sessionUser = session?.user as { isOwner?: boolean; isAdmin?: boolean } | undefined;
+  const showStaff =
+    isStaffFlag ||
+    !!sessionUser?.isOwner ||
+    !!sessionUser?.isAdmin ||
+    !!steamMe?.isOwner ||
+    !!steamMe?.isAdmin;
 
   const pathname = usePathname();
   useEffect(() => {
@@ -29,15 +33,21 @@ export default function NavBar() {
       .catch(() => {});
   }, [loggedIn, pathname]);
 
-  // Session check (Steam cookie or refresh isOwner for NextAuth)
+  // Session check (Steam cookie or refresh staff flags for NextAuth)
   useEffect(() => {
     fetch("/api/me/session", { credentials: "include" })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (!d) return;
-        setIsOwnerFlag(!!d.isOwner);
+        setIsStaffFlag(!!d.isStaff || !!d.isOwner || !!d.isAdmin);
+        setStaffLabel(d.isOwner ? "Owner" : d.isAdmin ? "Admin" : "Owner");
         if (!session?.user) {
-          setSteamMe({ userId: d.userId, username: d.username, isOwner: !!d.isOwner });
+          setSteamMe({
+            userId: d.userId,
+            username: d.username,
+            isOwner: !!d.isOwner,
+            isAdmin: !!d.isAdmin,
+          });
         }
       })
       .catch(() => {});
@@ -75,9 +85,9 @@ export default function NavBar() {
           <Link href="/games" className="navLink">Games</Link>
           <Link href="/enroll" className="navLink">Enroll</Link>
           <Link href="/hof" className="navLink">HOF</Link>
-          {showOwner ? (
+          {showStaff ? (
             <Link href="/owner" className="navLink" style={{ fontWeight: 800 }}>
-              Owner
+              {staffLabel}
             </Link>
           ) : null}
           <Link href="/blogs" className="navLink">Blogs</Link>

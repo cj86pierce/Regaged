@@ -144,6 +144,8 @@ model User {
 
   // Owner / moderation
   isOwner       Boolean   @default(false)
+  /** Staff access with Admin badge (not Owner). Exempt from multi-account warn. */
+  isAdmin       Boolean   @default(false)
   lockedLoginIp String?
   bannedAt      DateTime?
   banReason     String?

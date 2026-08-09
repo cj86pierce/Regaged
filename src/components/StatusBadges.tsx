@@ -15,9 +15,10 @@ const badgeBase: React.CSSProperties = {
   fontWeight: 900,
 };
 
-/** Owner / Warned / HOF badges in the same row next to username. */
+/** Owner / Admin / Warned / HOF badges in the same row next to username. */
 export default function StatusBadges(props: {
   isOwner?: boolean;
+  isAdmin?: boolean;
   isWarned?: boolean;
   isBanned?: boolean;
   hofRank?: number | null;
@@ -43,6 +44,21 @@ export default function StatusBadges(props: {
           }}
         >
           Owner
+        </span>
+      ) : props.isAdmin ? (
+        <span
+          title="Site admin"
+          style={{
+            ...badgeBase,
+            padding: pad,
+            fontSize,
+            background: "linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)",
+            color: "#eff6ff",
+            border: "1px solid #1d4ed8",
+            boxShadow: "0 1px 2px rgba(0,0,0,0.18)",
+          }}
+        >
+          Admin
         </span>
       ) : null}
       {props.isWarned ? (

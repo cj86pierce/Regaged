@@ -38,6 +38,7 @@ export const authOptions: NextAuthOptions = {
             usernameLower: true,
             passwordHash: true,
             isOwner: true,
+            isAdmin: true,
             lockedLoginIp: true,
             bannedAt: true,
           },
@@ -60,6 +61,7 @@ export const authOptions: NextAuthOptions = {
             id: user.id,
             usernameLower: user.usernameLower,
             isOwner: user.isOwner,
+            isAdmin: user.isAdmin,
             lockedLoginIp: user.lockedLoginIp,
             bannedAt: user.bannedAt,
           },
@@ -72,7 +74,12 @@ export const authOptions: NextAuthOptions = {
           throw new Error(guard.reason);
         }
 
-        return { id: guard.userId, name: guard.username, isOwner: guard.isOwner };
+        return {
+          id: guard.userId,
+          name: guard.username,
+          isOwner: guard.isOwner,
+          isAdmin: guard.isAdmin,
+        };
       },
     }),
   ],
@@ -82,16 +89,23 @@ export const authOptions: NextAuthOptions = {
         token.id = (user as { id?: string }).id;
         token.name = (user as { name?: string }).name;
         token.isOwner = Boolean((user as { isOwner?: boolean }).isOwner);
+        token.isAdmin = Boolean((user as { isAdmin?: boolean }).isAdmin);
       }
       return token;
     },
     async session({ session, token }) {
       if (!session.user) (session as { user: Record<string, unknown> }).user = {};
 
-      const u = session.user as { id?: string; name?: string | null; isOwner?: boolean };
+      const u = session.user as {
+        id?: string;
+        name?: string | null;
+        isOwner?: boolean;
+        isAdmin?: boolean;
+      };
       u.id = token.id as string | undefined;
       u.name = token.name as string;
       u.isOwner = Boolean(token.isOwner);
+      u.isAdmin = Boolean(token.isAdmin);
 
       return session;
     },

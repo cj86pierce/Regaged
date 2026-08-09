@@ -1,7 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/getCurrentUserId";
-import { isOwnerUsername } from "@/lib/usernames";
+import { resolveStaffFlags } from "@/lib/staffAccess";
+import { isAdminUsername, isOwnerUsername } from "@/lib/usernames";
 
+/** Owner or Admin staff access (owner panel, shop tools, etc.). */
 export async function requireOwner(req: Request): Promise<
   | { ok: true; ownerId: string }
   | { ok: false; status: number; error: string }
@@ -11,16 +13,19 @@ export async function requireOwner(req: Request): Promise<
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, isOwner: true, usernameLower: true, bannedAt: true },
+    select: { id: true, isOwner: true, isAdmin: true, usernameLower: true, bannedAt: true },
   });
   if (!user || user.bannedAt) return { ok: false, status: 401, error: "Not logged in" };
 
-  const aliasOwner = isOwnerUsername(user.usernameLower);
-  const isOwner = user.isOwner || aliasOwner;
-  if (!isOwner) return { ok: false, status: 403, error: "Owner only" };
+  const { isOwner, isAdmin, isStaff } = resolveStaffFlags(user);
+  if (!isStaff) return { ok: false, status: 403, error: "Owner/Admin only" };
 
-  if (!user.isOwner && aliasOwner) {
+  // Persist alias flags
+  if (isOwnerUsername(user.usernameLower) && !user.isOwner) {
     await prisma.user.update({ where: { id: user.id }, data: { isOwner: true } });
+  }
+  if (isAdminUsername(user.usernameLower) && !user.isAdmin && !isOwner) {
+    await prisma.user.update({ where: { id: user.id }, data: { isAdmin: true } });
   }
 
   return { ok: true, ownerId: user.id };

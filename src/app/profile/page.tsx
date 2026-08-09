@@ -10,7 +10,7 @@ import { getSlotDesignsForUser, getSlotDesignsForUserIds } from "@/lib/avatarSlo
 import { sortProfileGames } from "@/lib/sortProfileGames";
 import { avatarConfigFromUser } from "@/lib/avatarConfigFromUser";
 import { getKarmaRank } from "@/lib/hof";
-import { isOwnerUsername } from "@/lib/usernames";
+import { resolveStaffFlags } from "@/lib/staffAccess";
 
 export default async function ProfilePage({ searchParams }: { searchParams: { page?: string } }) {
   const userId = await getCurrentUserIdFromHeaders();
@@ -41,6 +41,8 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
       tMoney: true,
       bio: true, // ✅
       isOwner: true,
+      isAdmin: true,
+      usernameLower: true,
       warnedAt: true,
       bannedAt: true,
       emailVerifiedAt: true,
@@ -187,7 +189,8 @@ export default async function ProfilePage({ searchParams }: { searchParams: { pa
     joinedAt: (user.createdAt && typeof user.createdAt.toISOString === "function" ? user.createdAt.toISOString() : new Date().toISOString()),
     karma: user.karma,
     hofRank,
-    isOwner: user.isOwner || isOwnerUsername(user.username),
+    isOwner: resolveStaffFlags(user).isOwner,
+    isAdmin: resolveStaffFlags(user).isAdmin,
     isWarned: !!user.warnedAt,
     isBanned: !!user.bannedAt,
     emailVerified: !!user.emailVerifiedAt,

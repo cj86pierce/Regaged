@@ -1,14 +1,11 @@
 import { prisma } from "@/lib/prisma";
-import { isOwnerUsername, OWNER_USERNAME_ALIASES } from "@/lib/usernames";
-
-function isPrivileged(user: { isOwner: boolean; usernameLower: string }): boolean {
-  return user.isOwner || isOwnerUsername(user.usernameLower);
-}
+import { resolveStaffFlags } from "@/lib/staffAccess";
+import { ADMIN_USERNAME_ALIASES, OWNER_USERNAME_ALIASES } from "@/lib/usernames";
 
 /**
  * Record this login on a browser device cookie.
- * If another non-owner/admin account already used this device, warn both sides.
- * Owner / admin (isOwner or Carson/Siege) are never tracked or auto-warned.
+ * If another non-staff account already used this device, warn both sides.
+ * Owner / Admin accounts are never tracked or auto-warned (so Carson + Admin can share a device).
  */
 export async function trackDeviceLogin(
   deviceId: string | null | undefined,
@@ -20,12 +17,11 @@ export async function trackDeviceLogin(
 
   const me = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, isOwner: true, usernameLower: true },
+    select: { id: true, isOwner: true, isAdmin: true, usernameLower: true },
   });
   if (!me) return { multiAccount: false, warnedUserIds: [] };
 
-  // Never track / auto-warn owner or admin accounts
-  if (isPrivileged(me)) {
+  if (resolveStaffFlags(me).isStaff) {
     return { multiAccount: false, warnedUserIds: [] };
   }
 
@@ -40,23 +36,23 @@ export async function trackDeviceLogin(
     where: { deviceId, NOT: { userId } },
     select: {
       userId: true,
-      user: { select: { isOwner: true, usernameLower: true } },
+      user: { select: { isOwner: true, isAdmin: true, usernameLower: true } },
     },
   });
 
-  const otherPlayers = others.filter((o) => !isPrivileged(o.user));
+  const otherPlayers = others.filter((o) => !resolveStaffFlags(o.user).isStaff);
   if (otherPlayers.length === 0) {
     return { multiAccount: false, warnedUserIds: [] };
   }
 
   const warnIds = [userId, ...otherPlayers.map((o) => o.userId)];
-  // Extra guard: never set warnedAt on owner/admin even if ids slipped through
   await prisma.user.updateMany({
     where: {
       id: { in: warnIds },
       warnedAt: null,
       isOwner: false,
-      usernameLower: { notIn: [...OWNER_USERNAME_ALIASES] },
+      isAdmin: false,
+      usernameLower: { notIn: [...OWNER_USERNAME_ALIASES, ...ADMIN_USERNAME_ALIASES] },
     },
     data: { warnedAt: now },
   });

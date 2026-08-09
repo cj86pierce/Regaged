@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/requireOwner";
 import { maybeAlertSimilarUsernames, similarUsernameReason } from "@/lib/similarUsernames";
-import { isOwnerUsername } from "@/lib/usernames";
+import { isStaffUsername } from "@/lib/usernames";
 
 export async function GET(req: Request) {
   const gate = await requireOwner(req);
@@ -47,6 +47,7 @@ export async function POST(req: Request) {
     const recent = await prisma.user.findMany({
       where: {
         isOwner: false,
+        isAdmin: false,
         bannedAt: null,
         NOT: [{ usernameLower: { startsWith: "bot_" } }, { usernameLower: { startsWith: "__" } }],
       },
@@ -56,7 +57,7 @@ export async function POST(req: Request) {
     });
 
     const players = recent.filter(
-      (u) => !u.email?.endsWith("@regaged.bot") && !isOwnerUsername(u.usernameLower)
+      (u) => !u.email?.endsWith("@regaged.bot") && !isStaffUsername(u.usernameLower)
     );
 
     let created = 0;

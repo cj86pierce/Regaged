@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { isOwnerUsername } from "@/lib/usernames";
+import { isStaffUsername } from "@/lib/usernames";
 
 function normalize(name: string): string {
   return name.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -71,7 +71,7 @@ export async function maybeAlertSimilarUsernames(user: {
   username: string;
   usernameLower: string;
 }): Promise<number> {
-  if (isOwnerUsername(user.usernameLower)) return 0;
+  if (isStaffUsername(user.usernameLower)) return 0;
 
   const raw = normalize(user.usernameLower);
   if (raw.length < 3) return 0;
@@ -84,6 +84,7 @@ export async function maybeAlertSimilarUsernames(user: {
     where: {
       id: { not: user.id },
       isOwner: false,
+      isAdmin: false,
       bannedAt: null,
       OR: [
         { usernameLower: { startsWith: prefix } },
@@ -96,7 +97,7 @@ export async function maybeAlertSimilarUsernames(user: {
 
   let created = 0;
   for (const other of candidates) {
-    if (isOwnerUsername(other.usernameLower)) continue;
+    if (isStaffUsername(other.usernameLower)) continue;
     if (other.usernameLower.startsWith("bot_") || other.usernameLower.startsWith("__")) continue;
     if (other.email?.endsWith("@regaged.bot")) continue;
     const reason = similarUsernameReason(user.username, other.username);

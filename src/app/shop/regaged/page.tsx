@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { getCurrentUserIdFromHeaders } from "@/lib/getCurrentUserId";
 import { prisma } from "@/lib/prisma";
-import { isOwnerUsername } from "@/lib/usernames";
+import { resolveStaffFlags } from "@/lib/staffAccess";
 import Link from "next/link";
 import RegagedShopClient from "./regaged-client";
 
@@ -20,7 +20,7 @@ export default async function RegagedShopPage() {
 
   const me = await prisma.user.findUnique({
     where: { id: userId },
-    select: { tMoney: true, isOwner: true, usernameLower: true },
+    select: { tMoney: true, isOwner: true, isAdmin: true, usernameLower: true },
   });
   if (!me) {
     return (
@@ -30,7 +30,7 @@ export default async function RegagedShopPage() {
     );
   }
 
-  const isOwner = me.isOwner || isOwnerUsername(me.usernameLower);
+  const isOwner = resolveStaffFlags(me).isStaff;
 
   const items = await prisma.regagedShopItem.findMany({
     where: isOwner ? undefined : { active: true },

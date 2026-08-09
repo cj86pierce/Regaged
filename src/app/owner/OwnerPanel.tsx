@@ -8,6 +8,7 @@ type OwnerUser = {
   karma: number;
   tMoney: number;
   isOwner: boolean;
+  isAdmin?: boolean;
   banned: boolean;
   banReason: string | null;
   warned: boolean;
@@ -675,7 +676,7 @@ export default function OwnerPanel() {
           <div>
             <div style={{ fontWeight: 900, fontSize: 20 }}>{user.username}</div>
             <div style={{ fontSize: 13, color: "var(--text-muted)" }}>
-              {user.isOwner ? "Owner · " : ""}
+              {user.isOwner ? "Owner · " : user.isAdmin ? "Admin · " : ""}
               {user.warned ? "Warned · " : ""}
               {user.banned ? `Banned (${user.banReason ?? "—"})` : "Not banned"}
               {user.lockedLoginIp ? ` · IP lock: ${user.lockedLoginIp}` : ""}
@@ -746,7 +747,7 @@ export default function OwnerPanel() {
                 />
                 <button
                   type="button"
-                  disabled={busy || user.isOwner}
+                  disabled={busy || user.isOwner || !!user.isAdmin}
                   onClick={() => void call("ban", { reason: banReason })}
                   style={{ color: "#b91c1c" }}
                 >

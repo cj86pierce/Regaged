@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUserId } from "@/lib/getCurrentUserId";
 import { prisma } from "@/lib/prisma";
-import { isOwnerUsername } from "@/lib/usernames";
+import { resolveStaffFlags } from "@/lib/staffAccess";
 
 /**
  * GET /api/me/session
@@ -14,13 +14,16 @@ export async function GET(req: Request) {
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, username: true, isOwner: true, usernameLower: true },
+    select: { id: true, username: true, isOwner: true, isAdmin: true, usernameLower: true },
   });
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
+  const staff = resolveStaffFlags(user);
   return NextResponse.json({
     userId: user.id,
     username: user.username,
-    isOwner: user.isOwner || isOwnerUsername(user.usernameLower),
+    isOwner: staff.isOwner,
+    isAdmin: staff.isAdmin,
+    isStaff: staff.isStaff,
   });
 }
