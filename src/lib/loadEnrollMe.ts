@@ -8,7 +8,7 @@ export type EnrollMe = {
   highestColorName: string;
 };
 
-export async function loadEnrollMe(userId: string | null): Promise<EnrollMe | null> {
+export async function loadEnrollMe(userId: string | null | undefined): Promise<EnrollMe | null> {
   if (!userId) return null;
 
   const me = await prisma.user.findUnique({
