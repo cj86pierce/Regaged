@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { isEmailVerified } from "@/lib/emailVerification";
 import { maybeFillAndStartBotLobby, maybeStartLiveLobby } from "@/lib/lobbyTiming";
 import { SURVIVOR_MAX, SURVIVOR_MERGE_MAX } from "@/lib/survivor/timing";
+import { checkBlockedContent } from "@/lib/contentFilter";
 
 const FASTING_MAX = 15;
 const CASTING_MAX = 20;
@@ -60,9 +61,20 @@ export async function POST(req: Request) {
 
   const body = await req.json().catch(() => null);
   const gameType = (body?.gameType ?? "FASTING") as GameType;
+  const enrollMessage = typeof body?.message === "string" ? body.message.trim() : "";
 
   if (!ALL_TYPES.includes(gameType)) {
     return NextResponse.json({ error: "Invalid gameType" }, { status: 400 });
+  }
+
+  if (enrollMessage.length > 500) {
+    return NextResponse.json({ error: "Enrollment message too long (max 500)" }, { status: 400 });
+  }
+  if (enrollMessage) {
+    const hit = checkBlockedContent(enrollMessage);
+    if (hit) {
+      return NextResponse.json({ error: "Enrollment message contains blocked language." }, { status: 400 });
+    }
   }
 
   // FROOKIES / SURVIVOR: own Yellow (or higher) + T$10
@@ -245,6 +257,18 @@ export async function POST(req: Request) {
         });
       }
       return NextResponse.json({ error: "Lobby is full." }, { status: 409 });
+    }
+
+    // Tengaged-style: enrollment message auto-posts to public chat on join.
+    if (enrollMessage) {
+      await prisma.gameMessage.create({
+        data: {
+          gameId: lobby.id,
+          userId,
+          channel: "PUBLIC",
+          body: enrollMessage,
+        },
+      });
     }
   }
 
