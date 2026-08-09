@@ -53,7 +53,11 @@ export async function POST(req: Request) {
 
     await tx.user.update({
       where: { id: userId },
-      data: { tMoney: { decrement: level.priceT } },
+      data: {
+        tMoney: { decrement: level.priceT },
+        // Auto-equip so purchases unlock modes that used to check equipped color.
+        equippedColorId: colorId,
+      },
     });
 
     await tx.userColor.create({

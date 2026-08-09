@@ -65,20 +65,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid gameType" }, { status: 400 });
   }
 
-  // FROOKIES / SURVIVOR: Yellow + T$10
+  // FROOKIES / SURVIVOR: own Yellow (or higher) + T$10
   if (gameType === "FROOKIES" || gameType === "SURVIVOR") {
-    const yellow = await prisma.colorLevel.findUnique({ where: { name: "Yellow" }, select: { id: true } });
+    const { userOwnsYellowOrHigher } = await import("@/lib/colorAccess");
     const me = await prisma.user.findUnique({
       where: { id: userId },
-      select: { tMoney: true, equippedColorId: true },
+      select: { tMoney: true },
     });
-    if (!yellow || me?.equippedColorId !== yellow.id) {
+    if (!(await userOwnsYellowOrHigher(userId))) {
       return NextResponse.json(
         {
           error:
             gameType === "SURVIVOR"
-              ? "Yellow card required. Equip Yellow in Shop → Colors to play Survivor."
-              : "Yellow card required. Equip Yellow in Shop → Colors to play Frookies.",
+              ? "Yellow card required. Buy Yellow in Shop → Colors to play Survivor."
+              : "Yellow card required. Buy Yellow in Shop → Colors to play Frookies.",
         },
         { status: 403 }
       );
@@ -91,16 +91,16 @@ export async function POST(req: Request) {
     }
   }
 
-  // ROOKIES: Yellow + T$15
+  // ROOKIES: own Yellow (or higher) + T$15
   if (gameType === "ROOKIES") {
-    const yellow = await prisma.colorLevel.findUnique({ where: { name: "Yellow" }, select: { id: true } });
+    const { userOwnsYellowOrHigher } = await import("@/lib/colorAccess");
     const meForRookies = await prisma.user.findUnique({
       where: { id: userId },
-      select: { tMoney: true, equippedColorId: true },
+      select: { tMoney: true },
     });
-    if (!yellow || meForRookies?.equippedColorId !== yellow.id) {
+    if (!(await userOwnsYellowOrHigher(userId))) {
       return NextResponse.json(
-        { error: "Yellow card required. Equip Yellow in Shop → Colors to play Rookies." },
+        { error: "Yellow card required. Buy Yellow in Shop → Colors to play Rookies." },
         { status: 403 }
       );
     }

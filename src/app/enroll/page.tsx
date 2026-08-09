@@ -155,7 +155,7 @@ export default async function EnrollHub() {
         </div>
       ) : null}
       <div className="theme-text-muted" style={{ fontSize: 13, marginBottom: 16, lineHeight: 1.4 }}>
-        Pick a mode. Free: Fastings & Castings. Yellow + fee: Frookies, Rookies & Survivor. Live lobbies bot-fill after 15 minutes if seats are still open. Practice bot rooms fill instantly.
+        Pick a mode. Free: Fastings & Castings. Own Yellow + fee: Frookies, Rookies & Survivor. Live lobbies bot-fill after 15 minutes if seats are still open. Practice bot rooms fill instantly.
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
