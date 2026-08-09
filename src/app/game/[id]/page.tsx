@@ -314,10 +314,18 @@ export default function GamePage({ params }: { params: { id: string } }) {
 
     setSending(true);
 
+    // Spectators (incl. owners) may be viewing a Survivor tribe lobby — tag the message.
+    const tribeForChat =
+      lobbyTribe === "A" || lobbyTribe === "B"
+        ? lobbyTribe
+        : data?.viewTribe === "A" || data?.viewTribe === "B"
+          ? data.viewTribe
+          : undefined;
+
     const res = await fetch(`/api/game/${gameId}/chat`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({ text, ...(tribeForChat ? { tribe: tribeForChat } : {}) }),
     });
 
     const json = await res.json().catch(() => ({}));

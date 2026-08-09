@@ -3,6 +3,7 @@ import { getCurrentUserId } from "@/lib/getCurrentUserId";
 import { prisma } from "@/lib/prisma";
 import { touchUser } from "@/lib/touchUser";
 import { checkBlockedContent } from "@/lib/contentFilter";
+import { isOwnerUsername } from "@/lib/usernames";
 
 function bad(msg: string, status = 400) {
   return NextResponse.json({ error: msg }, { status });
@@ -27,7 +28,18 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     where: { gameId_userId: { gameId, userId } },
     select: { status: true, tribe: true },
   });
-  if (!inGame || inGame.status !== "ACTIVE") return bad("Not in this game", 403);
+  const isActive = inGame?.status === "ACTIVE";
+
+  let asOwner = false;
+  if (!isActive) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { isOwner: true, usernameLower: true, bannedAt: true },
+    });
+    if (!user || user.bannedAt) return bad("Unauthorized", 401);
+    asOwner = user.isOwner || isOwnerUsername(user.usernameLower);
+    if (!asOwner) return bad("Not in this game", 403);
+  }
 
   const game = await prisma.game.findUnique({
     where: { id: gameId },
@@ -36,11 +48,19 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   if (!game) return bad("Game not found", 404);
 
   const isSurvivor = game.gameType === "SURVIVOR" || game.gameType === "SURVIVOR_BOT";
+  const bodyTribe = body?.tribe === "A" || body?.tribe === "B" ? (body.tribe as "A" | "B") : null;
+  const senderTribe =
+    isActive && (inGame!.tribe === "A" || inGame!.tribe === "B")
+      ? (inGame!.tribe as "A" | "B")
+      : asOwner
+        ? bodyTribe
+        : null;
+
   const tribeScoped =
     isSurvivor &&
     !game.survivorMerged &&
     game.state !== "ENROLLING" &&
-    (inGame.tribe === "A" || inGame.tribe === "B");
+    (senderTribe === "A" || senderTribe === "B");
 
   const now = new Date();
 
@@ -51,15 +71,18 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         userId,
         channel: "PUBLIC",
         body: text,
-        tribe: tribeScoped ? inGame.tribe : null,
+        tribe: tribeScoped ? senderTribe : null,
       },
       select: { id: true, body: true, createdAt: true, userId: true, user: { select: { username: true } } },
     });
 
-    await tx.gamePlayer.update({
-      where: { gameId_userId: { gameId, userId } },
-      data: { chatCount: { increment: 1 }, lastActiveAt: now },
-    });
+    // Only seated ACTIVE players earn chat activity; owner spectate chat skips this.
+    if (isActive) {
+      await tx.gamePlayer.update({
+        where: { gameId_userId: { gameId, userId } },
+        data: { chatCount: { increment: 1 }, lastActiveAt: now },
+      });
+    }
 
     return {
       id: msg.id,
@@ -71,6 +94,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       minus: 0,
       myReaction: null as "PLUS" | "MINUS" | null,
       isSystem: false,
+      tribe: tribeScoped ? senderTribe : null,
     };
   });
 
