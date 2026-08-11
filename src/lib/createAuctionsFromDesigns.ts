@@ -26,7 +26,14 @@ export async function createAuctionsFromDesigns(): Promise<{ created: number }> 
     (await prisma.auction.findMany({ select: { designId: true } })).map((a) => a.designId)
   );
 
-  const eligible = designs.filter((d) => !alreadyAuctioned.has(d.id));
+  // Gifted / already-owned designs must not enter the auction pipeline
+  const ownedDesignIds = new Set(
+    (await prisma.designOwner.findMany({ select: { designId: true } })).map((o) => o.designId)
+  );
+
+  const eligible = designs.filter(
+    (d) => !alreadyAuctioned.has(d.id) && !ownedDesignIds.has(d.id)
+  );
 
   const score = (d: { votes: { type: string; points: number }[] }) => {
     const plus = d.votes.filter((v) => v.type === "PLUS").reduce((s, v) => s + v.points, 0);

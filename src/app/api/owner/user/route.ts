@@ -10,7 +10,9 @@ type Action =
   | "warn"
   | "clear_warn"
   | "ban"
-  | "unban";
+  | "unban"
+  | "grant_admin"
+  | "revoke_admin";
 
 const userSelect = {
   id: true,
@@ -149,6 +151,30 @@ export async function POST(req: Request) {
     const updated = await prisma.user.update({
       where: { id: target.id },
       data: { bannedAt: null, banReason: null },
+      select: userSelect,
+    });
+    return NextResponse.json({ user: serialize(updated) });
+  }
+
+  if (action === "grant_admin" || action === "revoke_admin") {
+    const actor = await prisma.user.findUnique({
+      where: { id: gate.ownerId },
+      select: { isOwner: true, usernameLower: true },
+    });
+    const { isOwnerUsername } = await import("@/lib/usernames");
+    const actorIsOwner = !!actor && (actor.isOwner || isOwnerUsername(actor.usernameLower));
+    if (!actorIsOwner) {
+      return NextResponse.json({ error: "Only owners can change Admin status" }, { status: 403 });
+    }
+    if (resolveStaffFlags(target).isOwner) {
+      return NextResponse.json({ error: "Cannot change Admin on an Owner account" }, { status: 400 });
+    }
+    const updated = await prisma.user.update({
+      where: { id: target.id },
+      data: {
+        isAdmin: action === "grant_admin",
+        ...(action === "grant_admin" ? { warnedAt: null, bannedAt: null, banReason: null } : {}),
+      },
       select: userSelect,
     });
     return NextResponse.json({ user: serialize(updated) });

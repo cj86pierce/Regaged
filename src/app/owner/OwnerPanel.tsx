@@ -87,6 +87,14 @@ export default function OwnerPanel() {
   const [nameAlertErr, setNameAlertErr] = useState<string | null>(null);
   const [nameAlertBusy, setNameAlertBusy] = useState(false);
 
+  const [giftUsername, setGiftUsername] = useState("");
+  const [giftTitle, setGiftTitle] = useState("");
+  const [giftDescription, setGiftDescription] = useState("");
+  const [giftType, setGiftType] = useState("HAIR");
+  const [giftFile, setGiftFile] = useState<File | null>(null);
+  const [giftBusy, setGiftBusy] = useState(false);
+  const [giftMsg, setGiftMsg] = useState<string | null>(null);
+
   const loadOnline = useCallback(async () => {
     if (typeof document !== "undefined" && document.hidden) return;
     setOnlineBusy(true);
@@ -281,6 +289,41 @@ export default function OwnerPanel() {
     }
   }
 
+  async function grantDesign() {
+    if (!giftFile || !giftUsername.trim() || !giftTitle.trim()) {
+      setGiftMsg("Username, title, and PNG are required.");
+      return;
+    }
+    setGiftBusy(true);
+    setGiftMsg(null);
+    try {
+      const form = new FormData();
+      form.set("username", giftUsername.trim());
+      form.set("title", giftTitle.trim());
+      form.set("description", giftDescription.trim() || giftTitle.trim());
+      form.set("designType", giftType);
+      form.set("file", giftFile);
+      const res = await fetch("/api/owner/grant-design", {
+        method: "POST",
+        credentials: "include",
+        body: form,
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setGiftMsg(json?.error ?? "Grant failed");
+      } else {
+        setGiftMsg(`Granted “${json.title}” (${json.designType}) to ${json.grantedTo}.`);
+        setGiftTitle("");
+        setGiftDescription("");
+        setGiftFile(null);
+      }
+    } catch {
+      setGiftMsg("Grant failed");
+    } finally {
+      setGiftBusy(false);
+    }
+  }
+
   return (
     <div style={{ display: "grid", gap: 16 }}>
       <section
@@ -472,6 +515,91 @@ export default function OwnerPanel() {
               </div>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section
+        style={{
+          border: "1px solid var(--border)",
+          borderRadius: 6,
+          padding: 14,
+          background: "var(--bg-card)",
+        }}
+      >
+        <div style={{ fontWeight: 900, marginBottom: 6 }}>Grant design to inventory</div>
+        <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 10 }}>
+          Upload a PNG and put it straight into a player&apos;s avatar inventory (Customize Avatar). Not listed for community voting/auction.
+        </div>
+        <div style={{ display: "grid", gap: 10, maxWidth: 520 }}>
+          <label style={{ display: "grid", gap: 4, fontSize: 13 }}>
+            Recipient username
+            <input
+              value={giftUsername}
+              onChange={(e) => setGiftUsername(e.target.value)}
+              placeholder="Username"
+              style={{ padding: "8px 10px" }}
+            />
+          </label>
+          <label style={{ display: "grid", gap: 4, fontSize: 13 }}>
+            Title
+            <input
+              value={giftTitle}
+              onChange={(e) => setGiftTitle(e.target.value)}
+              placeholder="Design title"
+              style={{ padding: "8px 10px" }}
+            />
+          </label>
+          <label style={{ display: "grid", gap: 4, fontSize: 13 }}>
+            Description (optional)
+            <input
+              value={giftDescription}
+              onChange={(e) => setGiftDescription(e.target.value)}
+              placeholder="Optional"
+              style={{ padding: "8px 10px" }}
+            />
+          </label>
+          <label style={{ display: "grid", gap: 4, fontSize: 13 }}>
+            Type
+            <select
+              value={giftType}
+              onChange={(e) => setGiftType(e.target.value)}
+              style={{ padding: "8px 10px" }}
+            >
+              {[
+                "BODY",
+                "HAIR",
+                "EYES",
+                "MOUTH",
+                "SHIRT",
+                "ACCESSORY",
+                "BACKGROUND",
+                "SCAR",
+                "HAIR_ORNAMENT",
+                "GLASSES",
+              ].map((t) => (
+                <option key={t} value={t}>
+                  {t === "HAIR_ORNAMENT" ? "Hair ornament" : t.charAt(0) + t.slice(1).toLowerCase()}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label style={{ display: "grid", gap: 4, fontSize: 13 }}>
+            PNG file (max 512KB)
+            <input
+              type="file"
+              accept="image/png"
+              onChange={(e) => setGiftFile(e.target.files?.[0] ?? null)}
+            />
+          </label>
+          <button
+            type="button"
+            disabled={giftBusy || !giftFile || !giftUsername.trim() || !giftTitle.trim()}
+            onClick={() => void grantDesign()}
+            style={{ padding: "10px 12px", fontWeight: 900, width: "fit-content" }}
+          >
+            {giftBusy ? "Granting…" : "Grant to inventory"}
+          </button>
+          {giftMsg ? <div style={{ fontSize: 13, fontWeight: 700 }}>{giftMsg}</div> : null}
         </div>
       </section>
 
@@ -759,6 +887,16 @@ export default function OwnerPanel() {
                 Unban
               </button>
             )}
+            {!user.isOwner && !user.isAdmin ? (
+              <button type="button" disabled={busy} onClick={() => void call("grant_admin")}>
+                Make Admin
+              </button>
+            ) : null}
+            {!user.isOwner && user.isAdmin ? (
+              <button type="button" disabled={busy} onClick={() => void call("revoke_admin")}>
+                Remove Admin
+              </button>
+            ) : null}
           </section>
         </div>
       ) : null}
