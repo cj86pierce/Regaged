@@ -1,4 +1,5 @@
-import { getServerSession } from "next-auth";
+import { getToken } from "next-auth/jwt";
+import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/authOptions";
 import { verifyJwt } from "@/lib/jwt";
 import { prisma } from "@/lib/prisma";
@@ -19,6 +20,25 @@ async function rejectIfBanned(userId: string | undefined): Promise<string | unde
   return userId;
 }
 
+async function userIdFromNextAuth(req?: Request, cookieHeader?: string | null): Promise<string | undefined> {
+  const cookie = cookieHeader ?? req?.headers.get("cookie") ?? null;
+  if (!cookie && !req) return undefined;
+  // NEXTAUTH_URL may be https (prod) while local cookies use the non-secure name.
+  const secureCookie = cookie?.includes("__Secure-next-auth.session-token=")
+    ? true
+    : cookie?.includes("next-auth.session-token=")
+      ? false
+      : undefined;
+
+  const token = await getToken({
+    req: (req ?? { headers: { cookie: cookie ?? "" } }) as Parameters<typeof getToken>[0]["req"],
+    secret: process.env.NEXTAUTH_SECRET,
+    secureCookie,
+  });
+  const id = (token?.id as string | undefined) ?? (token?.sub as string | undefined);
+  return id || undefined;
+}
+
 /**
  * Resolves the current user id for API routes.
  * Supports:
@@ -33,11 +53,14 @@ export async function getCurrentUserId(req: Request): Promise<string | undefined
     const payload = await verifyJwt(bearer);
     if (payload) return rejectIfBanned(payload.userId);
   }
-  const token = parseRegagedTokenCookie(req.headers.get("cookie"));
-  if (token) {
-    const payload = await verifyJwt(token);
+  const cookieHeader = req.headers.get("cookie");
+  const steamToken = parseRegagedTokenCookie(cookieHeader);
+  if (steamToken) {
+    const payload = await verifyJwt(steamToken);
     if (payload) return rejectIfBanned(payload.userId);
   }
+  const fromJwt = await userIdFromNextAuth(req, cookieHeader);
+  if (fromJwt) return rejectIfBanned(fromJwt);
   const session = await getServerSession(authOptions);
   return rejectIfBanned((session?.user as { id?: string } | undefined)?.id);
 }
@@ -49,11 +72,17 @@ export async function getCurrentUserId(req: Request): Promise<string | undefined
 export async function getCurrentUserIdFromHeaders(): Promise<string | undefined> {
   const { cookies } = await import("next/headers");
   const cookieStore = await cookies();
-  const token = cookieStore.get("regaged_token")?.value;
-  if (token) {
-    const payload = await verifyJwt(token);
+  const steamToken = cookieStore.get("regaged_token")?.value;
+  if (steamToken) {
+    const payload = await verifyJwt(steamToken);
     if (payload) return rejectIfBanned(payload.userId);
   }
+  const cookieHeader = cookieStore
+    .getAll()
+    .map((c) => `${c.name}=${c.value}`)
+    .join("; ");
+  const fromJwt = await userIdFromNextAuth(undefined, cookieHeader || null);
+  if (fromJwt) return rejectIfBanned(fromJwt);
   const session = await getServerSession(authOptions);
   return rejectIfBanned((session?.user as { id?: string } | undefined)?.id);
 }

@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import PlayerStrip from "./components/PlayerStrip";
 import CastingPlayerStrip from "./components/CastingPlayerStrip";
-import ChatPanel from "./components/ChatPanel";
 import CastingChatPanel from "./components/CastingChatPanel";
 import Sidebar from "./components/Sidebar";
 import Tabs from "./components/Tabs";
@@ -12,6 +11,7 @@ import type { AvatarConfig } from "@/components/Avatar";
 import CastingSidebar from "./components/CastingSidebar";
 import RookiesBetPanel from "./components/RookiesBetPanel";
 import SurvivorPanel from "./components/SurvivorPanel";
+import "@/styles/tengagedChat.css";
 
 type Player = {
   userId: string;
@@ -285,6 +285,12 @@ export default function GamePage({ params }: { params: { id: string } }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameId, page]);
 
+  useEffect(() => {
+    if (!data) return;
+    document.body.classList.add("tgGamePage");
+    return () => document.body.classList.remove("tgGamePage");
+  }, [data]);
+
   function onPhaseExpired() {
     if (!data || data.game.state === "COMPLETED") return;
     (async () => {
@@ -500,7 +506,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
           : null;
 
   return (
-    <div className="game-page-content pageShell">
+    <div className="game-page-content pageShell tgGamePage">
       <div style={{ marginBottom: 10 }}>
         <div className="gameHeaderTitle" style={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.3 }}>
           {data.game.gameType.replace(/_/g, " ")}{" "}
@@ -672,43 +678,38 @@ export default function GamePage({ params }: { params: { id: string } }) {
               compete.
             </div>
           ) : null}
-          <Tabs tab={tab} setTab={setTab} publicCount={data.pagination.totalCount} />
+          <Tabs
+            tab={tab}
+            setTab={setTab}
+            publicCount={data.pagination.totalCount}
+            tengaged
+            page={data.pagination.page}
+            totalPages={data.pagination.totalPages}
+            setPage={setPage}
+          />
 
-          {tab === "public" &&
-            (isCasting ? (
-              <CastingChatPanel
-                gameId={gameId}
-                meUserId={data.meUserId}
-                messages={data.messages}
-                dropEvents={data.dropEvents ?? {}}
-                chatText={chatText}
-                setChatText={setChatText}
-                onSend={sendChat}
-                onReact={react}
-                page={data.pagination.page}
-                totalPages={data.pagination.totalPages}
-                setPage={setPage}
-                onReload={load}
-              />
-            ) : (
-              <ChatPanel
-                meUserId={data.meUserId}
-                messages={data.messages}
-                chatText={chatText}
-                setChatText={setChatText}
-                onSend={sendChat}
-                onReact={react}
-                page={data.pagination.page}
-                totalPages={data.pagination.totalPages}
-                setPage={setPage}
-              />
-            ))}
+          {tab === "public" && (
+            <CastingChatPanel
+              gameId={gameId}
+              meUserId={data.meUserId}
+              messages={data.messages}
+              dropEvents={isCasting ? data.dropEvents ?? {} : {}}
+              chatText={chatText}
+              setChatText={setChatText}
+              onSend={sendChat}
+              onReact={react}
+              onReload={load}
+              enableDrops={isCasting}
+              systemLabel={isCasting ? "Big Brother" : "System"}
+            />
+          )}
 
           {tab === "private" && (
             <PmPanel
               gameId={gameId}
               meUserId={data.meUserId}
               players={lobbyPlayers.map((p) => ({ userId: p.userId, username: p.username, status: p.status }))}
+              tengaged
             />
           )}
 

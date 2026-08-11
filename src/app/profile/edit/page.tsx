@@ -62,6 +62,16 @@ export default async function EditProfilePage() {
   const slotDesigns = await getSlotDesignsForUser(userId);
   const avatar = avatarConfigFromUser(me);
 
+  const colorPurchases = await prisma.userColor.findMany({
+    where: { userId },
+    include: { color: { select: { name: true } } },
+    orderBy: { purchasedAt: "asc" },
+  });
+  const colorHistory = colorPurchases.map((p) => ({
+    name: p.color.name,
+    purchasedAt: p.purchasedAt.toISOString(),
+  }));
+
   return (
     <EditProfileClient
       initialBio={me.bio ?? ""}
@@ -71,6 +81,7 @@ export default async function EditProfilePage() {
       usernameChangedAt={me.usernameChangedAt ? me.usernameChangedAt.toISOString() : null}
       avatar={avatar}
       slotDesigns={slotDesigns}
+      colorHistory={colorHistory}
     />
   );
 }

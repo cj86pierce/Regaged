@@ -1,7 +1,9 @@
 "use client";
 
+import { useMemo } from "react";
 import CastingVoteBox from "./CastingVoteBox";
 import CarePackagePanel from "./CarePackagePanel";
+import "@/styles/tengagedChat.css";
 
 type Message = {
   id: string;
@@ -10,6 +12,29 @@ type Message = {
   createdAt: string;
   username: string;
 };
+
+function storyLine(body: string): string | null {
+  const raw = body.trim();
+  if (/^\[CASTDROP:/i.test(raw) || /^\[DROP:/i.test(raw)) return null; // drops live in chat / care panel
+  return (
+    raw
+      .replace(/^\[SYSTEM\]\s*/i, "")
+      .replace(/^\[SYSTEM:[^\]]+\]\n?/i, "")
+      .replace(/^\[SYSMSG:[^\]]+\]\s*/i, "")
+      .trim() || null
+  );
+}
+
+function ago(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(ms / 60000);
+  if (!Number.isFinite(mins) || mins < 0) return "";
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 48) return `${hours}h`;
+  return `${Math.floor(hours / 24)}d`;
+}
 
 export default function CastingSidebar(props: {
   gameId: string;
@@ -21,123 +46,95 @@ export default function CastingSidebar(props: {
   onSavedVotes: () => Promise<void>;
 
   messages: Message[];
-  carePackages?: Array<{ eventId: string; claimedAt: string | null; options: { slotIndex: number; kind: "APPLE" | "KEY" | "POISON" }[] }>;
+  carePackages?: Array<{
+    eventId: string;
+    claimedAt: string | null;
+    options: { slotIndex: number; kind: "APPLE" | "KEY" | "POISON" }[];
+  }>;
   onReload?: () => Promise<void>;
   meUserId?: string | null;
 }) {
   const showVote = props.state === "ROUND_VOTE" && props.nominees.length >= 2;
-  const dayLabel =
-    props.dayNumber <= 1 && props.state === "ROUND_NOMINATE"
-      ? "Day 1 — settle in: talk, compete, grab keys. No noms today. Day 2 opens with nominations."
-      : props.state === "ROUND_VOTE"
-        ? `Day ${props.dayNumber} — nominees are up. Vote (1/2/3). Keep competing for keys — that fuels tomorrow's noms.`
-        : `Day ${props.dayNumber} — opening nominations…`;
+
+  const status = useMemo(() => {
+    if (props.dayNumber <= 1 && props.state === "ROUND_NOMINATE") {
+      return { title: `Day ${props.dayNumber}`, note: "Settle in — compete & grab keys. No noms today." };
+    }
+    if (props.state === "ROUND_VOTE") {
+      return { title: `Day ${props.dayNumber}`, note: "Nominees are up — assign 1 / 2 / 3." };
+    }
+    if (props.state === "ROUND_COMPETE" || props.state === "ROUND_MINIGAME") {
+      return { title: `Day ${props.dayNumber}`, note: "Competition open — earn keys & checks." };
+    }
+    return { title: `Day ${props.dayNumber}`, note: props.state.replace(/_/g, " ") };
+  }, [props.dayNumber, props.state]);
+
+  const story = useMemo(() => {
+    const out: { id: string; text: string; when: string }[] = [];
+    for (const m of props.messages) {
+      if (!m.isSystem) continue;
+      const text = storyLine(m.body);
+      if (!text) continue;
+      out.push({ id: m.id, text, when: ago(m.createdAt) });
+      if (out.length >= 8) break;
+    }
+    return out;
+  }, [props.messages]);
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: 12,
-        height: "100%",
-        minHeight: 0,
-      }}
-    >
-      <div
-        className="theme-sidebar-panel"
-        style={{ borderRadius: 4, padding: 12, flexShrink: 0, borderLeft: "3px solid #2e7d32" }}
-      >
-        <div style={{ fontWeight: 1000, marginBottom: 4 }}>Right now</div>
-        <div style={{ fontSize: 12, lineHeight: 1.35 }}>{dayLabel}</div>
+    <aside className="tgSide">
+      <div className="tgSideStatus">
+        <div className="tgSideStatusTitle">{status.title}</div>
+        <div className="tgSideStatusNote">{status.note}</div>
       </div>
 
-      {/* CARE PACKAGES */}
-      {props.carePackages && props.carePackages.length > 0 && props.onReload && (
+      {props.carePackages && props.carePackages.length > 0 && props.onReload ? (
         <CarePackagePanel
           gameId={props.gameId}
           carePackages={props.carePackages}
           onClaimed={props.onReload}
           meUserId={props.meUserId ?? null}
+          tengaged
         />
-      )}
+      ) : null}
 
-      {/* VOTE */}
-      {showVote && (
-        <div style={{ flexShrink: 0 }}>
+      {showVote ? (
         <CastingVoteBox
           gameId={props.gameId}
           nominees={props.nominees}
           initialPointsMap={props.myPointsMap}
           onSaved={props.onSavedVotes}
+          tengaged
         />
-        </div>
-      )}
+      ) : null}
 
-      {/* READ THIS */}
-      <div
-        className="theme-sidebar-panel"
-        style={{ borderRadius: 4, padding: 12, flexShrink: 0 }}
-      >
-        <div style={{ fontWeight: 1000, marginBottom: 8 }}>Read this</div>
-        <div style={{ fontSize: 12, opacity: 0.8, lineHeight: 1.35 }}>
-          <b>Castings</b> runs in 12-hour days.<br />
-          <b>Day 1:</b> compete only. <b>Day 2→finals:</b> noms every day (no gap days).<br />
-          <b>Nominations:</b> lowest challenge score, then lowest activity (checks).<br />
-          <b>Keys</b> win at the end (max 5). Final 5 ranks by <b>keys → challenge → checks</b>.<br />
-          Public drops: <b>1/hour</b>, at least <b>3 keys/day</b> guaranteed.<br />
-          Every 3000 checks = private care package (see above).<br />
-          At final 7 there are only 2 nominees.
-        </div>
-      </div>
+      <details className="tgSideDetails">
+        <summary>How Castings works</summary>
+        <ul>
+          <li>12-hour days. Day 1 is compete-only; noms start Day 2.</li>
+          <li>Lowest challenge score, then lowest checks, get nominated.</li>
+          <li>Keys win (max 5). Final 5: keys → challenge → checks.</li>
+          <li>Public drops hourly; ≥3 keys/day guaranteed.</li>
+          <li>Every 3000 checks → private care package.</li>
+          <li>Final 7: only 2 nominees.</li>
+        </ul>
+      </details>
 
-      {/* STORY - stretches to fill */}
-      <div
-        className="theme-sidebar-panel"
-        style={{
-          padding: 12,
-          flex: 1,
-          minHeight: 120,
-          overflowY: "auto",
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        <div style={{ fontWeight: 1000, marginBottom: 8, flexShrink: 0 }}>Game Story</div>
-
-        {/* show recent system lines as “story” */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          {props.messages
-            .filter((m) => m.isSystem)
-            .slice(0, 12)
-            .map((m) => (
-              <div
-                key={m.id}
-                className="theme-chat-msg-sys"
-                style={{
-                  background: "var(--bg-msg-system)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 4,
-                  padding: 10,
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
-                  <span className="theme-username" style={{ fontWeight: 800 }}>{m.username}</span>
-                  <span style={{ fontSize: 11, opacity: 0.75 }}>{new Date(m.createdAt).toLocaleString()}</span>
-                </div>
-                <div style={{ fontSize: 12, whiteSpace: "pre-wrap", background: "var(--bg-msg)", borderRadius: 8, padding: 8 }}>
-                  {m.body
-                  .replace(/^\[SYSTEM\]\s*/i, "")
-                  .replace(/^\[SYSTEM:[^\]]+\]\n?/i, "")
-                  .replace(/^\[SYSMSG:[^\]]+\]\s*/i, "") || "System update"}
-                </div>
-              </div>
+      <div className="tgSideStory">
+        <div className="tgSideStoryHead">Game story</div>
+        {story.length === 0 ? (
+          <div className="tgSideStoryEmpty">No story yet.</div>
+        ) : (
+          <ul>
+            {story.map((s) => (
+              <li key={s.id}>
+                <span className="when">{s.when}</span>
+                <span className="text">{s.text}</span>
+              </li>
             ))}
-        </div>
-
-        {!props.messages.some((m) => m.isSystem) && (
-          <div style={{ fontSize: 12, opacity: 0.7 }}>No story yet.</div>
+          </ul>
         )}
       </div>
-    </div>
+    </aside>
   );
 }

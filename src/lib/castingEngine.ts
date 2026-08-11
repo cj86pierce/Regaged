@@ -29,9 +29,12 @@ export async function finalizeCastingGame(gameId: string) {
 
   const game = await prisma.game.findUnique({
     where: { id: gameId },
-    select: { gameType: true },
+    select: { gameType: true, state: true, completedAt: true },
   });
-  const skipPayout = game?.gameType === "CASTING_BOT";
+  if (!game) return;
+  if (game.state === "COMPLETED" || game.completedAt) return;
+
+  const skipPayout = game.gameType === "CASTING_BOT";
 
   const actives = await prisma.gamePlayer.findMany({
     where: { gameId, status: "ACTIVE" },
@@ -63,6 +66,13 @@ export async function finalizeCastingGame(gameId: string) {
   });
 
   await prisma.$transaction(async (tx) => {
+    // Bail if another worker already finished the game.
+    const stillOpen = await tx.game.updateMany({
+      where: { id: gameId, state: { not: "COMPLETED" }, completedAt: null },
+      data: { state: "COMPLETED", completedAt: now, stateEndsAt: null },
+    });
+    if (stillOpen.count === 0) return;
+
     // stamp 1..4 and eliminate them (game completed)
     for (let i = 0; i < ranked.length; i++) {
       await tx.gamePlayer.update({
@@ -74,11 +84,6 @@ export async function finalizeCastingGame(gameId: string) {
         },
       });
     }
-
-    await tx.game.update({
-      where: { id: gameId },
-      data: { state: "COMPLETED", completedAt: now, stateEndsAt: null },
-    });
 
     const users = await tx.user.findMany({
       where: { id: { in: ranked.map((r) => r.userId) } },
@@ -93,10 +98,10 @@ export async function finalizeCastingGame(gameId: string) {
         channel: "PUBLIC",
         body:
           `[SYSTEM] Castings finished!\n` +
-          `- 1st: ${nameOf(ranked[0]?.userId ?? "?")}\n` +
-          `- 2nd: ${nameOf(ranked[1]?.userId ?? "?")}\n` +
-          `- 3rd: ${nameOf(ranked[2]?.userId ?? "?")}\n` +
-          `- 4th: ${nameOf(ranked[3]?.userId ?? "?")}`,
+          `1st — ${nameOf(ranked[0]?.userId ?? "?")}\n` +
+          `2nd — ${nameOf(ranked[1]?.userId ?? "?")}\n` +
+          `3rd — ${nameOf(ranked[2]?.userId ?? "?")}\n` +
+          `4th — ${nameOf(ranked[3]?.userId ?? "?")}`,
       },
     });
   });

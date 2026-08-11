@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { getMinigameDef, pickMinigameForDay } from "@/lib/minigamePicker";
 import SurvivorCamp, { type CampSupplies } from "./SurvivorCamp";
+import "@/styles/tengagedChat.css";
 
 type Player = {
   userId: string;
@@ -84,19 +85,11 @@ export default function SurvivorPanel(props: {
   }
 
   return (
-    <div
-      style={{
-        border: "1px solid var(--border)",
-        borderRadius: 10,
-        padding: 12,
-        background: "var(--bg-card)",
-        marginBottom: 10,
-      }}
-    >
-      <div style={{ fontWeight: 1000, color: "#2e7d32", marginBottom: 6 }}>Survivor</div>
-      <div style={{ fontSize: 12, marginBottom: 8 }}>
+    <div className="tgAction">
+      <div className="tgActionHead">Survivor</div>
+      <div className="tgActionHint">
         Phase: <strong>{phase.replace(/_/g, " ") || "—"}</strong>
-        {showVoteUi && props.losingTribe ? ` · Your tribe is at Tribal Council` : ""}
+        {showVoteUi && props.losingTribe ? " · Your tribe is at Tribal Council" : ""}
         {props.merged ? " · Merged" : ""}
       </div>
 
@@ -114,7 +107,7 @@ export default function SurvivorPanel(props: {
       )}
 
       {me && me.status === "ACTIVE" && (
-        <div style={{ fontSize: 12, marginBottom: 8 }}>
+        <div className="tgActionHint">
           You: tribe {me.tribe ?? "?"}
           {me.hasImmunity ? " · IMMUNE" : ""}
           {me.sittingOut ? " · SITTING OUT" : ""}
@@ -124,61 +117,46 @@ export default function SurvivorPanel(props: {
       )}
 
       {isChallenge && me?.status === "ACTIVE" && me.sittingOut && (
-        <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 8 }}>
-          Sitting out so both tribes send the same number of competitors.
-        </div>
+        <div className="tgActionHint">Sitting out so both tribes send the same number of competitors.</div>
       )}
 
       {isChallenge && me?.status === "ACTIVE" && !me.sittingOut && (
-        <div style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 12, marginBottom: 6, opacity: 0.85 }}>
+        <div style={{ marginTop: 6 }}>
+          <div className="tgActionHint">
             Competition: <b>{minigameDef.name}</b>
           </div>
-          <Link
-            href={`/game/${props.gameId}/challenge`}
-            style={{
-              display: "block",
-              padding: "10px 12px",
-              borderRadius: 10,
-              border: "1px solid var(--border)",
-              background: "var(--bg-btn-send)",
-              color: "var(--text-btn-send)",
-              fontWeight: 1000,
-              textAlign: "center",
-              textDecoration: "none",
-            }}
-          >
+          <Link href={`/game/${props.gameId}/challenge`} className="tgActionBtn link">
             Play competition →
           </Link>
         </div>
       )}
 
       {safeDuringTribal && (
-        <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 8 }}>
-          Your tribe won immunity. Sit tight while the other tribe goes to Tribal Council.
-        </div>
+        <div className="tgActionHint">Your tribe won immunity. Sit tight while the other tribe goes to Tribal Council.</div>
       )}
 
       {showVoteUi && (
-        <div style={{ display: "grid", gap: 6 }}>
-          <div style={{ fontSize: 12, fontWeight: 800 }}>Vote someone out</div>
+        <div className="tgActionStack" style={{ marginTop: 6 }}>
+          <div className="tgActionHead" style={{ fontSize: 11 }}>
+            Vote someone out
+          </div>
           {voteTargets.map((t) => (
             <button
               key={t.userId}
               type="button"
+              className="tgActionBtn secondary"
               disabled={busy}
               onClick={() => void vote(t.userId)}
-              style={{ textAlign: "left" }}
             >
               {t.username}
               {t.tribe ? ` (tribe ${t.tribe})` : ""}
             </button>
           ))}
-          {!voteTargets.length && <div style={{ fontSize: 12, opacity: 0.7 }}>No valid targets.</div>}
+          {!voteTargets.length && <div className="tgActionHint">No valid targets.</div>}
         </div>
       )}
 
-      {msg && <div style={{ marginTop: 6, fontSize: 12, fontWeight: 800 }}>{msg}</div>}
+      {msg && <div className="tgActionOk" style={{ marginTop: 6 }}>{msg}</div>}
     </div>
   );
 }

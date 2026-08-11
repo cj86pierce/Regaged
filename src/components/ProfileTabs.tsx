@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Avatar, { AvatarConfig, type SlotDesignType } from "@/components/Avatar";
 import StatusBadges from "@/components/StatusBadges";
 import { formatLastSeen } from "@/lib/lastSeenLabel";
 import { renderBioContent } from "@/lib/renderBio";
-import DailyLoginCard from "@/components/DailyLoginCard";
+import { colorLevelSwatch, isTvStarColor } from "@/lib/colorLevelCss";
+import ProfileSocialActions from "@/components/ProfileSocialActions";
+import "@/styles/tengagedProfile.css";
 
 export type ProfileGameBubble = {
   gameId: string;
@@ -52,59 +54,45 @@ export type ProfileTabsData = {
   recentGamesPage: number;
   recentGamesTotalPages: number;
 
-  blogPosts: { id: string; title: string }[];
+  blogPosts: { id: string; title: string; createdAt?: string }[];
 
   friends: { id: string; username: string; avatar: AvatarConfig; slotDesigns?: Partial<Record<SlotDesignType, string>>; isMutual: boolean }[];
   isFriend?: boolean;
   canAddFriend?: boolean;
+  /** Logged-in viewer looking at someone else's profile — shows heart/mail */
+  showSocialActions?: boolean;
   profileUserId?: string;
-};
 
-function AddFriendButton({
-  username,
-  onAdded,
-}: {
-  username: string;
-  onAdded: () => void;
-}) {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  async function add() {
-    setLoading(true);
-    setError(null);
-    const res = await fetch("/api/friends/add", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ username }),
-    });
-    const json = await res.json().catch(() => ({}));
-    setLoading(false);
-    if (!res.ok) return setError(json?.error ?? "Failed");
-    onAdded();
-  }
-  return (
-    <div>
-      <button
-        onClick={add}
-        disabled={loading}
-        style={{
-          width: "100%",
-          padding: "8px 12px",
-          borderRadius: 8,
-          border: "1px solid var(--border)",
-          background: loading ? "var(--loading-bg)" : "var(--add-friend-loading)",
-          color: "var(--add-friend-loading-text)",
-          fontWeight: 800,
-          fontSize: 13,
-          cursor: loading ? "not-allowed" : "pointer",
-        }}
-      >
-        {loading ? "Adding..." : "Add friend"}
-      </button>
-      {error && <div style={{ fontSize: 12, color: "var(--text-error)", marginTop: 4 }}>{error}</div>}
-    </div>
-  );
-}
+  colorHistory?: { name: string; purchasedAt: string }[];
+  bets?: {
+    id: string;
+    gameId: string;
+    gameNumber: number;
+    amount: number;
+    payoutAmount: number | null;
+    paidOutAt: string | null;
+    createdAt: string;
+    targetUsername: string;
+  }[];
+  /** Designs this player listed that went to auction */
+  myAuctions?: {
+    id: string;
+    auctionId: string;
+    designId: string;
+    designTitle: string;
+    soldPrice: number;
+    soldAt: string | null;
+    endsAt: string;
+  }[];
+  /** Designs this player owns (auction wins + staff gifts) */
+  designGifts?: {
+    id: string;
+    title: string;
+    designType: string;
+    acquiredAt: string;
+  }[];
+  latestActions?: { id: string; label: string; href?: string; at: string; ago: string }[];
+};
 
 function ReorderFriendsButton({
   friends,
@@ -251,164 +239,72 @@ function ReorderFriendsButton({
   );
 }
 
-function RemoveFriendButton({ friendId, onRemoved }: { friendId: string; onRemoved: () => void }) {
-  const [loading, setLoading] = useState(false);
-  async function remove() {
-    setLoading(true);
-    const res = await fetch("/api/friends/remove", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ friendId }),
-    });
-    setLoading(false);
-    if (res.ok) onRemoved();
-  }
-  return (
-    <button
-      onClick={remove}
-      disabled={loading}
-      style={{
-        width: "100%",
-        padding: "8px 12px",
-        borderRadius: 8,
-        border: "1px solid var(--border)",
-        background: loading ? "var(--loading-bg)" : "var(--remove-friend-loading)",
-        color: "var(--remove-friend-loading-text)",
-        fontWeight: 800,
-        fontSize: 13,
-        cursor: loading ? "not-allowed" : "pointer",
-      }}
-    >
-      {loading ? "Removing..." : "Remove friend"}
-    </button>
-  );
-}
-
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="theme-card" style={{ borderRadius: 4, boxShadow: "var(--shadow-card)", overflow: "hidden" }}>
-      <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--border)", fontWeight: 1000 }}>{title}</div>
-      <div style={{ padding: 14 }}>{children}</div>
-    </div>
-  );
-}
-
 function suffix(n: number) {
-  const j = n % 10, k = n % 100;
+  const j = n % 10,
+    k = n % 100;
   if (j === 1 && k !== 11) return `${n}st`;
   if (j === 2 && k !== 12) return `${n}nd`;
   if (j === 3 && k !== 13) return `${n}rd`;
   return `${n}th`;
 }
 
-const COLOR_SWATCH: Record<string, string> = {
-  white: "#ffffff",
-  yellow: "#ffeb3b",
-  orange: "#ff9800",
-  "light green": "#8bc34a",
-  green: "#2e7d32",
-  blue: "#1e88e5",
-  purple: "#8e24aa",
-  red: "#e53935",
-  brown: "#6d4c41",
-  black: "#111111",
-  silver: "#c0c0c0",
-  gold: "#ffd700",
-  sky: "#4fc3f7",
-  blood: "#8b0000",
-  "tv star": "#ff66cc",
-};
-
-function colorToSwatch(name: string) {
-  const key = name.trim().toLowerCase();
-  return COLOR_SWATCH[key] ?? "#ffffff";
-}
-
-function StatLine({ label, value, suffixText, isCurrency }: { label: string; value: React.ReactNode; suffixText?: string; isCurrency?: boolean }) {
-  return (
-    <div className="profileStatLine" style={{ display: "grid", gridTemplateColumns: "80px auto 1fr", alignItems: "center", gap: 10, marginTop: 8 }}>
-      <div style={{ fontSize: 22, color: "var(--text-muted)" }}>{label}</div>
-      <div style={{ padding: "6px 10px", background: isCurrency ? "var(--bg-currency)" : "var(--bg-btn-disabled)", borderRadius: 4, fontSize: 26, fontWeight: 1000, lineHeight: 1, color: "var(--text-primary)" }}>
-        {value}
-      </div>
-      {suffixText ? <div style={{ fontSize: 22, color: "var(--text-muted)" }}>{suffixText}</div> : <div />}
-    </div>
-  );
-}
-
-function gameBubbleColor(gameType: string): string {
+function gameBtnClass(gameType: string): string {
   const t = gameType.toUpperCase();
-  if (t === "SURVIVOR" || t === "SURVIVOR_BOT") return "var(--game-bubble-survivor)";
-  if (t === "FROOKIES" || t === "FROOKIES_BOT" || t === "ROOKIES" || t === "ROOKIES_BOT") {
-    return "var(--game-bubble-frookies)";
-  }
-  if (t === "HUNGER" || t === "HUNGER_GAMES" || t === "HUNGER_BOT") return "var(--game-bubble-hunger)";
-  if (t === "DUEL" || t === "DUEL_BOT") return "var(--game-bubble-duel)";
-  if (t === "CHALLENGE" || t === "CHALLENGE_BOT") return "var(--game-bubble-challenge)";
-  if (t === "STARS" || t === "STARS_BOT") return "var(--game-bubble-stars)";
-  return "var(--game-bubble-fasting)";
+  if (t.includes("SURVIVOR")) return "sv";
+  if (t.includes("HUNGER")) return "hg";
+  if (t.includes("STAR")) return "st";
+  if (t.includes("CHALLENGE") || t.includes("DUEL")) return "ch";
+  if (t.includes("FROOK") || t.includes("ROOK")) return "rk";
+  return "bb"; // casting / fasting / default
 }
 
-function Bubble({ g }: { g: ProfileGameBubble }) {
+function GameChip({ g }: { g: ProfileGameBubble }) {
   const isActiveGame = g.state !== "COMPLETED" && g.yourStatus === "ACTIVE";
   const isFilling = g.state === "ENROLLING" && g.yourStatus === "ACTIVE";
-
-  const labelTop = g.gameType.toLowerCase().replace(/_/g, " ");
-  const labelBottom = isActiveGame ? (isFilling ? "Filling" : "Enter") : g.eliminatedPlace ? suffix(g.eliminatedPlace) : "—";
-  const bubbleBg = gameBubbleColor(g.gameType);
+  const placeLabel =
+    !isActiveGame && g.eliminatedPlace != null ? suffix(g.eliminatedPlace) : null;
+  const dateLabel = new Date(g.joinedAt).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "2-digit",
+  });
+  const typeLetter = g.gameType.replace(/_BOT$/i, "").charAt(0).toUpperCase();
+  const bubble = gameBtnClass(g.gameType);
+  const placeDigits = placeLabel ? String(g.eliminatedPlace).length : 0;
 
   return (
-    <div className="profileGameBubble" style={{ textAlign: "center", width: 92, flexShrink: 0 }}>
-      <Link href={`/game/${g.gameId}`} style={{ textDecoration: "none", color: "inherit" }}>
-        <div
-          style={{
-            width: 72,
-            height: 72,
-            borderRadius: 999,
-            border: "2px solid var(--border)",
-            background: bubbleBg,
-            margin: "0 auto",
-            display: "grid",
-            placeItems: "center",
-            fontWeight: 1000,
-            position: "relative",
-          }}
-        >
-          <div style={{ fontSize: 12, opacity: 0.95, textTransform: "uppercase" }}>{labelTop}</div>
-          <div
-            style={{
-              position: "absolute",
-              bottom: -9,
-              left: "50%",
-              transform: "translateX(-50%)",
-              padding: "2px 8px",
-              borderRadius: 999,
-              fontSize: 11,
-              fontWeight: 1000,
-              border: "1px solid var(--border)",
-              background: isActiveGame ? "var(--bg-btn-send)" : "var(--bg-card)",
-              color: isActiveGame ? "var(--text-btn-send)" : "var(--text-primary)",
-              minWidth: 56,
-              textAlign: "center",
-            }}
-          >
-            {labelBottom}
-          </div>
-        </div>
-      </Link>
-    </div>
+    <Link href={`/game/${g.gameId}`} className="tgGame">
+      <span
+        className={`tgGameBtn ${bubble}${isActiveGame ? " enter" : ""}${
+          placeDigits >= 2 ? " wide" : ""
+        }`}
+      >
+        {isActiveGame ? "Enter" : placeLabel ?? "—"}
+      </span>
+      <div className="tgGameStatus">
+        <span className="tgFastSign">{typeLetter}</span>
+        {isActiveGame ? (isFilling ? "Filling" : "Enter") : "Finished"}
+        <br />#{g.gameNumber}
+        <br />
+        {dateLabel}
+      </div>
+    </Link>
   );
 }
 
 export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
   const joinedLabel = useMemo(() => new Date(data.joinedAt).toLocaleDateString(), [data.joinedAt]);
   const last = useMemo(() => formatLastSeen(data.lastSeenAt), [data.lastSeenAt]);
-  const swatch = colorToSwatch(data.colorName);
 
   const [editingBio, setEditingBio] = useState(false);
   const [bioDraft, setBioDraft] = useState(data.bio ?? "");
   const [bioSaving, setBioSaving] = useState(false);
   const [bioMsg, setBioMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    document.body.classList.add("tgProfilePage");
+    return () => document.body.classList.remove("tgProfilePage");
+  }, []);
 
   async function saveBio() {
     setBioSaving(true);
@@ -425,119 +321,112 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
     setEditingBio(false);
   }
 
-  const isTvStar = data.colorName.trim().toLowerCase() === "tv star";
-  const swatchClass = `lvlSwatch ${isTvStar ? "tvstar" : ""} ${(data.colorAnimated || isTvStar) ? "animated" : "static"}`;
+  const pageBase = data.isOwnProfile ? "/profile" : `/u/${data.username.toLowerCase()}`;
+  const openBet = (data.bets ?? []).find((b) => !b.paidOutAt);
 
   return (
-    <main style={{ padding: 8 }} className="profilePage">
-      <div className="profileLayout" style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 14 }}>
-        <Card title="Profile">
-          <div className="profileCardInner" style={{ display: "grid", gridTemplateColumns: "220px 1fr 110px", gap: 14, alignItems: "start" }}>
-            <div style={{ display: "grid", placeItems: "start" }}>
+    <main className="profilePage tgProfile">
+      <div className="tgLayout">
+        <div className="tgColLeft">
+          <div className="tgUserHeader">
+            <div className="tgAvatar">
               {data.isOwnProfile ? (
                 <Link href="/profile/avatar" title="Edit avatar" style={{ display: "inline-block" }}>
-                  <Avatar config={data.avatar} width={190} slotDesigns={data.slotDesigns} />
+                  <Avatar config={data.avatar} width={140} slotDesigns={data.slotDesigns} />
                 </Link>
               ) : (
-                <Avatar config={data.avatar} width={190} slotDesigns={data.slotDesigns} />
+                <Avatar config={data.avatar} width={140} slotDesigns={data.slotDesigns} />
               )}
             </div>
 
-            <div>
-              {/* ✅ Wrap name + bar so bar spans under swatch too */}
-              <div style={{ position: "relative" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
-                  <div
-                    className="profileUsername theme-username"
-                    style={{ fontSize: 38, lineHeight: 1, display: "flex", alignItems: "center", flexWrap: "wrap", gap: 2 }}
-                  >
-                    {data.username}
-                    <StatusBadges
-                      isOwner={data.isOwner}
-                      isAdmin={data.isAdmin}
-                      isWarned={data.isWarned}
-                      isBanned={data.isBanned}
-                      hofRank={data.hofRank}
-                      size="md"
-                    />
-                  </div>
-
-                  {/* bar is in the right column, but the background bar spans full width */}
-                  <div style={{ width: 0 }} />
-                </div>
-
-                {/* ✅ full-width bar behind */}
-                <div
-                  style={{
-                    position: "absolute",
-                    left: 0,
-                    right: 0,
-                    top: 40,
-                    height: 10,
-                    borderRadius: 999,
-                        background: "var(--bg-btn-disabled)",
-                        border: "1px solid var(--border)",
-                    zIndex: -1,
-                  }}
+            <div className="tgUserInfo">
+              <h1 className="tgName">
+                <span className="tgNameText">{data.username}</span>
+                <StatusBadges
+                  isOwner={data.isOwner}
+                  isAdmin={data.isAdmin}
+                  isWarned={data.isWarned}
+                  isBanned={data.isBanned}
+                  hofRank={null}
+                  size="sm"
                 />
+              </h1>
+
+              <div className="tgStatRow">
+                <div>
+                  Karma: <span className="tgRemark">{data.karma}</span>
+                  {data.hofRank != null && data.hofRank > 0 && data.hofRank <= 500 ? (
+                    <span className="tgMiniRank">
+                      {data.hofRank}
+                      <span style={{ fontSize: 9 }}>{suffix(data.hofRank).replace(String(data.hofRank), "")}</span>
+                    </span>
+                  ) : null}
+                </div>
+                {data.isOwnProfile ? (
+                  <div>
+                    Money: <span className="tgRemark">{data.tMoney}</span> R$
+                  </div>
+                ) : null}
+                <div>
+                  Played: <span className="tgRemark">{data.stats.gamesPlayed}</span> times
+                </div>
+                <div>
+                  Last Activity: <span className="tgRemark">{last}</span>
+                </div>
+                <div>
+                  Joined: <span className="tgRemark">{joinedLabel}</span>
+                </div>
               </div>
 
-              <StatLine label="Karma:" value={data.karma} isCurrency />
-              {data.isOwnProfile && (
-                <>
-                  <StatLine label="Money:" value={data.tMoney} suffixText="R$" isCurrency />
-                </>
-              )}
-              <StatLine label="Played:" value={data.stats.gamesPlayed} suffixText="times" />
-
-              <div style={{ marginTop: 8, fontSize: 14, color: "var(--muted-gray)" }}>
-                Last Activity: <b>{last}</b>
-              </div>
-
-              <div style={{ marginTop: 6, fontSize: 12, color: "var(--muted-gray-2)" }}>Joined {joinedLabel}</div>
+              {data.profileUserId ? (
+                <ProfileSocialActions
+                  profileUserId={data.profileUserId}
+                  username={data.username}
+                  isOwnProfile={data.isOwnProfile}
+                  initialIsFriend={data.isFriend}
+                  initialCanAddFriend={data.canAddFriend}
+                  designGifts={data.designGifts}
+                />
+              ) : null}
 
               {data.isOwnProfile && data.isWarned ? (
-                <div
-                  style={{
-                    marginTop: 10,
-                    padding: "10px 12px",
-                    borderRadius: 6,
-                    border: "1px solid #c9a227",
-                    background: "rgba(201, 162, 39, 0.12)",
-                    fontSize: 13,
-                    lineHeight: 1.4,
-                  }}
-                >
+                <div className="tgAdvise" style={{ marginTop: 10 }}>
                   Your account is warned. You cannot enroll in games until an owner clears the warning.
                 </div>
               ) : null}
-
-              {data.isOwnProfile ? <DailyLoginCard /> : null}
             </div>
 
-            {/* ✅ Swatch sits here; bar spans under it because the bar uses full width (left/right) */}
-            <div style={{ display: "grid", justifyItems: "end", paddingTop: 6 }}>
-              <div
+            <div className="tgGradeCol">
+              <span
+                className={`lvlSwatch tgGradeBelt${isTvStarColor(data.colorName) ? " tvstar" : ""}${
+                  data.colorAnimated || isTvStarColor(data.colorName) ? " animated" : " static"
+                }`}
+                style={{ ["--lvl" as string]: colorLevelSwatch(data.colorName) }}
                 title={data.colorName}
-                className={swatchClass}
-                style={{ ["--lvl" as any]: swatch }}
+                aria-label={`Color level: ${data.colorName}`}
               />
             </div>
           </div>
 
-          {/* Bio */}
-          <div className="theme-chat-msg-sys" style={{ marginTop: 14, border: "1px solid var(--border)", borderRadius: 10, padding: 12, minHeight: 120 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-              <div style={{ fontWeight: 1000 }}>Bio</div>
+          <div className="tgSpeech">
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 4 }}>
               {data.isOwnProfile && (
                 <button
+                  type="button"
                   onClick={() => {
                     setBioDraft(data.bio ?? "");
                     setBioMsg(null);
                     setEditingBio((v) => !v);
                   }}
-                  className="theme-pager-btn"
-                  style={{ padding: "6px 10px", borderRadius: 10, fontWeight: 1000, cursor: "pointer" }}
+                  style={{
+                    border: "1px solid #ccc",
+                    background: "#fff",
+                    borderRadius: 3,
+                    padding: "1px 7px",
+                    fontSize: 10,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                  }}
                 >
                   {editingBio ? "Cancel" : "Edit"}
                 </button>
@@ -545,216 +434,270 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
             </div>
 
             {editingBio && data.isOwnProfile ? (
-              <div style={{ marginTop: 10, display: "grid", gap: 8 }}>
+              <div style={{ display: "grid", gap: 8 }}>
                 <textarea
                   value={bioDraft}
                   onChange={(e) => setBioDraft(e.target.value)}
                   rows={6}
-                  style={{ width: "100%", padding: 10, borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text-primary)", resize: "vertical", fontFamily: "inherit" }}
+                  style={{
+                    width: "100%",
+                    padding: 8,
+                    borderRadius: 4,
+                    border: "1px solid #ccc",
+                    background: "#fff",
+                    color: "#252525",
+                    resize: "vertical",
+                    fontFamily: "inherit",
+                    fontSize: 11,
+                  }}
                   placeholder="Write your bio…"
                 />
-                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                   <button
+                    type="button"
                     onClick={saveBio}
                     disabled={bioSaving}
                     style={{
-                      padding: "10px 12px",
-                      borderRadius: 10,
-                      border: "1px solid rgba(0,0,0,0.18)",
-                      background: bioSaving ? "var(--bg-btn-disabled)" : "var(--bg-btn-send)",
-                      color: bioSaving ? "var(--text-primary)" : "var(--text-btn-send)",
-                      fontWeight: 1000,
+                      padding: "5px 10px",
+                      borderRadius: 3,
+                      border: "1px solid #999",
+                      background: bioSaving ? "#ddd" : "#257eb2",
+                      color: bioSaving ? "#555" : "#fff",
+                      fontWeight: 700,
+                      fontSize: 11,
                       cursor: bioSaving ? "not-allowed" : "pointer",
+                      fontFamily: "inherit",
                     }}
                   >
                     {bioSaving ? "Saving..." : "Save"}
                   </button>
-                  <div style={{ fontSize: 12, opacity: 0.75 }}>{bioDraft.length}/1000</div>
-                  {bioMsg && <div style={{ fontSize: 12, fontWeight: 1000 }}>{bioMsg}</div>}
+                  <span style={{ fontSize: 10, opacity: 0.7 }}>{bioDraft.length}/1000</span>
+                  {bioMsg && <span style={{ fontSize: 11, fontWeight: 700 }}>{bioMsg}</span>}
                 </div>
               </div>
+            ) : data.bio?.trim().length ? (
+              <div style={{ whiteSpace: "pre-wrap" }}>{renderBioContent(data.bio)}</div>
             ) : (
-              <div style={{ marginTop: 10, whiteSpace: "pre-wrap", fontSize: 13, lineHeight: 1.35 }}>
-                {data.bio?.trim().length ? (
-                  renderBioContent(data.bio)
-                ) : (
-                  <span style={{ opacity: 0.6 }}>No bio yet.</span>
-                )}
+              <span style={{ opacity: 0.55 }}>No bio yet.</span>
+            )}
+          </div>
+
+          <div className="tgSection">
+            <div className="tgSectionTitle">
+              <h2>My Games</h2>
+              <span className="tgSectionMeta">{data.stats.gamesPlayed} games played</span>
+            </div>
+            {data.recentGamesTotalPages > 1 ? (
+              <div className="tgPager">
+                {Array.from({ length: Math.min(data.recentGamesTotalPages, 8) }, (_, i) => i + 1).map((p) => (
+                  <Link key={p} href={`${pageBase}?page=${p}`} className={p === data.recentGamesPage ? "on" : undefined}>
+                    {p}
+                  </Link>
+                ))}
+                {data.recentGamesTotalPages > 8 ? (
+                  <>
+                    <span>…</span>
+                    <Link href={`${pageBase}?page=${data.recentGamesTotalPages}`}>{data.recentGamesTotalPages}</Link>
+                  </>
+                ) : null}
+              </div>
+            ) : null}
+            {data.recentGames.length === 0 ? (
+              <div style={{ fontSize: 11, opacity: 0.7 }}>No games yet.</div>
+            ) : (
+              <div className="tgGames">
+                {data.recentGames.map((g) => (
+                  <GameChip key={g.gameId} g={g} />
+                ))}
               </div>
             )}
           </div>
 
-          {/* My Games */}
-          <div style={{ marginTop: 14 }}>
-            <Card title="My Games">
-              <div className="profileGameBubbles" style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-start" }}>
-                {data.recentGames.map((g) => (
-                  <Bubble key={g.gameId} g={g} />
+          <div className="tgSection">
+            <div className="tgSectionTitle">
+              <h2>My Blog</h2>
+              <Link href="/blogs" className="tgAction">
+                Check my blog!
+              </Link>
+            </div>
+            {data.blogPosts.length === 0 ? (
+              <div style={{ fontSize: 11, opacity: 0.7 }}>No blog posts yet.</div>
+            ) : (
+              <ol className="tgBlogList">
+                {data.blogPosts.map((b) => (
+                  <li key={b.id}>
+                    <Link href={`/blogs/${b.id}`}>{b.title}</Link>
+                  </li>
                 ))}
-              </div>
-              {data.recentGamesTotalPages > 1 && (
-                <div style={{ display: "flex", gap: 8, marginTop: 12, alignItems: "center", flexWrap: "wrap" }}>
-                  {data.recentGamesPage > 1 ? (
-                    <Link
-                      href={data.isOwnProfile ? `/profile?page=${data.recentGamesPage - 1}` : `/u/${data.username.toLowerCase()}?page=${data.recentGamesPage - 1}`}
-                      style={{
-                        padding: "6px 10px",
-                        borderRadius: 8,
-                        border: "1px solid rgba(0,0,0,0.12)",
-                        background: "var(--bg-card)",
-                        textDecoration: "none",
-                        color: "var(--text-primary)",
-                        fontWeight: 800,
-                        fontSize: 12,
-                      }}
-                    >
-                      ← Prev
-                    </Link>
-                  ) : (
-                    <span className="theme-text-muted" style={{ padding: "6px 10px", borderRadius: 8, background: "var(--bg-btn-disabled)", fontSize: 12 }}>← Prev</span>
-                  )}
-                  <span style={{ fontSize: 13 }}>
-                    Page {data.recentGamesPage} of {data.recentGamesTotalPages}
-                  </span>
-                  {data.recentGamesPage < data.recentGamesTotalPages ? (
-                    <Link
-                      href={data.isOwnProfile ? `/profile?page=${data.recentGamesPage + 1}` : `/u/${data.username.toLowerCase()}?page=${data.recentGamesPage + 1}`}
-                      style={{
-                        padding: "6px 10px",
-                        borderRadius: 8,
-                        border: "1px solid rgba(0,0,0,0.12)",
-                        background: "var(--bg-card)",
-                        textDecoration: "none",
-                        color: "var(--text-primary)",
-                        fontWeight: 800,
-                        fontSize: 12,
-                      }}
-                    >
-                      Next →
-                    </Link>
-                  ) : (
-                    <span className="theme-text-muted" style={{ padding: "6px 10px", borderRadius: 8, background: "var(--bg-btn-disabled)", fontSize: 12 }}>Next →</span>
-                  )}
-                </div>
-              )}
-            </Card>
+              </ol>
+            )}
           </div>
+        </div>
 
-          {/* Blogs written */}
-          {data.blogPosts.length > 0 && (
-            <div style={{ marginTop: 14 }}>
-              <Card title="Blogs">
-                <div style={{ display: "grid", gap: 6 }}>
-                  {data.blogPosts.map((b) => (
+        <div className="tgColRight">
+          {data.isOwnProfile ? (
+            <div className="tgSideBlock">
+              <div className="tgSideTitle">Profile</div>
+              <div style={{ display: "grid", gap: 8 }}>
+                <Link
+                  href="/enroll"
+                  style={{
+                    display: "block",
+                    textAlign: "center",
+                    padding: "8px 10px",
+                    background: "#f5d76e",
+                    border: "1px solid #d4b84a",
+                    color: "#333",
+                    fontWeight: 700,
+                    textDecoration: "none",
+                    fontSize: 12,
+                  }}
+                >
+                  Enroll now ▶
+                </Link>
+                {!data.emailVerified && (
+                  <Link
+                    href="/profile/edit#email"
+                    style={{
+                      display: "block",
+                      textAlign: "center",
+                      padding: "8px 10px",
+                      background: "#b91c1c",
+                      color: "#fff",
+                      fontWeight: 700,
+                      textDecoration: "none",
+                      fontSize: 12,
+                    }}
+                  >
+                    Verify email
+                  </Link>
+                )}
+                <Link href="/profile/edit" className="tgAction" style={{ textAlign: "center", display: "block" }}>
+                  Edit Profile
+                </Link>
+              </div>
+            </div>
+          ) : null}
+
+          <div className="tgSideBlock">
+            <div className="tgSideTitle">Friends</div>
+            {data.friends.length > 0 ? (
+              <div>
+                <div className="tgFriends">
+                  {data.friends.map((f) => (
                     <Link
-                      key={b.id}
-                      href={`/blogs/${b.id}`}
-                      style={{
-                        fontSize: 14,
-                        fontWeight: 700,
-                        color: "var(--link-color)",
-                        textDecoration: "none",
-                      }}
+                      key={f.id}
+                      href={`/u/${f.username.toLowerCase()}`}
+                      title={f.username + (f.isMutual ? " (mutual)" : "")}
+                      className="tgFriend"
                     >
-                      {b.title}
+                      <Avatar config={f.avatar} width={48} slotDesigns={f.slotDesigns} />
+                      <div style={{ marginTop: 3 }}>{f.username}</div>
                     </Link>
                   ))}
                 </div>
-              </Card>
+                {data.isOwnProfile && data.friends.length > 1 && (
+                  <ReorderFriendsButton friends={data.friends} onReordered={() => window.location.reload()} />
+                )}
+              </div>
+            ) : (
+              <div style={{ fontSize: 11, opacity: 0.7 }}>No friends yet</div>
+            )}
+          </div>
+
+          <div className="tgSideBlock">
+            <div className="tgSideTitle">My Bets</div>
+            {openBet ? (
+              <div className="tgAdvise">
+                <Link href={`/game/${openBet.gameId}`} style={{ float: "right", fontWeight: 700 }}>
+                  #{openBet.gameNumber}
+                </Link>
+                Open now:&nbsp;
+              </div>
+            ) : null}
+            {(data.bets?.length ?? 0) === 0 ? (
+              <div style={{ fontSize: 11, opacity: 0.7 }}>No bets yet.</div>
+            ) : (
+              <table className="tgBetsTable">
+                <tbody>
+                  {(data.bets ?? []).slice(0, 10).map((b) => {
+                    const won = !!b.paidOutAt && (b.payoutAmount ?? 0) > 0;
+                    return (
+                      <tr key={b.id}>
+                        <td>
+                          <span className="tgRemark">{b.amount}</span> to{" "}
+                          <Link href={`/u/${b.targetUsername.toLowerCase()}`}>{b.targetUsername}</Link>
+                        </td>
+                        <td>
+                          in <Link href={`/game/${b.gameId}`}>#{b.gameNumber}</Link>
+                        </td>
+                        <td style={{ textAlign: "right", color: won ? "#2e7d32" : "#888", fontWeight: won ? 700 : 500 }}>
+                          {won ? (
+                            <>
+                              won: <span className="tgRemark">{b.payoutAmount}</span>
+                            </>
+                          ) : (
+                            "open"
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          <div className="tgSideBlock">
+            <div className="tgSideTitle">My auctions</div>
+            {(data.myAuctions?.length ?? 0) === 0 ? (
+              <div style={{ fontSize: 11, opacity: 0.7 }}>No auctions yet.</div>
+            ) : (
+              <table className="tgBetsTable">
+                <tbody>
+                  {(data.myAuctions ?? []).slice(0, 10).map((a) => {
+                    const sold = !!a.soldAt;
+                    return (
+                      <tr key={a.id}>
+                        <td>
+                          <Link href={`/designs/${a.designId}`}>{a.designTitle}</Link>
+                        </td>
+                        <td>
+                          <Link href="/shop/auctions">auction</Link>
+                        </td>
+                        <td
+                          style={{
+                            textAlign: "right",
+                            color: sold ? "#2e7d32" : "#888",
+                            fontWeight: sold ? 700 : 500,
+                          }}
+                        >
+                          {sold ? (
+                            <>
+                              sold: <span className="tgRemark">{a.soldPrice}</span>
+                            </>
+                          ) : (
+                            <>
+                              open: <span className="tgRemark">{a.soldPrice}</span>
+                            </>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {!data.isOwnProfile && (
+            <div className="tgReportRow">
+              <span>Report this User</span>
+              <Link href={`/contact?report=${encodeURIComponent(data.username)}`} className="tgReportBtn">
+                REPORT
+              </Link>
             </div>
           )}
-        </Card>
-
-        {/* RIGHT */}
-        <div className="profileSidebar" style={{ display: "grid", gap: 14 }}>
-          <Card title="Participate!">
-            <div style={{ display: "grid", gap: 10 }}>
-              <Link href="/enroll" className="theme-btn-primary" style={{ display: "block", textAlign: "center" }}>
-                Enroll now ▶
-              </Link>
-
-              {data.isOwnProfile && !data.emailVerified && (
-                <Link
-                  href="/profile/edit#email"
-                  className="theme-btn-primary"
-                  style={{ display: "block", textAlign: "center", background: "#b91c1c", borderColor: "#991b1b" }}
-                >
-                  Verify email
-                </Link>
-              )}
-
-              {data.isOwnProfile && (
-                <Link href="/profile/edit" className="theme-btn-secondary" style={{ display: "block", textAlign: "center" }}>
-                  Edit Profile
-                </Link>
-              )}
-            </div>
-          </Card>
-
-          {/* Friends */}
-          <Card title="Friends">
-              {data.friends.length > 0 && (
-                <div style={{ marginBottom: (data.canAddFriend || data.isFriend) ? 10 : 0 }}>
-                  <div className="profileFriendsList" style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-                    {data.friends.map((f) => (
-                      <Link
-                        key={f.id}
-                        href={`/u/${f.username.toLowerCase()}`}
-                        title={f.username + (f.isMutual ? " (mutual)" : "")}
-                        className="profileFriendLink"
-                        style={{
-                          display: "block",
-                          textDecoration: "none",
-                          color: "inherit",
-                          textAlign: "center",
-                          padding: 6,
-                          borderRadius: 10,
-                          background: f.isMutual ? "var(--friend-mutual-bg)" : "transparent",
-                          border: f.isMutual ? "1px solid var(--friend-mutual-border)" : "1px solid transparent",
-                        }}
-                      >
-                        <Avatar config={f.avatar} width={48} slotDesigns={f.slotDesigns} />
-                        <div className="theme-username" style={{ fontSize: 11, marginTop: 4, wordBreak: "break-word" }}>{f.username}</div>
-                      </Link>
-                    ))}
-                  </div>
-                  {data.isOwnProfile && data.friends.length > 1 && (
-                    <ReorderFriendsButton friends={data.friends} onReordered={() => window.location.reload()} />
-                  )}
-                </div>
-              )}
-              {!data.isOwnProfile && data.profileUserId && (
-                <Link
-                  href={`/dms/${data.profileUserId}`}
-                  className="theme-btn-secondary"
-                  style={{ display: "block", textAlign: "center", marginBottom: 10 }}
-                >
-                  ✉️ Message
-                </Link>
-              )}
-              {data.canAddFriend && data.profileUserId && (
-                <AddFriendButton
-                  username={data.username}
-                  onAdded={() => window.location.reload()}
-                />
-              )}
-              {data.isFriend && data.profileUserId && (
-                <RemoveFriendButton friendId={data.profileUserId} onRemoved={() => window.location.reload()} />
-              )}
-              {data.friends.length === 0 && !data.canAddFriend && !data.isFriend && (
-                <div style={{ fontSize: 13, color: "var(--muted-gray-3)" }}>No friends yet</div>
-              )}
-            </Card>
-
-          <Card title="Stats">
-            <div style={{ display: "grid", gap: 10 }}>
-              <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ opacity: 0.8 }}>Games played</span><b>{data.stats.gamesPlayed}</b></div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ opacity: 0.8 }}>Total chat</span><b>{data.stats.totalChats}</b></div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ opacity: 0.8 }}>✅ received</span><b>{data.stats.totalPlus}</b></div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ opacity: 0.8 }}>❌ received</span><b>{data.stats.totalMinus}</b></div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ opacity: 0.8 }}>POV wins</span><b>{data.stats.totalPov}</b></div>
-            </div>
-          </Card>
         </div>
       </div>
     </main>

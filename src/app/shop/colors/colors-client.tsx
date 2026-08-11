@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { colorLevelSwatch, isTvStarColor } from "@/lib/colorLevelCss";
 
 type Me = { username: string; karma: number; tMoney: number };
 
@@ -12,20 +13,6 @@ type ColorLevel = {
   strength: number;
   isAnimated: boolean;
 };
-
-const SWATCH: Record<string, string> = {
-  white: "#ffffff", yellow: "#ffeb3b", orange: "#ff9800", "light green": "#8bc34a",
-  green: "#2e7d32", blue: "#1e88e5", purple: "#8e24aa", red: "#e53935",
-  brown: "#6d4c41", black: "#111111", silver: "#c0c0c0", gold: "#ffd700",
-  sky: "#4fc3f7", blood: "#8b0000", "tv star": "#ff66cc",
-};
-
-function colorToSwatch(name: string) {
-  return SWATCH[name.trim().toLowerCase()] ?? "#ffffff";
-}
-function isTvStar(name: string) {
-  return name.trim().toLowerCase() === "tv star";
-}
 
 export default function ColorLevelsClient({
   me,
@@ -75,8 +62,8 @@ export default function ColorLevelsClient({
           const isNext = lvl.id === nextBuyableId;
           const isLockedByOrder = !has && lvl.id !== nextBuyableId && lvl.id !== 0;
           const canBuy = lvl.id !== 0 && !has && isNext && canKarma && canMoney;
-          const sw = colorToSwatch(lvl.name);
-          const tv = isTvStar(lvl.name);
+          const sw = colorLevelSwatch(lvl.name);
+          const tv = isTvStarColor(lvl.name);
 
           return (
             <div

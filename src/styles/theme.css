@@ -1,16 +1,16 @@
-/* Light: blue & white */
+/* Light: Tengaged-ish blue & white */
 :root,
 [data-theme="light"] {
-  --bg-body: linear-gradient(#a9cfe8, #d6eaf6 260px, #f5f7fb 900px);
+  --bg-body: linear-gradient(#a9cfe8, #c5dced 180px, #e8f2f8 520px, #f3f7fa 100%);
   --bg-card: #ffffff;
-  --bg-nav: rgba(169, 207, 232, 0.92);
+  --bg-nav: #a4c2d8;
   --bg-input: #fff;
   --text-primary: #111;
   --text-secondary: #222;
   --text-muted: #555;
-  --text-nav: #123;
+  --text-nav: #3a3a3a;
   --border: rgba(0, 0, 0, 0.08);
-  --border-nav: rgba(0, 0, 0, 0.08);
+  --border-nav: rgba(0, 0, 0, 0.06);
   --shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
   --shadow-card: 0 6px 18px rgba(0, 0, 0, 0.06);
   --accent: #0b2b66;
@@ -26,7 +26,7 @@
   --bg-btn-send: #111;
   --text-btn-send: #fff;
   --border-input: rgba(0, 0, 0, 0.12);
-  --link-color: #0b5ed7;
+  --link-color: #257eb2;
   --bg-pm-mine: #eaf2ff;
   --text-error: #c00;
   --vote-plus-bg: #e8f5e9;
@@ -53,7 +53,7 @@
   --friend-mutual-border: #81c784;
   --save-btn-bg: #2e7d32;
   --edit-panel-bg: #fff;
-  --link-blue: #0b5ed7;
+  --link-blue: #257eb2;
   --muted-gray: #666;
   --muted-gray-2: #777;
   --muted-gray-3: #888;
@@ -179,78 +179,192 @@
   min-width: 0;
 }
 
-/* NavBar */
-.navBar {
+/* NavBar — Tengaged-style top bar + circular menu */
+.tgNav {
   position: sticky;
   top: 0;
   z-index: 50;
-  background: var(--bg-nav);
-  backdrop-filter: blur(6px);
-  border-bottom: 1px solid var(--border-nav);
+  background: #a4c2d8;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  font-family: Verdana, Geneva, Arial, Helvetica, sans-serif;
 }
 
-.navInner {
+.tgNavInner {
   max-width: 980px;
   margin: 0 auto;
-  padding: 10px 14px;
+  padding: 8px 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  min-height: 42px;
 }
 
-.navLinks {
+.tgNavBrand {
+  color: #2b2b2b;
+  text-decoration: none;
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: -0.3px;
+  flex-shrink: 0;
+}
+
+.tgNavLinks {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 14px;
   flex-wrap: wrap;
+  margin-left: auto;
 }
 
-.navLink {
-  color: var(--text-nav);
+.tgNavLink {
+  color: #3a3a3a;
   text-decoration: none;
   font-weight: 700;
-  font-size: 13px;
+  font-size: 12px;
+  white-space: nowrap;
 }
 
-.navLinkBold {
+.tgNavLink:hover {
+  color: #111;
+  text-decoration: underline;
+}
+
+.tgNavMuted {
+  font-size: 12px;
+  font-weight: 700;
+  opacity: 0.65;
+}
+
+.tgNavDm {
+  position: relative;
+  padding-right: 2px;
+}
+
+.tgNavBadge {
+  position: absolute;
+  top: -7px;
+  right: -10px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 7px;
+  background: #d11b1b;
+  color: #fff;
+  font-size: 9px;
   font-weight: 800;
-}
-
-.navDivider {
-  width: 1px;
-  height: 18px;
-  background: var(--border);
-}
-
-.navThemeBtn {
-  background: none;
-  border: none;
-  font-size: 18px;
-  cursor: pointer;
-  padding: 2px 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   line-height: 1;
-  opacity: 0.9;
 }
 
-.navThemeBtn:hover {
-  opacity: 1;
+.tgNavMenuWrap {
+  position: relative;
+  margin-left: 2px;
 }
 
-.navLoading {
-  font-size: 13px;
-  font-weight: 800;
-  opacity: 0.8;
-}
-
-.navLogoutBtn {
-  background: none;
-  border: none;
-  color: var(--text-nav);
-  font-weight: 800;
-  font-size: 13px;
+.tgNavMenuBtn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: #f2f6f9;
+  box-shadow: inset 0 1px 0 #fff, 0 1px 2px rgba(0, 0, 0, 0.08);
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 0;
+  color: #555;
+}
+
+.tgNavMenuBtn:hover,
+.tgNavMenuBtn.open {
+  background: #fff;
+  color: #222;
+}
+
+.tgNavChevron {
+  font-size: 14px;
+  line-height: 1;
+  transform: translateY(-1px);
+}
+
+.tgNavDropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 188px;
+  background: #fff;
+  border: 1px solid #d7e0e8;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
+  z-index: 80;
+  text-align: left;
+}
+
+.tgNavDropWelcome {
+  padding: 10px 12px 8px;
+}
+
+.tgNavDropHi {
+  color: #3f8f38;
+  font-weight: 700;
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+
+.tgNavDropAuth {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tgNavDropAuth a,
+.tgNavDropAuth button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  color: #257eb2;
+  font: 700 12px Verdana, Geneva, Arial, Helvetica, sans-serif;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.tgNavDropAuth a:hover,
+.tgNavDropAuth button:hover {
+  text-decoration: underline;
+}
+
+.tgNavDropList {
+  border-top: 1px solid #e6eef4;
+  padding: 6px 0 8px;
+}
+
+.tgNavDropItem {
+  display: block;
+  padding: 4px 12px;
+  color: #257eb2;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.tgNavDropItem:hover {
+  background: #f3f7fa;
+}
+
+.tgNavDropItem .note {
+  display: inline;
+  margin-left: 4px;
+  color: #999;
+  font-size: 10px;
+  font-weight: 600;
 }
 
 /* Shared theme-aware components */
@@ -497,6 +611,15 @@ html:not([data-theme]) .theme-username {
   color: var(--brand, #2563eb);
   text-decoration: underline;
   font-weight: 700;
+}
+
+button.siteFooterDaily {
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  cursor: pointer;
 }
 
 .siteFooterLink:hover {

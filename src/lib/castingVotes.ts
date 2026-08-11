@@ -31,13 +31,37 @@ export async function resolveCastingEviction(gameId: string) {
 
   // Day 1: no algorithm eviction
   if (dayNum === 1) {
-    await prisma.castingDayResult.upsert({
+    const day1 = await prisma.castingDayResult.findUnique({
       where: { gameId_dayNumber: { gameId, dayNumber: 1 } },
-      update: { evictedUserIds: [] },
-      create: { gameId, dayNumber: 1, nomineeUserIds: [], evictedUserIds: [] },
+      select: { dayNumber: true },
     });
+    if (day1) {
+      // Already completed day 1 — don't re-post the system message.
+      const activeAfter = await prisma.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
+      if (activeAfter <= 5) {
+        await finalizeCastingGame(gameId);
+        return { ok: true, finished: true as const };
+      }
+      await openCastingVoteDay(gameId, 2);
+      return { ok: true, advancedToDay: 2 as const, skipped: true as const, reason: "day1_already_done" as const };
+    }
+
+    try {
+      await prisma.castingDayResult.create({
+        data: { gameId, dayNumber: 1, nomineeUserIds: [], evictedUserIds: [] },
+      });
+    } catch {
+      // Unique race — another tick already finished day 1.
+      await openCastingVoteDay(gameId, 2);
+      return { ok: true, advancedToDay: 2 as const, skipped: true as const, reason: "day1_race" as const };
+    }
     await prisma.gameMessage.create({
-      data: { gameId, userId: sysId, channel: "PUBLIC", body: `[SYSTEM] Day 1 complete.` },
+      data: {
+        gameId,
+        userId: sysId,
+        channel: "PUBLIC",
+        body: `[SYSTEM] Day 1 complete\nCompetition day is over. Nominations begin on Day 2.`,
+      },
     });
 
     const activeAfter = await prisma.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
@@ -113,6 +137,17 @@ export async function resolveCastingEviction(gameId: string) {
   });
 
   await prisma.$transaction(async (tx) => {
+    // Only one writer may claim the eviction for this day.
+    const claimed = await tx.castingDayResult.updateMany({
+      where: {
+        gameId,
+        dayNumber: dayNum,
+        evictedUserIds: { equals: [] },
+      },
+      data: { evictedUserIds: [evicted] },
+    });
+    if (claimed.count === 0) return;
+
     await tx.gamePlayer.update({
       where: { gameId_userId: { gameId, userId: evicted } },
       data: { status: "ELIMINATED", eliminatedAt: now },
@@ -122,19 +157,26 @@ export async function resolveCastingEviction(gameId: string) {
       where: { gameId_userId: { gameId, userId: evicted } },
       data: { eliminatedPlace: remaining + 1 },
     });
-    await tx.castingDayResult.update({
-      where: { gameId_dayNumber: { gameId, dayNumber: dayNum } },
-      data: { evictedUserIds: [evicted] },
-    });
     await tx.gameMessage.create({
       data: {
         gameId,
         userId: sysId,
         channel: "PUBLIC",
-        body: `[SYSTEM] ${evictedUser?.username ?? evicted} has been voted out.\nDay ${dayNum} resolved.`,
+        body:
+          `[SYSTEM] ${evictedUser?.username ?? evicted} has been voted out\n` +
+          `Day ${dayNum} is over.`,
       },
     });
   });
+
+  // If a concurrent tick already evicted, still heal forward.
+  const dayAfter = await prisma.castingDayResult.findUnique({
+    where: { gameId_dayNumber: { gameId, dayNumber: dayNum } },
+    select: { evictedUserIds: true },
+  });
+  if (!dayAfter?.evictedUserIds?.length) {
+    return { ok: true, skipped: true as const, reason: "evict_race_lost" as const };
+  }
 
   const activeAfter = await prisma.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
   // FAQ: final day when 5 players remain

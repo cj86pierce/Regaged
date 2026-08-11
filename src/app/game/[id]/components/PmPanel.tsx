@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import "@/styles/tengagedChat.css";
 
 type PlayerMini = { userId: string; username: string; status: "ACTIVE" | "ELIMINATED" };
 
@@ -14,19 +15,36 @@ type PmMsg = {
   body: string;
 };
 
+function chatAgo(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(ms / 60000);
+  if (!Number.isFinite(mins) || mins < 0) return "";
+  if (mins < 1) return "just now";
+  if (mins === 1) return "1 min ago";
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours === 1) return "1 hour ago";
+  if (hours < 48) return `${hours} hours ago`;
+  const days = Math.floor(hours / 24);
+  return days === 1 ? "1 day ago" : `${days} days ago`;
+}
+
 export default function PmPanel({
   gameId,
   meUserId,
   players,
+  tengaged,
 }: {
   gameId: string;
   meUserId: string | null;
   players: PlayerMini[];
+  tengaged?: boolean;
 }) {
   const [toUserId, setToUserId] = useState<string>("");
   const [messages, setMessages] = useState<PmMsg[]>([]);
   const [text, setText] = useState("");
   const [err, setErr] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
 
   const options = useMemo(() => {
     return players
@@ -61,25 +79,84 @@ export default function PmPanel({
   async function send() {
     if (!meUserId) return;
     if (!toUserId) return;
-    if (text.trim().length < 1) return;
+    if (text.trim().length < 1 || sending) return;
 
+    setSending(true);
     setErr(null);
-    const res = await fetch(`/api/game/${gameId}/pm`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ toUserId, text }),
-    });
-    const json = await res.json();
-    if (!res.ok) {
-      setErr(json?.error ?? "Send failed");
-      return;
+    try {
+      const res = await fetch(`/api/game/${gameId}/pm`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ toUserId, text }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setErr(json?.error ?? "Send failed");
+        return;
+      }
+      setText("");
+      await load();
+    } finally {
+      setSending(false);
     }
-    setText("");
-    await load();
   }
 
   if (!meUserId) {
     return <div className="theme-sidebar-panel" style={{ borderRadius: 10, padding: 12 }}>Login required.</div>;
+  }
+
+  if (tengaged) {
+    return (
+      <div className="tgPm">
+        <div className="tgPmCompose">
+          <div className="tgPmComposeRow">
+            <select value={toUserId} onChange={(e) => setToUserId(e.target.value)}>
+              {options.map((o) => (
+                <option key={o.value} value={o.value}>
+                  Send to: {o.label}
+                </option>
+              ))}
+            </select>
+            <button type="button" onClick={send} disabled={sending || !text.trim()}>
+              {sending ? "…" : "Send"}
+            </button>
+          </div>
+          <div className="tgPmComposeRow">
+            <input
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Write a private message…"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  void send();
+                }
+              }}
+            />
+          </div>
+          {err ? <div style={{ color: "#c62828", fontWeight: 700 }}>{err}</div> : null}
+        </div>
+
+        <div className="tgPmList">
+          {messages.length === 0 ? (
+            <div style={{ opacity: 0.65, padding: "8px 4px" }}>No PMs yet.</div>
+          ) : (
+            messages.map((m) => {
+              const mine = m.senderUserId === meUserId;
+              return (
+                <div key={m.id} className={`tgPmMsg${mine ? " mine" : ""}`}>
+                  <div className="tgPmMeta">
+                    <span className="user">{mine ? "You" : m.senderUsername}</span>
+                    <span className="date">{chatAgo(m.createdAt)}</span>
+                  </div>
+                  <div className="tgPmBody">{m.body}</div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+    );
   }
 
   return (

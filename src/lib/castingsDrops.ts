@@ -169,16 +169,20 @@ export async function maybeSpawnCastingsDrops(gameId: string) {
     const alreadyThisHour = g.castingLastAppleHourKey === hk || g.castingLastKeyHourKey === hk;
     if (alreadyThisHour) return;
 
+    // Claim this hour first so concurrent ticks don't double-spawn.
+    const won = await prisma.$executeRaw`
+      UPDATE "Game"
+      SET "castingLastAppleHourKey" = ${hk}, "castingLastKeyHourKey" = ${hk}
+      WHERE id = ${gameId}
+        AND ("castingLastAppleHourKey" IS DISTINCT FROM ${hk})
+        AND ("castingLastKeyHourKey" IS DISTINCT FROM ${hk})
+    `;
+    if (Number(won) === 0) return;
+
     const keysToday = await prisma.castingDropEvent.count({
       where: { gameId, dayNumber: dayNum, dropType: "NORMAL", kind: "KEY" },
     });
-    const rewardKind = pickRewardKind(keysToday);
-
-    await spawnNormalDrop(gameId, dayNum, rewardKind);
-    await prisma.game.update({
-      where: { id: gameId },
-      data: { castingLastAppleHourKey: hk, castingLastKeyHourKey: hk },
-    });
+    await spawnNormalDrop(gameId, dayNum, pickRewardKind(keysToday));
   }
 }
 

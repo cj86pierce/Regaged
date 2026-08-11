@@ -4,13 +4,22 @@ import { useEffect, useMemo, useState } from "react";
 
 type Nominee = { userId: string; username: string };
 
+function hasSavedVotes(
+  nominees: Nominee[],
+  map: Record<string, number> | null | undefined
+): boolean {
+  if (!map) return false;
+  return nominees.every((n) => typeof map[n.userId] === "number" && Number.isFinite(map[n.userId]));
+}
+
 export default function CastingVoteBox(props: {
   gameId: string;
   nominees: Nominee[];
   initialPointsMap?: Record<string, number> | null;
   onSaved: () => Promise<void>;
+  tengaged?: boolean;
 }) {
-  const { gameId, nominees, initialPointsMap } = props;
+  const { gameId, nominees, initialPointsMap, tengaged } = props;
 
   // Must match nominee count so every point value is assigned exactly once
   const pointsOptions =
@@ -29,21 +38,25 @@ export default function CastingVoteBox(props: {
     return init;
   }
 
+  const alreadySaved = hasSavedVotes(nominees, initialPointsMap);
+
   const [pointsMap, setPointsMap] = useState<Record<string, number>>(() => buildMap(initialPointsMap));
   const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState<string | null>(() =>
-    initialPointsMap && Object.keys(initialPointsMap).length > 0 ? "Saved!" : null
-  );
+  const [msg, setMsg] = useState<string | null>(() => (alreadySaved ? "Saved!" : null));
   const [err, setErr] = useState<string | null>(null);
+  const [open, setOpen] = useState(() => !alreadySaved);
 
   // Rehydrate when leaving/returning or after a poll — votes live in DB, not only local state.
   const savedKey = JSON.stringify(
     nominees.map((n) => [n.userId, initialPointsMap?.[n.userId] ?? null])
   );
   useEffect(() => {
+    const saved = hasSavedVotes(nominees, initialPointsMap);
     setPointsMap(buildMap(initialPointsMap));
-    setMsg(initialPointsMap && Object.keys(initialPointsMap).length > 0 ? "Saved!" : null);
+    setMsg(saved ? "Saved!" : null);
     setErr(null);
+    // Stay collapsed if already saved; only force-open when there is nothing saved yet.
+    if (!saved) setOpen(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- savedKey captures nominees + initialPointsMap
   }, [savedKey]);
 
@@ -63,6 +76,16 @@ export default function CastingVoteBox(props: {
     const exp = [...pointsOptions].sort((a, b) => a - b);
     return got.join(",") === exp.join(",");
   }, [nominees, pointsMap, pointsOptions]);
+
+  const summary = useMemo(() => {
+    return nominees
+      .map((n) => {
+        const p = pointsMap[n.userId];
+        if (!Number.isFinite(p)) return null;
+        return { id: n.userId, name: n.username, points: p as number };
+      })
+      .filter(Boolean) as { id: string; name: string; points: number }[];
+  }, [nominees, pointsMap]);
 
   function setPoint(nomineeId: string, p: number) {
     setErr(null);
@@ -105,7 +128,84 @@ export default function CastingVoteBox(props: {
     if (!res.ok) return setErr(json?.error ?? "Save failed");
 
     setMsg("Saved!");
+    setOpen(false);
     await props.onSaved();
+  }
+
+  if (tengaged) {
+    if (!open) {
+      return (
+        <div className="tgVote tgVoteCollapsed">
+          <button type="button" className="tgVoteToggle" onClick={() => setOpen(true)}>
+            <span className="tgVoteToggleLabel">
+              <span className="tgVoteHead">Vote</span>
+              <span className="tgVoteOkInline">Saved</span>
+            </span>
+            <span className="tgVoteEdit">Edit votes ▾</span>
+          </button>
+          {summary.length > 0 ? (
+            <ul className="tgVoteSummary">
+              {[...summary]
+                .sort((a, b) => b.points - a.points)
+                .map((s) => (
+                  <li key={s.id}>
+                    <span className="name">{s.name}</span>
+                    <span className="pts">{s.points}</span>
+                  </li>
+                ))}
+            </ul>
+          ) : null}
+        </div>
+      );
+    }
+
+    return (
+      <div className="tgVote">
+        <div className="tgVoteHeadRow">
+          <div className="tgVoteHead">Vote</div>
+          {msg === "Saved!" || alreadySaved ? (
+            <button type="button" className="tgVoteCollapseBtn" onClick={() => setOpen(false)}>
+              Collapse ▴
+            </button>
+          ) : null}
+        </div>
+        <div className="tgVoteHint">Give each nominee a different score</div>
+        <div className="tgVoteList">
+          {nominees.map((n) => {
+            const myP = pointsMap[n.userId];
+            return (
+              <div key={n.userId} className="tgVoteRow">
+                <div className="tgVoteName" title={n.username}>
+                  {n.username}
+                </div>
+                <div className="tgVotePts">
+                  {pointsOptions.map((p) => {
+                    const selected = myP === p;
+                    const disabled = !selected && usedPoints.has(p);
+                    return (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setPoint(n.userId, p)}
+                        disabled={saving || disabled}
+                        className={selected ? "on" : undefined}
+                      >
+                        {p}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {err ? <div className="tgVoteErr">{err}</div> : null}
+        {msg ? <div className="tgVoteOk">{msg}</div> : null}
+        <button type="button" className="tgVoteSave" disabled={saving || !complete} onClick={save}>
+          {saving ? "Saving…" : msg === "Saved!" || alreadySaved ? "Update votes" : "Save votes"}
+        </button>
+      </div>
+    );
   }
 
   return (

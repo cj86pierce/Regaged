@@ -3,8 +3,32 @@
 import React from "react";
 import Link from "next/link";
 import RookiesVoteBox from "./RookiesVoteBox";
+import "@/styles/tengagedChat.css";
 
 type Msg = { id: string; body: string; createdAt: string; isSystem: boolean };
+
+function ago(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(ms / 60000);
+  if (!Number.isFinite(mins) || mins < 0) return "";
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 48) return `${hours}h`;
+  return `${Math.floor(hours / 24)}d`;
+}
+
+function storyText(body: string): string | null {
+  const raw = body.trim();
+  if (/^\[CASTDROP:/i.test(raw) || /^\[DROP:/i.test(raw)) return null;
+  return (
+    raw
+      .replace(/^\[SYSTEM\]\s*/i, "")
+      .replace(/^\[SYSTEM:[^\]]+\]\n?/i, "")
+      .replace(/^\[SYSMSG:[^\]]+\]\s*/i, "")
+      .trim() || null
+  );
+}
 
 export default function Sidebar(props: {
   gameState: string;
@@ -23,10 +47,8 @@ export default function Sidebar(props: {
 
   messages?: Msg[];
 
-  // Frookies: competition + POV save + HOH-only noms
   gameId?: string;
   gameType?: string;
-  /** Survivor phase label for Read this / round box */
   survivorPhase?: string | null;
   meUserId?: string | null;
   povUserId?: string | null;
@@ -38,7 +60,6 @@ export default function Sidebar(props: {
   onPovSave?: (targetUserId: string | null) => Promise<void>;
   onReload?: () => void;
 
-  // Frookies: jury phase (final 2)
   jury?: {
     finalists: { userId: string; username: string }[];
     isJuror: boolean;
@@ -89,49 +110,67 @@ export default function Sidebar(props: {
       ? rookiesNominees
       : players.filter((p) => p.isNominee).map((p) => ({ userId: p.userId, username: p.username }));
 
-  const box: React.CSSProperties = {
-    border: "1px solid var(--border)",
-    borderRadius: 4,
-    padding: 10,
-    background: "var(--bg-card)",
-    maxHeight: 240,
-    overflowY: "auto",
-    wordBreak: "break-word",
-  };
-
-  const systemStory = messages
-    .filter((m) => m.isSystem)
-    .slice(0, 12)
-    .map((m) => ({
-      ...m,
-      body: m.body.replace(/^\[SYSTEM\]\s*/i, ""),
-    }));
-
   const [povSaving, setPovSaving] = React.useState(false);
   const [juryVoting, setJuryVoting] = React.useState(false);
 
+  const statusNote = (() => {
+    if (isSurvivor) return (survivorPhase ?? gameState).replace(/_/g, " ");
+    if (gameState === "ROUND_NOMINATE") {
+      if (frookiesPhase === "HOH_RENOM") return "HOH picks a replacement nominee";
+      if (frookiesPhase === "POV_SAVE") return "POV may save before noms";
+      return isFrookies || isRookies ? "HOH nominations" : "Pick nominees";
+    }
+    if (gameState === "ROUND_VOTE") return isRookies ? "Rank the nominees" : "Vote to evict";
+    if (gameState === "JURY_VOTE") return "Jury is voting";
+    return gameState.replace(/_/g, " ");
+  })();
+
+  const rulesTitle = isSurvivor
+    ? "How Survivor works"
+    : isFrookies
+      ? "How Frookies works"
+      : isRookies
+        ? "How Rookies works"
+        : "How Fasting works";
+
+  const story = messages
+    .filter((m) => m.isSystem)
+    .map((m) => {
+      const text = storyText(m.body);
+      if (!text) return null;
+      return { id: m.id, text, when: ago(m.createdAt) };
+    })
+    .filter(Boolean)
+    .slice(0, 8) as { id: string; text: string; when: string }[];
+
   return (
-    <div style={{ display: "grid", gap: 6, alignContent: "start" }}>
+    <aside className="tgSide">
+      <div className="tgSideStatus">
+        <div className="tgSideStatusTitle">
+          {isSurvivor ? "Survivor" : "Round"} {roundNumber}
+        </div>
+        <div className="tgSideStatusNote">{statusNote}</div>
+      </div>
+
       {isFrookies && gameState === "JURY_VOTE" && jury && (
-        <div style={box}>
-          <div style={{ fontWeight: 1000, marginBottom: 6 }}>Jury Vote</div>
-          <div style={{ fontSize: 12, marginBottom: 8, opacity: 0.85 }}>
+        <div className="tgAction">
+          <div className="tgActionHead">Jury vote</div>
+          <div className="tgActionHint">
             {jury.voteCount}/{jury.jurorCount} jurors have voted.
           </div>
           {!jury.isJuror ? (
-            <div style={{ fontSize: 12, opacity: 0.8 }}>
-              Only players evicted 9th through 3rd place can vote. Sit tight for the result.
-            </div>
+            <div className="tgActionHint">Only 9th–3rd place can vote. Sit tight.</div>
           ) : jury.myVoteTargetUserId ? (
-            <div style={{ fontWeight: 1000, color: "var(--success)" }}>
-              ✅ Vote submitted for{" "}
-              {jury.finalists.find((f) => f.userId === jury.myVoteTargetUserId)?.username ?? "your pick"}.
+            <div className="tgActionOk">
+              Vote in for {jury.finalists.find((f) => f.userId === jury.myVoteTargetUserId)?.username ?? "your pick"}.
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <div className="tgActionStack">
               {jury.finalists.map((f) => (
                 <button
                   key={f.userId}
+                  type="button"
+                  className="tgActionBtn"
                   disabled={juryVoting}
                   onClick={async () => {
                     if (!onJuryVote) return;
@@ -141,16 +180,6 @@ export default function Sidebar(props: {
                     } finally {
                       setJuryVoting(false);
                     }
-                  }}
-                  style={{
-                    width: "100%",
-                    padding: "10px 12px",
-                    borderRadius: 10,
-                    border: "1px solid var(--border)",
-                    background: "var(--bg-btn-send)",
-                    color: "var(--text-btn-send)",
-                    fontWeight: 1000,
-                    cursor: juryVoting ? "not-allowed" : "pointer",
                   }}
                 >
                   Vote for {f.username}
@@ -162,43 +191,28 @@ export default function Sidebar(props: {
       )}
 
       {isFrookies && gameId && (gameState === "ROUND_NOMINATE" || gameState === "ROUND_VOTE") && (
-        <div style={box}>
-          <div style={{ fontWeight: 1000, marginBottom: 6 }}>Competition</div>
-          <div style={{ fontSize: 12, marginBottom: 8 }}>
-            Highest challenge score wins POV. Retries keep your best.
-          </div>
-          <Link
-            href={`/game/${gameId}/challenge`}
-            style={{
-              display: "block",
-              padding: "10px 12px",
-              borderRadius: 10,
-              border: "1px solid var(--border)",
-              background: "var(--bg-btn-send)",
-              color: "var(--text-btn-send)",
-              fontWeight: 800,
-              textAlign: "center",
-              textDecoration: "none",
-            }}
-          >
+        <div className="tgAction">
+          <div className="tgActionHead">Competition</div>
+          <div className="tgActionHint">Highest score wins POV. Retries keep your best.</div>
+          <Link href={`/game/${gameId}/challenge`} className="tgActionBtn link">
             Play competition →
           </Link>
         </div>
       )}
 
       {isRookies && gameState === "ROUND_VOTE" && iAmPov && onPovSave && (
-        <div style={box}>
-          <div style={{ fontWeight: 1000, marginBottom: 6 }}>Secret POV</div>
-          <div style={{ fontSize: 12, marginBottom: 8 }}>
-            Only you know you have POV. Save one nominee so they cannot be evicted.
-          </div>
+        <div className="tgAction">
+          <div className="tgActionHead">Secret POV</div>
+          <div className="tgActionHint">Save one nominee so they cannot be evicted.</div>
           {povSaveSubmitted ? (
-            <div style={{ fontWeight: 1000, color: "var(--success)" }}>✅ POV save submitted.</div>
+            <div className="tgActionOk">POV save submitted.</div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <div className="tgActionStack">
               {rookiesNomineeList.map((n) => (
                 <button
                   key={n.userId}
+                  type="button"
+                  className="tgActionBtn"
                   disabled={povSaving}
                   onClick={async () => {
                     setPovSaving(true);
@@ -208,16 +222,6 @@ export default function Sidebar(props: {
                     } finally {
                       setPovSaving(false);
                     }
-                  }}
-                  style={{
-                    width: "100%",
-                    padding: "8px 10px",
-                    borderRadius: 10,
-                    border: "1px solid var(--border)",
-                    background: "var(--bg-btn-send)",
-                    color: "var(--text-btn-send)",
-                    fontWeight: 1000,
-                    cursor: povSaving ? "not-allowed" : "pointer",
                   }}
                 >
                   Save {n.username}
@@ -229,16 +233,16 @@ export default function Sidebar(props: {
       )}
 
       {isFrookies && gameState === "ROUND_NOMINATE" && iAmPov && onPovSave && (
-        <div style={box}>
-          <div style={{ fontWeight: 1000, marginBottom: 6 }}>Use POV</div>
-          <div style={{ fontSize: 12, marginBottom: 8 }}>
-            Save yourself or one other player before noms. They cannot be nominated.
-          </div>
+        <div className="tgAction">
+          <div className="tgActionHead">Use POV</div>
+          <div className="tgActionHint">Save yourself or one other player before noms.</div>
           {povSaveSubmitted ? (
-            <div style={{ fontWeight: 1000, color: "var(--success)" }}>✅ POV save submitted.</div>
+            <div className="tgActionOk">POV save submitted.</div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <div className="tgActionStack">
               <button
+                type="button"
+                className="tgActionBtn secondary"
                 disabled={povSaving}
                 onClick={async () => {
                   setPovSaving(true);
@@ -249,15 +253,6 @@ export default function Sidebar(props: {
                     setPovSaving(false);
                   }
                 }}
-                style={{
-                  width: "100%",
-                  padding: "8px 12px",
-                  borderRadius: 8,
-                  border: "1px solid var(--border)",
-                  background: "var(--bg-card)",
-                  fontWeight: 700,
-                  cursor: povSaving ? "not-allowed" : "pointer",
-                }}
               >
                 Save myself
               </button>
@@ -266,6 +261,8 @@ export default function Sidebar(props: {
                 .map((p) => (
                   <button
                     key={p.userId}
+                    type="button"
+                    className="tgActionBtn secondary"
                     disabled={povSaving}
                     onClick={async () => {
                       setPovSaving(true);
@@ -275,15 +272,6 @@ export default function Sidebar(props: {
                       } finally {
                         setPovSaving(false);
                       }
-                    }}
-                    style={{
-                      width: "100%",
-                      padding: "8px 12px",
-                      borderRadius: 8,
-                      border: "1px solid var(--border)",
-                      background: "var(--bg-card)",
-                      fontWeight: 700,
-                      cursor: povSaving ? "not-allowed" : "pointer",
                     }}
                   >
                     Save {p.username}
@@ -295,182 +283,135 @@ export default function Sidebar(props: {
       )}
 
       {!isSurvivor && (
-      <div style={box}>
-        <div style={{ fontWeight: 1000, marginBottom: 8 }}>
-          {gameState === "ROUND_NOMINATE"
-            ? frookiesPhase === "HOH_RENOM"
-              ? "Pick 1 replacement nominee"
-              : isFrookies
-                ? "HOH Nominations"
-                : "Confirm Nominations"
-            : gameState === "ROUND_VOTE"
-              ? "Confirm Vote"
-              : "Round"}
-        </div>
-
-        {gameState === "ROUND_NOMINATE" && (
-          <>
-            {(isFrookies || isRookies) && !iAmHoh && frookiesPhase !== "HOH_RENOM" && (
-              <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 8 }}>Only the HOH can nominate.</div>
-            )}
-            {frookiesPhase === "POV_SAVE" && (
-              <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 8 }}>POV may save themselves or one player. Then everyone votes.</div>
-            )}
-            {myNomLockedIn ? (
-              <div style={{ fontWeight: 1000, color: "var(--success)" }}>✅ Nominations locked in.</div>
-            ) : (
-              <>
-                <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 8 }}>
-                  Selected: <b>{nomSelected.length}/{frookiesPhase === "HOH_RENOM" ? 1 : 2}</b>
-                </div>
-                <button
-                  disabled={!canConfirmNoms}
-                  onClick={onConfirmNoms}
-                  style={{
-                    width: "100%",
-                    padding: "10px 12px",
-                    borderRadius: 10,
-                    border: "1px solid rgba(0,0,0,0.12)",
-                    background: canConfirmNoms ? "var(--bg-btn-send)" : "var(--bg-btn-disabled)",
-                    color: canConfirmNoms ? "var(--text-btn-send)" : "var(--text-primary)",
-                    fontWeight: 1000,
-                    cursor: canConfirmNoms ? "pointer" : "not-allowed",
-                  }}
-                >
-                  Confirm Nominations
-                </button>
-              </>
-            )}
-          </>
-        )}
-
-        {gameState === "ROUND_VOTE" && isRookies && gameId && rookiesNomineeList.length >= 3 ? (
-          <RookiesVoteBox
-            gameId={gameId}
-            nominees={rookiesNomineeList}
-            locked={!!myRankingsLocked}
-            onSaved={async () => { onReload?.(); }}
-          />
-        ) : gameState === "ROUND_VOTE" ? (
-          <>
-            {myVoteLockedIn ? (
-              <div style={{ fontWeight: 1000, color: "var(--success)" }}>✅ Vote locked in.</div>
-            ) : (
-              <>
-                <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 8 }}>
-                  Selected evict: <b>{evictSelected ? "1/1" : "0/1"}</b>
-                </div>
-                <button
-                  disabled={!canConfirmVote}
-                  onClick={onConfirmVote}
-                  style={{
-                    width: "100%",
-                    padding: "10px 12px",
-                    borderRadius: 10,
-                    border: "1px solid rgba(0,0,0,0.12)",
-                    background: canConfirmVote ? "var(--bg-btn-send)" : "var(--bg-btn-disabled)",
-                    color: canConfirmVote ? "var(--text-btn-send)" : "var(--text-primary)",
-                    fontWeight: 1000,
-                    cursor: canConfirmVote ? "pointer" : "not-allowed",
-                  }}
-                >
-                  Confirm Vote
-                </button>
-              </>
-            )}
-          </>
-        ) : null}
-
-        {(gameState !== "ROUND_NOMINATE" && gameState !== "ROUND_VOTE") && (
-          <div style={{ fontSize: 12, opacity: 0.75 }}>
-            State: <b>{gameState}</b> · Round <b>{roundNumber}</b>
+        <div className="tgAction">
+          <div className="tgActionHead">
+            {gameState === "ROUND_NOMINATE"
+              ? frookiesPhase === "HOH_RENOM"
+                ? "Replacement nominee"
+                : isFrookies
+                  ? "HOH nominations"
+                  : "Nominations"
+              : gameState === "ROUND_VOTE"
+                ? isRookies
+                  ? "Ranking vote"
+                  : "Eviction vote"
+                : "Actions"}
           </div>
-        )}
-      </div>
-      )}
 
-      {isSurvivor && (
-        <div style={box}>
-          <div style={{ fontWeight: 1000, marginBottom: 8 }}>Round</div>
-          <div style={{ fontSize: 12, opacity: 0.85 }}>
-            Round <b>{roundNumber}</b>
-            {" · "}
-            <b>{(survivorPhase ?? gameState).replace(/_/g, " ")}</b>
-          </div>
+          {gameState === "ROUND_NOMINATE" && (
+            <>
+              {(isFrookies || isRookies) && !iAmHoh && frookiesPhase !== "HOH_RENOM" && (
+                <div className="tgActionHint">Only the HOH can nominate.</div>
+              )}
+              {frookiesPhase === "POV_SAVE" && (
+                <div className="tgActionHint">POV may save first. Then everyone votes.</div>
+              )}
+              {myNomLockedIn ? (
+                <div className="tgActionOk">Nominations locked in.</div>
+              ) : (
+                <>
+                  <div className="tgActionHint">
+                    Selected: <b>{nomSelected.length}/{frookiesPhase === "HOH_RENOM" ? 1 : 2}</b>
+                  </div>
+                  <button
+                    type="button"
+                    className="tgActionBtn"
+                    disabled={!canConfirmNoms}
+                    onClick={onConfirmNoms}
+                  >
+                    Confirm nominations
+                  </button>
+                </>
+              )}
+            </>
+          )}
+
+          {gameState === "ROUND_VOTE" && isRookies && gameId && rookiesNomineeList.length >= 3 ? (
+            <RookiesVoteBox
+              gameId={gameId}
+              nominees={rookiesNomineeList}
+              locked={!!myRankingsLocked}
+              onSaved={async () => {
+                onReload?.();
+              }}
+              tengaged
+            />
+          ) : gameState === "ROUND_VOTE" ? (
+            <>
+              {myVoteLockedIn ? (
+                <div className="tgActionOk">Vote locked in.</div>
+              ) : (
+                <>
+                  <div className="tgActionHint">
+                    Selected evict: <b>{evictSelected ? "1/1" : "0/1"}</b>
+                  </div>
+                  <button
+                    type="button"
+                    className="tgActionBtn"
+                    disabled={!canConfirmVote}
+                    onClick={onConfirmVote}
+                  >
+                    Confirm vote
+                  </button>
+                </>
+              )}
+            </>
+          ) : null}
+
+          {gameState !== "ROUND_NOMINATE" && gameState !== "ROUND_VOTE" && (
+            <div className="tgActionHint">
+              {gameState.replace(/_/g, " ")} · Round {roundNumber}
+            </div>
+          )}
         </div>
       )}
 
-      <div style={box}>
-        <div style={{ fontWeight: 1000, color: "#b02a37" }}>Read this</div>
-        <div style={{ fontSize: 12, marginTop: 8, lineHeight: 1.35 }}>
+      <details className="tgSideDetails">
+        <summary>{rulesTitle}</summary>
+        <ul>
           {isSurvivor ? (
             <>
-              <b>Survivor:</b> Two tribe lobbies (A/B). Manage camp, play competitions; highest tribe
-              total wins immunity; top scorer on the losing tribe is also immune. Places are only
-              1st (make merge) or 20th (out). At 10 left, 1sts go to a new merge lobby (bots end there).
-              <br /><br />
+              <li>Two tribe lobbies. Manage camp and play competitions.</li>
+              <li>Highest tribe total wins immunity; top scorer on the losing tribe is also immune.</li>
+              <li>Places are 1st (merge) or 20th (out). At 10 left, 1sts go to a merge lobby.</li>
             </>
           ) : isFrookies ? (
             <>
-              <b>Frookies:</b> Play the competition (highest score = POV, costs health to win). POV can save themselves or one player. HOH nominates 2. Vote to evict. At final 2, the jury (9th–3rd place) votes for the winner.
-              <br /><br />
+              <li>Competition: highest score gets POV (costs health).</li>
+              <li>POV can save themselves or one player; HOH nominates 2.</li>
+              <li>Vote to evict. At final 2, jury (9th–3rd) picks the winner.</li>
             </>
           ) : isRookies ? (
             <>
-              <b>Rookies:</b> HOH nominates 2; algorithm adds more (4 total, 3 at final 5). Rank nominees with points — top 2 are evicted. POV is secret. Top 3 place by activity.
-              <br /><br />
+              <li>HOH nominates 2; algorithm fills to 4 (3 at final 5).</li>
+              <li>Rank nominees with points — top 2 are evicted. POV is secret.</li>
+              <li>Top 3 place by activity.</li>
             </>
           ) : (
             <>
-              <b>Fasting:</b> POV is awarded first (immune). Pick 2 nominees. Then vote to evict one nominee. Final 3 starts a 30-minute clock before placements.
-              <br /><br />
+              <li>POV is awarded first (immune). Pick 2 nominees.</li>
+              <li>Vote to evict one nominee.</li>
+              <li>Final 3 starts a 30-minute clock before placements.</li>
             </>
           )}
-          {isSurvivor ? (
-            <>
-              <b>Phase:</b> {(survivorPhase ?? gameState).replace(/_/g, " ")} · <b>Round:</b>{" "}
-              {roundNumber}
-            </>
-          ) : (
-            <>
-              <b>State:</b> {gameState} · <b>Round:</b> {roundNumber}
-            </>
-          )}
-        </div>
-      </div>
+        </ul>
+      </details>
 
-      <div style={box}>
-        <div style={{ fontWeight: 1000, color: "var(--brand)" }}>Story</div>
-        {systemStory.length === 0 ? (
-          <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>No story yet.</div>
+      <div className="tgSideStory">
+        <div className="tgSideStoryHead">Game story</div>
+        {story.length === 0 ? (
+          <div className="tgSideStoryEmpty">No story yet.</div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
-            {systemStory.map((m) => (
-              <div
-                key={m.id}
-                className="theme-chat-msg-sys"
-                style={{
-                  background: "var(--bg-msg-system)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 12,
-                  padding: 10,
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
-                  <span style={{ fontWeight: 800 }}>System</span>
-                  <span style={{ fontSize: 11, opacity: 0.75 }}>{new Date(m.createdAt).toLocaleString()}</span>
-                </div>
-                <div style={{ fontSize: 12, whiteSpace: "pre-wrap", background: "var(--bg-msg)", borderRadius: 8, padding: 8 }}>
-                  {m.body
-                  .replace(/^\[SYSTEM\]\s*/i, "")
-                  .replace(/^\[SYSTEM:[^\]]+\]\n?/i, "")
-                  .replace(/^\[SYSMSG:[^\]]+\]\s*/i, "") || "System update"}
-                </div>
-              </div>
+          <ul>
+            {story.map((s) => (
+              <li key={s.id}>
+                <span className="when">{s.when}</span>
+                <span className="text">{s.text}</span>
+              </li>
             ))}
-          </div>
+          </ul>
         )}
       </div>
-    </div>
+    </aside>
   );
 }

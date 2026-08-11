@@ -1,0 +1,713 @@
+/* Tengaged-style profile mimic (visual preview) */
+
+body.tgProfilePage .rightRail {
+  display: none !important;
+}
+
+.tgProfile {
+  --tg-red: #f74d4d;
+  --tg-link: #257eb2;
+  --tg-text: #5d5d5d;
+  --tg-remark-bg: #eeeeee;
+  --tg-remark: #424242;
+  --tg-speech: #ffffcc;
+  --tg-speech-border: #ffff66;
+  --tg-status-bg: #e7f0f9;
+  --tg-status-border: #d6e6f5;
+  --tg-status: #4682b4;
+  --tg-font: Verdana, Geneva, Arial, Helvetica, sans-serif;
+  --tg-btn-font: "Trebuchet MS", trebuchet, Verdana, Geneva, Arial, Helvetica, sans-serif;
+
+  font-family: var(--tg-font) !important;
+  color: var(--tg-text);
+  font-size: 12px;
+  line-height: 1.35;
+  max-width: 980px;
+  width: 97%;
+  margin: 0 auto;
+  padding: 1.5% 1.5% 24px !important;
+  text-align: left;
+  background: #fff;
+  border-top-left-radius: 16px;
+  border-bottom: 1px solid #eff6fa;
+  box-shadow: rgba(177, 177, 177, 0.15) 0 0 10px 0;
+  min-height: 70vh;
+}
+
+.tgProfile * {
+  box-sizing: border-box;
+}
+
+.tgProfile a {
+  color: var(--tg-link);
+}
+
+.tgLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 58.5%) minmax(0, 38.5%);
+  gap: 3%;
+  align-items: start;
+}
+
+.tgColLeft {
+  min-width: 0;
+}
+
+.tgColRight {
+  min-width: 0;
+}
+
+.tgUserHeader {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  font-size: 20px;
+}
+
+.tgAvatar {
+  width: 26%;
+  min-width: 120px;
+  flex-shrink: 0;
+}
+
+.tgUserInfo {
+  width: 70%;
+  min-width: 0;
+  flex: 1;
+}
+
+.tgGradeCol {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+  padding-top: 2px;
+  padding-right: 10px;
+  margin-left: auto;
+}
+
+.tgProfile .tgGradeBelt.lvlSwatch {
+  width: 40px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 2px;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.tgProfile h1.tgName {
+  margin: 0 0 6px;
+  font-size: 22px;
+  font-weight: 700;
+  font-family: "Trebuchet MS", Verdana, Arial, sans-serif;
+  color: var(--tg-link);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.tgProfile .tgNameText {
+  font: inherit;
+  color: inherit;
+}
+
+.tgStatRow {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--tg-text);
+}
+
+.tgRemark {
+  display: inline-block;
+  color: #424242;
+  font-weight: 700;
+  background: #eeeeee;
+  padding: 1px 5px;
+  margin: 0 1px;
+  line-height: 1.35;
+  vertical-align: baseline;
+}
+
+.tgMiniRank {
+  display: inline-block;
+  margin-left: 5px;
+  padding: 0 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #353535;
+  background: #ffda02;
+  vertical-align: middle;
+  line-height: 1.35;
+}
+
+.tgSpeech {
+  position: relative;
+  margin-top: 15px;
+  background: var(--tg-speech);
+  border-radius: 0.4em;
+  padding: 8px 10px;
+  color: #252525;
+  font-size: 11px;
+  line-height: 1.45;
+  min-height: 64px;
+}
+
+.tgSpeech::after {
+  content: "";
+  position: absolute;
+  left: 12%;
+  top: 0;
+  width: 0;
+  height: 0;
+  margin-left: -15px;
+  margin-top: -15px;
+  border: 15px solid transparent;
+  border-bottom-color: var(--tg-speech);
+  border-top: 0;
+}
+
+.tgSection {
+  margin-top: 14px;
+}
+
+.tgSectionTitle {
+  margin: 0 0 8px;
+  padding: 0 0 4px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--tg-red);
+  border-bottom: 1px dotted #ffdfdf;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-family: var(--tg-font);
+}
+
+.tgSectionTitle h2,
+.tgSectionTitle h3 {
+  margin: 0;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+  font-family: inherit;
+}
+
+.tgSectionMeta,
+.tgSectionTitle a.tgAction {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--tg-link);
+  text-decoration: none;
+}
+
+.tgSectionMeta {
+  color: #888;
+}
+
+.tgSideTitle {
+  margin: 0 0 8px;
+  padding: 0 0 3px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--tg-red);
+  border-bottom: 1px dotted #ffdfdf;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+  font-family: var(--tg-font);
+}
+
+.tgAdvise {
+  width: 100%;
+  padding: 7px 8px;
+  margin: 0 0 8px;
+  background: var(--tg-speech);
+  border: 1px solid var(--tg-speech-border);
+  font-size: 11px;
+  color: #4a4a4a;
+}
+
+.tgGames {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 4px;
+  align-items: flex-start;
+}
+
+.tgGame {
+  width: 70px;
+  text-align: center;
+  text-decoration: none !important;
+  color: var(--tg-status) !important;
+  flex-shrink: 0;
+}
+
+/*
+ * Classic Tengaged-style circular medals.
+ * Original CSS art; text colors match Tengaged (.gbutton / .gsvbutton / .grbutton / …).
+ */
+.tgGameBtn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 58px;
+  height: 58px;
+  margin: 3px auto 5px;
+  border-radius: 50%;
+  font-family: Impact, "Arial Black", "Arial Narrow", Haettenschweiler, sans-serif;
+  font-size: 20px;
+  font-weight: 400;
+  font-stretch: condensed;
+  letter-spacing: -0.8px;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none !important;
+  border: 2px solid #c8c8c8;
+  box-shadow:
+    inset 0 2px 3px rgba(255, 255, 255, 0.55),
+    inset 0 -3px 5px rgba(0, 0, 0, 0.22),
+    0 1px 2px rgba(0, 0, 0, 0.25);
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    filter 160ms ease;
+  will-change: transform;
+}
+
+/* Two-digit places (11th, 15th…) — shrink so “15th” stays one line */
+.tgGameBtn.wide {
+  font-size: 16px;
+  letter-spacing: -1px;
+}
+
+/* Active games — "Enter" needs a bit more room */
+.tgGameBtn.enter {
+  font-size: 14px;
+  letter-spacing: -0.3px;
+}
+
+/* Inner medal ring */
+.tgGameBtn::before {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12);
+  pointer-events: none;
+}
+
+.tgGame:hover .tgGameBtn {
+  transform: translateY(-3px) scale(1.08);
+  filter: brightness(1.05);
+  box-shadow:
+    inset 0 2px 3px rgba(255, 255, 255, 0.6),
+    inset 0 -3px 5px rgba(0, 0, 0, 0.2),
+    0 7px 14px rgba(0, 0, 0, 0.25);
+}
+
+.tgGame:active .tgGameBtn {
+  transform: translateY(-1px) scale(1.03);
+}
+
+/* Casting / Fasting — .gbutton color #476b8d */
+.tgGameBtn.bb {
+  background:
+    radial-gradient(circle at 50% 38%, #c5d8e8 0%, #8fadc4 62%, #6a8eaa 100%);
+  border-color: #9eb6c8;
+  color: #476b8d !important;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+/* Survivor — .gsvbutton color #ffea6f */
+.tgGameBtn.sv {
+  background:
+    radial-gradient(circle at 50% 38%, #78c468 0%, #4d9e42 58%, #357a2f 100%);
+  border-color: #c9b24a;
+  color: #ffea6f !important;
+  text-shadow: 0 1px 0 rgba(20, 60, 15, 0.55);
+}
+
+.tgGameBtn.sv::before {
+  border-color: rgba(255, 234, 111, 0.35);
+}
+
+/* Rookies / Frookies — .grbutton color #b20000 */
+.tgGameBtn.rk {
+  background:
+    radial-gradient(circle at 50% 38%, #f2b8be 0%, #d98a92 58%, #c05e6a 100%);
+  border-color: #d4a0a6;
+  color: #b20000 !important;
+  text-shadow: 0 1px 0 rgba(255, 230, 230, 0.5);
+}
+
+/* Hunger — .ghbutton color #ffea6f */
+.tgGameBtn.hg {
+  background:
+    radial-gradient(circle at 50% 38%, #efcf78 0%, #c9a03a 58%, #a07820 100%);
+  border-color: #e0c060;
+  color: #ffea6f !important;
+  text-shadow: 0 1px 0 rgba(70, 40, 5, 0.45);
+}
+
+/* Stars — .gsbutton color #ffea6f */
+.tgGameBtn.st {
+  background:
+    radial-gradient(circle at 50% 38%, #c9a0e4 0%, #9a6bb8 58%, #734094 100%);
+  border-color: #b890d0;
+  color: #ffea6f !important;
+  text-shadow: 0 1px 0 rgba(40, 15, 60, 0.45);
+}
+
+/* Challenge / Duel — .gtdbutton color #5a2f1b */
+.tgGameBtn.ch {
+  background:
+    radial-gradient(circle at 50% 38%, #d0b48a 0%, #9a7a52 58%, #6e5234 100%);
+  border-color: #b89868;
+  color: #5a2f1b !important;
+  text-shadow: 0 1px 0 rgba(255, 235, 210, 0.4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tgGameBtn {
+    transition: none;
+  }
+  .tgGame:hover .tgGameBtn,
+  .tgGame:active .tgGameBtn {
+    transform: none;
+  }
+}
+
+.tgGiftsModal {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(0, 0, 0, 0.35);
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+
+.tgGiftsPanel {
+  width: min(520px, 100%);
+  max-height: min(70vh, 560px);
+  overflow: auto;
+  background: #fff;
+  border: 1px solid #ccc;
+  box-shadow: 4px 4px 7px rgba(0, 0, 0, 0.35);
+  padding: 14px 16px 18px;
+  font-family: var(--tg-font);
+}
+
+.tgGiftsPanel h2 {
+  margin: 0 0 12px;
+  color: #ff1313;
+  font-size: 22px;
+  font-family: "Trebuchet MS", Verdana, Arial, sans-serif;
+}
+
+.tgDailyModal {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+
+.tgDailyModalBackdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+}
+
+.tgDailyPanel {
+  position: relative;
+  z-index: 1;
+  width: min(360px, 100%);
+  background: #fff;
+  border: 1px solid #ccc;
+  box-shadow: 4px 4px 7px rgba(0, 0, 0, 0.35);
+  padding: 16px 18px 18px;
+  font-family: var(--tg-font);
+  color: var(--tg-text);
+}
+
+.tgDailyPanelHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.tgDailyPanelHead h2 {
+  margin: 0;
+  color: #ff1313;
+  font-size: 22px;
+  font-family: "Trebuchet MS", Verdana, Arial, sans-serif;
+}
+
+.tgDailyClose {
+  border: 0;
+  background: transparent;
+  color: #888;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.tgDailyMeta {
+  margin: 0 0 14px;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.tgDailyClaim {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  background: linear-gradient(#ffd85a, #ffb703);
+  font-weight: 800;
+  font-size: 13px;
+  font-family: var(--tg-font);
+  cursor: pointer;
+}
+
+.tgDailyClaim:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.tgDailyClaimed {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 800;
+  opacity: 0.75;
+}
+
+.tgDailyMsg {
+  margin: 10px 0 0;
+  font-size: 12px;
+  font-weight: 800;
+  color: #2e7d32;
+}
+
+.tgGiftsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 10px;
+}
+
+.tgGiftCard {
+  border: 1px solid #e6e6e6;
+  background: #fafafa;
+  padding: 8px;
+  text-align: center;
+  text-decoration: none;
+  color: #5d5d5d;
+  font-size: 10px;
+}
+
+.tgGiftCard img {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  background: #fff;
+  border: 1px solid #eee;
+}
+
+.tgGameStatus {
+  font-size: 9px;
+  line-height: 1.25;
+  color: var(--tg-status);
+  background: var(--tg-status-bg);
+  border-bottom: 1px solid var(--tg-status-border);
+  border-right: 1px solid var(--tg-status-border);
+  padding: 2px 3px;
+  text-align: left;
+  min-height: 40px;
+  overflow: hidden;
+}
+
+.tgFastSign {
+  display: inline-block;
+  float: left;
+  margin-right: 3px;
+  width: 11px;
+  height: 11px;
+  line-height: 11px;
+  text-align: center;
+  background: #888;
+  color: #fff;
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.tgGame:has(.bb) .tgFastSign {
+  background: #476b8d;
+}
+.tgGame:has(.sv) .tgFastSign {
+  background: #3f8f38;
+  color: #ffea6f;
+}
+.tgGame:has(.rk) .tgFastSign {
+  background: #b20000;
+}
+.tgGame:has(.hg) .tgFastSign {
+  background: #c9a03a;
+  color: #ffea6f;
+}
+.tgGame:has(.st) .tgFastSign {
+  background: #7a4d98;
+  color: #ffea6f;
+}
+.tgGame:has(.ch) .tgFastSign {
+  background: #5a2f1b;
+}
+
+.tgPager {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  align-items: center;
+  font-size: 11px;
+  margin-bottom: 8px;
+}
+
+.tgPager a {
+  padding: 1px 5px;
+  text-decoration: none;
+  color: var(--tg-link);
+}
+
+.tgPager a.on {
+  background: var(--tg-link);
+  color: #fff !important;
+}
+
+.tgBlogList {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 5px;
+  font-size: 12px;
+}
+
+.tgBlogList a {
+  text-decoration: none;
+}
+
+.tgFriends {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 6px;
+}
+
+.tgFriend {
+  width: 58px;
+  text-align: center;
+  text-decoration: none !important;
+  color: var(--tg-text) !important;
+  font-size: 10px;
+  line-height: 1.15;
+  word-break: break-word;
+}
+
+.tgBetsTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.tgBetsTable td {
+  padding: 4px 2px;
+  border-top: 1px solid #eee;
+  vertical-align: baseline;
+}
+
+.tgBetsTable tr:first-child td {
+  border-top: none;
+}
+
+.tgReportRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 7px 8px;
+  background: #f5f5f5;
+  border: 1px solid #f5f5f5;
+  font-size: 11px;
+}
+
+.tgReportBtn {
+  display: inline-block;
+  padding: 4px 10px;
+  background: #c0392b;
+  color: #fff !important;
+  font-weight: 700;
+  font-size: 11px;
+  text-decoration: none !important;
+  letter-spacing: 0.3px;
+}
+
+.tgSocial {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.tgSocial a,
+.tgSocial button {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #cfcfcf;
+  background: #fff;
+  border-radius: 3px;
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  color: #555;
+  padding: 0;
+  text-decoration: none;
+}
+
+.tgSocial button.friended {
+  background: #fdecea;
+  color: #e53935;
+  border-color: #f5c6c2;
+}
+
+.tgSideBlock {
+  margin-bottom: 14px;
+}
+
+@media (max-width: 820px) {
+  .tgLayout {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .tgUserHeader {
+    flex-direction: column;
+  }
+  .tgAvatar,
+  .tgUserInfo {
+    width: 100%;
+  }
+}

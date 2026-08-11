@@ -12,6 +12,7 @@ export default function EditProfileClient(props: {
   usernameChangedAt: string | null;
   avatar: AvatarConfig;
   slotDesigns?: Partial<Record<SlotDesignType, string>>;
+  colorHistory?: { name: string; purchasedAt: string }[];
 }) {
   const [bio, setBio] = useState(props.initialBio);
   const [saving, setSaving] = useState(false);
@@ -180,6 +181,31 @@ export default function EditProfileClient(props: {
           <div style={{ fontSize: 12, opacity: 0.75 }}>{bio.length}/1000</div>
           {msg && <div style={{ fontWeight: 1000, color: "var(--text-primary)" }}>{msg}</div>}
         </div>
+      </div>
+
+      {/* Color unlock history (kept off the public profile) */}
+      <div style={{ marginTop: 12, border: "1px solid var(--border)", borderRadius: 12, background: "var(--edit-panel-bg)", padding: 12 }}>
+        <div style={{ fontWeight: 1000, marginBottom: 8 }}>Colors</div>
+        <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 10 }}>
+          Username colors you&apos;ve unlocked. Your highest color is used on your name; this list is only shown here.
+        </div>
+        {(props.colorHistory?.length ?? 0) === 0 ? (
+          <div style={{ fontSize: 13, opacity: 0.7 }}>White (default) — no color purchases yet.</div>
+        ) : (
+          <div style={{ display: "grid", gap: 8, fontSize: 13 }}>
+            {(props.colorHistory ?? []).map((c) => (
+              <div
+                key={`${c.name}-${c.purchasedAt}`}
+                style={{ display: "flex", justifyContent: "space-between", gap: 12 }}
+              >
+                <span style={{ fontWeight: 800 }}>{c.name}</span>
+                <span style={{ opacity: 0.65, fontSize: 12 }}>
+                  unlocked {new Date(c.purchasedAt).toLocaleDateString()}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* EMAIL */}

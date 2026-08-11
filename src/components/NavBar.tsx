@@ -3,28 +3,47 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
-import { useTheme } from "@/app/ThemeProvider";
+import { useEffect, useRef, useState } from "react";
 
 type SteamMe = { userId: string; username: string; isOwner?: boolean; isAdmin?: boolean } | null;
 
+const DROP_LINKS: { href: string; label: string; note?: string }[] = [
+  { href: "/blogs", label: "Community Blogs" },
+  { href: "/games", label: "Games" },
+  { href: "/shop", label: "Shop" },
+  { href: "/enroll", label: "Enroll" },
+  { href: "/designs", label: "Designs" },
+  { href: "/contact", label: "Ask Me" },
+  { href: "/hof", label: "HoF", note: "The Hall of Fame" },
+];
+
 export default function NavBar() {
-  const { theme, setTheme } = useTheme();
   const { data: session, status } = useSession();
   const [steamMe, setSteamMe] = useState<SteamMe>(null);
   const [dmUnread, setDmUnread] = useState(0);
   const [isStaffFlag, setIsStaffFlag] = useState(false);
   const [staffLabel, setStaffLabel] = useState<"Owner" | "Admin">("Owner");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
   const loggedIn = !!session?.user || !!steamMe;
-  const sessionUser = session?.user as { isOwner?: boolean; isAdmin?: boolean } | undefined;
+  const sessionUser = session?.user as
+    | { isOwner?: boolean; isAdmin?: boolean; name?: string | null }
+    | undefined;
   const showStaff =
     isStaffFlag ||
     !!sessionUser?.isOwner ||
     !!sessionUser?.isAdmin ||
     !!steamMe?.isOwner ||
     !!steamMe?.isAdmin;
+  const displayName =
+    steamMe?.username || sessionUser?.name || session?.user?.name || "Player";
 
   const pathname = usePathname();
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
   useEffect(() => {
     if (!loggedIn) return;
     fetch("/api/dms/unread-count", { credentials: "include" })
@@ -33,7 +52,6 @@ export default function NavBar() {
       .catch(() => {});
   }, [loggedIn, pathname]);
 
-  // Session check (Steam cookie or refresh staff flags for NextAuth)
   useEffect(() => {
     fetch("/api/me/session", { credentials: "include" })
       .then((r) => (r.ok ? r.json() : null))
@@ -53,109 +71,143 @@ export default function NavBar() {
       .catch(() => {});
   }, [session?.user]);
 
+  useEffect(() => {
+    if (!menuOpen) return;
+    function onDoc(e: MouseEvent) {
+      if (!menuRef.current) return;
+      if (!menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setMenuOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [menuOpen]);
+
   function logoutSteam() {
     document.cookie = "regaged_token=; path=/; max-age=0";
     window.location.reload();
   }
 
   return (
-    <div className="navBar">
-      <div
-        className="navInner"
-        style={{
-          maxWidth: 980,
-          margin: "0 auto",
-          padding: "10px 14px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 12,
-        }}
-      >
-        <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
-          <div className="navLogo" style={{ fontWeight: 1000, fontSize: 22, letterSpacing: -0.3 }}>
-            Regaged<span style={{ opacity: 0.7 }}>🎞️</span>
-          </div>
+    <header className="tgNav">
+      <div className="tgNavInner">
+        <Link href="/" className="tgNavBrand">
+          Regaged
         </Link>
 
-        <div className="navLinks">
-          <Link href="/" className="navLink navLinkSecondary">
+        <nav className="tgNavLinks" aria-label="Primary">
+          <Link href="/" className="tgNavLink">
             Community
           </Link>
-          <Link href="/games" className="navLink">Games</Link>
-          <Link href="/enroll" className="navLink">Enroll</Link>
-          <Link href="/hof" className="navLink">HOF</Link>
+          <Link href="/games" className="tgNavLink">
+            Games
+          </Link>
+          <Link href="/designs" className="tgNavLink">
+            Designs
+          </Link>
           {showStaff ? (
-            <Link href="/owner" className="navLink" style={{ fontWeight: 800 }}>
+            <Link href="/owner" className="tgNavLink">
               {staffLabel}
             </Link>
           ) : null}
-          <Link href="/blogs" className="navLink">Blogs</Link>
-          <Link href="/designs" className="navLink">Designs</Link>
-          <Link href="/shop" className="navLink">Shop</Link>
-
-          <div className="navDivider" />
-
-          <button
-            type="button"
-            onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-            className="navThemeBtn"
-            title={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
-            aria-label="Toggle theme"
-          >
-            {theme === "light" ? "🌙" : "☀️"}
-          </button>
-
-          <div className="navDivider" />
-
-          {loggedIn && (
-            <Link href="/dms" className="navLink" title="Messages" style={{ position: "relative", paddingLeft: 4, paddingRight: 4 }}>
-              ✉️
-              {dmUnread > 0 && (
-                <span
-                  style={{
-                    position: "absolute",
-                    top: -4,
-                    right: -2,
-                    minWidth: 16,
-                    height: 16,
-                    borderRadius: 8,
-                    background: "var(--brand)",
-                    color: "#fff",
-                    fontSize: 10,
-                    fontWeight: 900,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    padding: "0 4px",
-                  }}
-                >
-                  {dmUnread > 99 ? "99+" : dmUnread}
-                </span>
-              )}
-            </Link>
-          )}
 
           {status === "loading" && !steamMe ? (
-            <span className="navLoading">Loading…</span>
+            <span className="tgNavMuted">…</span>
           ) : !loggedIn ? (
             <>
-              <Link href="/register" className="navLink navLinkBold">Register</Link>
-              <Link href="/login" className="navLink navLinkBold">Login</Link>
-            </>
-          ) : steamMe && !session?.user ? (
-            <>
-              <Link href="/profile" className="navLink navLinkBold">Profile</Link>
-              <button type="button" onClick={logoutSteam} className="navLogoutBtn">Logout</button>
+              <Link href="/register" className="tgNavLink">
+                Register
+              </Link>
+              <Link href="/login" className="tgNavLink">
+                Login
+              </Link>
             </>
           ) : (
             <>
-              <Link href="/profile" className="navLink navLinkBold">Profile</Link>
-              <Link href="/logout" className="navLink navLinkBold">Logout</Link>
+              <Link href="/dms" className="tgNavLink tgNavDm" title="Messages">
+                Mail
+                {dmUnread > 0 ? <span className="tgNavBadge">{dmUnread > 99 ? "99+" : dmUnread}</span> : null}
+              </Link>
+              <Link href="/profile" className="tgNavLink">
+                Profile
+              </Link>
             </>
           )}
-        </div>
+
+          <div className="tgNavMenuWrap" ref={menuRef}>
+            <button
+              type="button"
+              className={`tgNavMenuBtn${menuOpen ? " open" : ""}`}
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+              aria-label="Open menu"
+              onClick={() => setMenuOpen((v) => !v)}
+            >
+              <span className="tgNavChevron" aria-hidden>
+                ▾
+              </span>
+            </button>
+
+            {menuOpen ? (
+              <div className="tgNavDropdown" role="menu">
+                <div className="tgNavDropWelcome">
+                  {loggedIn ? (
+                    <>
+                      <div className="tgNavDropHi">Welcome, {displayName}</div>
+                      <div className="tgNavDropAuth">
+                        <Link href="/profile" role="menuitem">
+                          Profile
+                        </Link>
+                        {steamMe && !session?.user ? (
+                          <button type="button" onClick={logoutSteam} role="menuitem">
+                            Logout
+                          </button>
+                        ) : (
+                          <Link href="/logout" role="menuitem">
+                            Logout
+                          </Link>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="tgNavDropHi">Welcome to Regaged:</div>
+                      <div className="tgNavDropAuth">
+                        <Link href="/register" role="menuitem">
+                          Register
+                        </Link>
+                        <Link href="/login" role="menuitem">
+                          Login
+                        </Link>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="tgNavDropList">
+                  {DROP_LINKS.map((l) => (
+                    <Link key={l.href} href={l.href} className="tgNavDropItem" role="menuitem">
+                      <span className="label">{l.label}</span>
+                      {l.note ? <span className="note">{l.note}</span> : null}
+                    </Link>
+                  ))}
+                  {showStaff ? (
+                    <Link href="/owner" className="tgNavDropItem" role="menuitem">
+                      <span className="label">{staffLabel}</span>
+                      <span className="note">Staff panel</span>
+                    </Link>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </nav>
       </div>
-    </div>
+    </header>
   );
 }

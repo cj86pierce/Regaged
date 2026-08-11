@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type Status = {
   claimedToday: boolean;
@@ -12,31 +12,80 @@ type Status = {
 const ENABLED =
   process.env.NODE_ENV !== "production" || process.env.NEXT_PUBLIC_DAILY_LOGIN === "1";
 
+export const DAILY_OPEN_EVENT = "regaged:daily-open";
+
+function dismissKey() {
+  const d = new Date();
+  return `dailyLoginDismissed:${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+}
+
 export default function DailyLoginCard() {
   const [status, setStatus] = useState<Status | null>(null);
+  const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  const loadStatus = useCallback(async () => {
+    const res = await fetch("/api/daily-login", { credentials: "include" });
+    const json = await res.json().catch(() => ({}));
+    if (res.status === 401) {
+      setStatus(null);
+      setErr("Log in to claim your daily reward.");
+      return null;
+    }
+    if (!res.ok) {
+      setErr(json?.error ?? "Not available");
+      return null;
+    }
+    const next: Status = {
+      claimedToday: !!json.claimedToday,
+      streak: json.streak ?? 0,
+      longestStreak: json.longestStreak ?? 0,
+      nextReward: json.nextReward ?? { tMoney: 5, karma: 1 },
+    };
+    setStatus(next);
+    setErr(null);
+    return next;
+  }, []);
 
   useEffect(() => {
     if (!ENABLED) return;
     let cancelled = false;
     (async () => {
-      const res = await fetch("/api/daily-login", { credentials: "include" });
-      const json = await res.json().catch(() => ({}));
-      if (cancelled || !res.ok) return;
-      setStatus({
-        claimedToday: !!json.claimedToday,
-        streak: json.streak ?? 0,
-        longestStreak: json.longestStreak ?? 0,
-        nextReward: json.nextReward ?? { tMoney: 5, karma: 1 },
-      });
+      const next = await loadStatus();
+      if (cancelled || !next || next.claimedToday) return;
+      try {
+        if (sessionStorage.getItem(dismissKey()) === "1") return;
+      } catch {
+        /* ignore */
+      }
+      setOpen(true);
     })().catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [loadStatus]);
 
-  if (!ENABLED || !status) return null;
+  useEffect(() => {
+    if (!ENABLED) return;
+    function onOpen() {
+      setMsg(null);
+      setOpen(true);
+      loadStatus().catch(() => {});
+    }
+    window.addEventListener(DAILY_OPEN_EVENT, onOpen);
+    return () => window.removeEventListener(DAILY_OPEN_EVENT, onOpen);
+  }, [loadStatus]);
+
+  function close() {
+    setOpen(false);
+    try {
+      sessionStorage.setItem(dismissKey(), "1");
+    } catch {
+      /* ignore */
+    }
+  }
 
   async function claim() {
     setBusy(true);
@@ -55,57 +104,50 @@ export default function DailyLoginCard() {
       nextReward: json.reward ?? json.nextReward ?? { tMoney: 0, karma: 0 },
     });
     setMsg(`+${json.reward?.tMoney ?? 0} R$ · +${json.reward?.karma ?? 0} karma`);
+    window.setTimeout(() => close(), 900);
   }
 
+  if (!ENABLED || !open) return null;
+
   return (
-    <div
-      style={{
-        marginTop: 14,
-        border: "1px solid var(--border)",
-        borderRadius: 10,
-        padding: 12,
-        background: "var(--bg-card)",
-      }}
-    >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-        <div>
-          <div style={{ fontWeight: 1000, fontSize: 14 }}>Daily login</div>
-          <div style={{ marginTop: 4, fontSize: 12, opacity: 0.75 }}>
-            Streak <b>{status.streak}</b>
-            {status.longestStreak > 0 ? (
-              <span style={{ opacity: 0.8 }}> · best {status.longestStreak}</span>
-            ) : null}
-            <span style={{ opacity: 0.65 }}> · local testing</span>
-          </div>
-        </div>
-        {status.claimedToday ? (
-          <div style={{ fontSize: 12, fontWeight: 800, opacity: 0.7 }}>Claimed today</div>
-        ) : (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={claim}
-            style={{
-              padding: "8px 12px",
-              borderRadius: 10,
-              border: "1px solid rgba(0,0,0,0.14)",
-              background: "linear-gradient(#ffd85a, #ffb703)",
-              fontWeight: 1000,
-              cursor: busy ? "not-allowed" : "pointer",
-              fontSize: 12,
-            }}
-          >
-            {busy
-              ? "…"
-              : `Claim ${status.nextReward.tMoney} R$ + ${status.nextReward.karma} karma`}
+    <div className="tgDailyModal" role="dialog" aria-modal="true" aria-label="Daily">
+      <button type="button" className="tgDailyModalBackdrop" aria-label="Close" onClick={close} />
+      <div className="tgDailyPanel">
+        <div className="tgDailyPanelHead">
+          <h2>Daily</h2>
+          <button type="button" className="tgDailyClose" onClick={close} aria-label="Close">
+            ×
           </button>
+        </div>
+        {err ? (
+          <p className="tgDailyMeta">{err}</p>
+        ) : status ? (
+          <>
+            <p className="tgDailyMeta">
+              Streak <b>{status.streak}</b>
+              {status.longestStreak > 0 ? <span> · best {status.longestStreak}</span> : null}
+            </p>
+            {status.claimedToday ? (
+              <p className="tgDailyClaimed">Claimed today</p>
+            ) : (
+              <button type="button" className="tgDailyClaim" disabled={busy} onClick={claim}>
+                {busy
+                  ? "…"
+                  : `Claim ${status.nextReward.tMoney} R$ + ${status.nextReward.karma} karma`}
+              </button>
+            )}
+            {msg ? <p className="tgDailyMsg">{msg}</p> : null}
+          </>
+        ) : (
+          <p className="tgDailyMeta">Loading…</p>
         )}
       </div>
-      {msg ? (
-        <div style={{ marginTop: 8, fontSize: 12, fontWeight: 800, color: "var(--text-success, #2e7d32)" }}>
-          {msg}
-        </div>
-      ) : null}
     </div>
   );
+}
+
+export function openDailyLogin() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(DAILY_OPEN_EVENT));
+  }
 }

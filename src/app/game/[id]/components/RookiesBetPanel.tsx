@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import "@/styles/tengagedChat.css";
 
 type Contestant = { userId: string; username: string };
 
@@ -53,33 +54,23 @@ export default function RookiesBetPanel({ gameId }: { gameId: string }) {
   }
 
   return (
-    <div
-      style={{
-        border: "1px solid var(--border)",
-        borderRadius: 10,
-        padding: 12,
-        background: "var(--bg-card)",
-        marginBottom: 10,
-      }}
-    >
-      <div style={{ fontWeight: 1000, marginBottom: 6, color: "#2e7d32" }}>Rookies betting</div>
-      <div style={{ fontSize: 11, opacity: 0.75, marginBottom: 8 }}>
+    <div className="tgAction">
+      <div className="tgActionHead">Rookies betting</div>
+      <div className="tgActionHint">
         Day 1 only · 1–30 T$ · Non-players. 1st +100%, 2nd +30%, 3rd +20%, 4th +10%, 5th stake back.
       </div>
       {myBet ? (
-        <div style={{ fontSize: 13, fontWeight: 800 }}>
+        <div className="tgActionOk">
           Your bet: {myBet.amount} T$ on{" "}
           {contestants.find((c) => c.userId === myBet.targetUserId)?.username ?? "…"}
-          {myBet.paidOutAt != null && (
-            <span> · paid {myBet.payoutAmount ?? 0} T$</span>
-          )}
+          {myBet.paidOutAt != null && <span> · paid {myBet.payoutAmount ?? 0} T$</span>}
         </div>
       ) : (
-        <div style={{ display: "grid", gap: 8 }}>
+        <div className="tgActionStack">
           <select
             value={targetUserId}
             onChange={(e) => setTargetUserId(e.target.value)}
-            style={{ padding: 8 }}
+            className="tgActionInput"
           >
             <option value="">Pick contestant</option>
             {contestants.map((c) => (
@@ -88,7 +79,7 @@ export default function RookiesBetPanel({ gameId }: { gameId: string }) {
               </option>
             ))}
           </select>
-          <label style={{ fontSize: 13 }}>
+          <label className="tgActionHint">
             Stake{" "}
             <input
               type="number"
@@ -96,16 +87,26 @@ export default function RookiesBetPanel({ gameId }: { gameId: string }) {
               max={30}
               value={amount}
               onChange={(e) => setAmount(Number(e.target.value))}
-              style={{ width: 70, marginLeft: 6 }}
+              className="tgActionInput"
+              style={{ width: 70, display: "inline-block", marginLeft: 6 }}
             />{" "}
             T$
           </label>
-          <button type="button" disabled={busy || !targetUserId} onClick={() => void place()}>
+          <button
+            type="button"
+            className="tgActionBtn"
+            disabled={busy || !targetUserId}
+            onClick={() => void place()}
+          >
             {busy ? "…" : "Place bet"}
           </button>
         </div>
       )}
-      {msg && <div style={{ marginTop: 6, fontSize: 12, fontWeight: 800 }}>{msg}</div>}
+      {msg && (
+        <div className="tgActionOk" style={{ marginTop: 6 }}>
+          {msg}
+        </div>
+      )}
     </div>
   );
 }

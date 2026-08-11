@@ -58,6 +58,20 @@ export async function resolveCastingNominations(gameId: string) {
   const dayNum = game.roundNumber ?? 1;
   if (dayNum <= 1) return; // day 1 has no nominees
 
+  // Idempotent: if this day already has nominees, only ensure we're in ROUND_VOTE.
+  const existing = await prisma.castingDayResult.findUnique({
+    where: { gameId_dayNumber: { gameId, dayNumber: dayNum } },
+    select: { nomineeUserIds: true },
+  });
+  if (existing?.nomineeUserIds?.length) {
+    const dayMs = await getDayMsForGame(gameId);
+    await prisma.game.update({
+      where: { id: gameId },
+      data: { state: "ROUND_VOTE", stateEndsAt: new Date(Date.now() + dayMs) },
+    });
+    return;
+  }
+
   const activeCount = await prisma.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
   const nomCount = castingNomineeCount(activeCount);
   if (nomCount === 0) {
@@ -86,8 +100,22 @@ export async function resolveCastingNominations(gameId: string) {
     select: { id: true, username: true },
   });
   const nameOf = (id: string) => names.find((u) => u.id === id)?.username ?? id;
+  const nomineeNames = nominees.map(nameOf);
 
-  await prisma.$transaction(async (tx) => {
+  // Create day result only if still empty — prevents double nominee messages under race.
+  const created = await prisma.$transaction(async (tx) => {
+    const prior = await tx.castingDayResult.findUnique({
+      where: { gameId_dayNumber: { gameId, dayNumber: dayNum } },
+      select: { nomineeUserIds: true },
+    });
+    if (prior?.nomineeUserIds?.length) {
+      await tx.game.update({
+        where: { id: gameId },
+        data: { state: "ROUND_VOTE", stateEndsAt: new Date(Date.now() + dayMs) },
+      });
+      return false;
+    }
+
     await tx.castingDayResult.upsert({
       where: { gameId_dayNumber: { gameId, dayNumber: dayNum } },
       update: { nomineeUserIds: nominees, evictedUserIds: [] },
@@ -102,10 +130,16 @@ export async function resolveCastingNominations(gameId: string) {
         gameId,
         userId: sysId,
         channel: "PUBLIC",
-        body: `[SYSTEM] Day ${dayNum}: Nominees — ${nominees.map(nameOf).join(", ")}. Vote now (1/2/3 points).`,
+        body:
+          `[SYSTEM] Day ${dayNum} nominations\n` +
+          `Nominees: ${nomineeNames.join(", ")}\n` +
+          `Assign 1, 2, and 3 points — each score once.`,
       },
     });
+    return true;
   });
+
+  void created;
 }
 
 /**
@@ -117,6 +151,24 @@ export async function openCastingVoteDay(
   dayNumber: number
 ): Promise<"vote" | "finalized" | "noop"> {
   if (dayNumber <= 1) return "noop";
+
+  // If this day already has nominees, just ensure vote state (no second system message).
+  const existing = await prisma.castingDayResult.findUnique({
+    where: { gameId_dayNumber: { gameId, dayNumber } },
+    select: { nomineeUserIds: true },
+  });
+  if (existing?.nomineeUserIds?.length) {
+    const dayMs = await getDayMsForGame(gameId);
+    await prisma.game.update({
+      where: { id: gameId },
+      data: {
+        roundNumber: dayNumber,
+        state: "ROUND_VOTE",
+        stateEndsAt: new Date(Date.now() + dayMs),
+      },
+    });
+    return "vote";
+  }
 
   await prisma.game.update({
     where: { id: gameId },

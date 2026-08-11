@@ -19,8 +19,9 @@ export default function CarePackagePanel(props: {
   carePackages: CarePackage[];
   onClaimed: () => Promise<void>;
   meUserId: string | null;
+  tengaged?: boolean;
 }) {
-  const { gameId, carePackages, onClaimed, meUserId } = props;
+  const { gameId, carePackages, onClaimed, meUserId, tengaged } = props;
   const [claiming, setClaiming] = useState<Record<string, boolean>>({});
   const [err, setErr] = useState<string | null>(null);
 
@@ -50,24 +51,31 @@ export default function CarePackagePanel(props: {
   }
 
   return (
-    <div className="theme-sidebar-panel" style={{ borderRadius: 12, padding: 12, flexShrink: 0 }}>
-      <div style={{ fontWeight: 1000, marginBottom: 8 }}>Care Packages</div>
+    <div className={tengaged ? "tgCare" : "theme-sidebar-panel"} style={tengaged ? undefined : { borderRadius: 12, padding: 12, flexShrink: 0 }}>
+      <div className={tengaged ? "tgCareHead" : undefined} style={tengaged ? undefined : { fontWeight: 1000, marginBottom: 8 }}>
+        Care packages
+      </div>
       {err && <div style={{ fontSize: 12, color: "var(--text-error)", marginBottom: 8 }}>{err}</div>}
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: tengaged ? 8 : 12 }}>
         {unclaimed.map((cp) => {
           const busy = claiming[cp.eventId] === true;
           return (
             <div
               key={cp.eventId}
-              style={{
-                border: "1px solid var(--border)",
-                borderRadius: 10,
-                padding: 10,
-                background: "var(--bg-card)",
-              }}
+              className={tengaged ? "tgCareBox" : undefined}
+              style={
+                tengaged
+                  ? undefined
+                  : {
+                      border: "1px solid var(--border)",
+                      borderRadius: 10,
+                      padding: 10,
+                      background: "var(--bg-card)",
+                    }
+              }
             >
-              <div style={{ fontSize: 11, opacity: 0.8, marginBottom: 8 }}>Pick one slot</div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 6 }}>
+              <div style={{ fontSize: 11, opacity: 0.75, marginBottom: 6 }}>Pick one</div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 4 }}>
                 {(cp.options ?? [])
                   .sort((a, b) => a.slotIndex - b.slotIndex)
                   .map((o) => (
@@ -75,14 +83,19 @@ export default function CarePackagePanel(props: {
                       key={o.slotIndex}
                       onClick={() => claim(cp.eventId, o.slotIndex)}
                       disabled={busy}
-                      style={{
-                        padding: "10px 0",
-                        borderRadius: 10,
-                        border: "1px solid var(--border)",
-                        background: busy ? "var(--bg-btn-disabled)" : "var(--bg-card)",
-                        cursor: busy ? "not-allowed" : "pointer",
-                        fontSize: 18,
-                      }}
+                      className={tengaged ? "tgCareSlot" : undefined}
+                      style={
+                        tengaged
+                          ? undefined
+                          : {
+                              padding: "10px 0",
+                              borderRadius: 10,
+                              border: "1px solid var(--border)",
+                              background: busy ? "var(--bg-btn-disabled)" : "var(--bg-card)",
+                              cursor: busy ? "not-allowed" : "pointer",
+                              fontSize: 18,
+                            }
+                      }
                       title={o.kind}
                     >
                       {iconFor(o.kind)}

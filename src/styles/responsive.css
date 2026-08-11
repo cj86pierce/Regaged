@@ -55,37 +55,26 @@ body {
 
 /* Nav: compact + horizontal scroll on small screens */
 @media (max-width: 640px) {
-  .navInner {
-    padding: 8px 10px !important;
-    gap: 8px !important;
-    max-width: none !important;
+  .tgNavInner {
+    padding: 8px 10px;
+    gap: 8px;
   }
-  .navLogo {
-    font-size: 17px !important;
-    flex-shrink: 0;
+  .tgNavBrand {
+    font-size: 16px;
   }
-  .navLinks {
-    gap: 4px !important;
-    font-size: 12px !important;
-    flex-wrap: nowrap !important;
+  .tgNavLinks {
+    gap: 8px;
+    flex-wrap: nowrap;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
-    mask-image: linear-gradient(90deg, #000 85%, transparent);
+    max-width: calc(100vw - 110px);
   }
-  .navLinks::-webkit-scrollbar {
+  .tgNavLinks::-webkit-scrollbar {
     display: none;
   }
-  .navLink {
-    white-space: nowrap;
-    padding: 6px 8px;
-    font-size: 12px !important;
-  }
-  .navDivider {
-    display: none;
-  }
-  .navLinkSecondary {
-    display: none !important;
+  .tgNavLink {
+    font-size: 11px;
   }
   .onlineCountBadge {
     top: auto !important;

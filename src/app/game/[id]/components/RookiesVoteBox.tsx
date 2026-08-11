@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import "@/styles/tengagedChat.css";
 
 type Nominee = { userId: string; username: string };
 
@@ -10,8 +11,9 @@ export default function RookiesVoteBox(props: {
   nominees: Nominee[];
   locked?: boolean;
   onSaved: () => Promise<void>;
+  tengaged?: boolean;
 }) {
-  const { gameId, nominees } = props;
+  const { gameId, nominees, tengaged } = props;
   const pointsOptions =
     nominees.length >= 4 ? [0, 1, 2, 3] : nominees.length === 3 ? [1, 2, 3] : [1, 2];
 
@@ -75,8 +77,46 @@ export default function RookiesVoteBox(props: {
   }
 
   if (props.locked) {
+    return <div className={tengaged ? "tgActionOk" : undefined} style={tengaged ? undefined : { fontWeight: 1000, color: "var(--success)" }}>Ranking vote locked in.</div>;
+  }
+
+  if (tengaged) {
     return (
-      <div style={{ fontWeight: 1000, color: "var(--success)" }}>✅ Ranking vote locked in.</div>
+      <div className="tgVoteList" style={{ marginTop: 4 }}>
+        <div className="tgVoteHint">Assign each of {pointsOptions.join(", ")} once (higher = more want out).</div>
+        {nominees.map((n) => {
+          const myP = pointsMap[n.userId];
+          return (
+            <div key={n.userId} className="tgVoteRow">
+              <div className="tgVoteName" title={n.username}>
+                {n.username}
+              </div>
+              <div className="tgVotePts">
+                {pointsOptions.map((p) => {
+                  const selected = myP === p;
+                  const disabled = !selected && usedPoints.has(p);
+                  return (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setPoint(n.userId, p)}
+                      disabled={saving || disabled}
+                      className={selected ? "on" : undefined}
+                    >
+                      {p}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+        {err ? <div className="tgVoteErr">{err}</div> : null}
+        {msg ? <div className="tgVoteOk">{msg}</div> : null}
+        <button type="button" className="tgVoteSave" disabled={saving || !complete} onClick={save}>
+          {saving ? "Saving…" : "Confirm ranking vote"}
+        </button>
+      </div>
     );
   }
 

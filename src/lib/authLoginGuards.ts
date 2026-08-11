@@ -64,7 +64,15 @@ export async function enforceLoginGuards(
   }
 
   if (lockedIp) {
-    if (!clientIp || !ipsMatch(clientIp, lockedIp)) {
+    // Local Next.js often has no X-Forwarded-For; allow owner/staff login for preview.
+    const isDev = process.env.NODE_ENV !== "production";
+    const isLocalIp =
+      !!clientIp &&
+      (ipsMatch(clientIp, "127.0.0.1") ||
+        ipsMatch(clientIp, "::1") ||
+        ipsMatch(clientIp, "::ffff:127.0.0.1"));
+    const allowLocalPreview = isDev && (!clientIp || isLocalIp);
+    if (!allowLocalPreview && (!clientIp || !ipsMatch(clientIp, lockedIp))) {
       return { ok: false, reason: "Login blocked: IP not allowed for this account." };
     }
   }

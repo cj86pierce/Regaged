@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import DailyLoginCard, { openDailyLogin } from "@/components/DailyLoginCard";
 
 const ROW1: { href: string; label: string }[] = [
   { href: "/contact", label: "Contact" },
@@ -19,6 +22,9 @@ const ROW2: { href: string; label: string }[] = [
   { href: "/designs", label: "Designs" },
 ];
 
+const DAILY_ENABLED =
+  process.env.NODE_ENV !== "production" || process.env.NEXT_PUBLIC_DAILY_LOGIN === "1";
+
 function LinkRow({ links }: { links: { href: string; label: string }[] }) {
   return (
     <div className="siteFooterRow">
@@ -38,7 +44,24 @@ export default function SiteFooter() {
   return (
     <footer className="siteFooter">
       <div className="siteFooterInner">
-        <LinkRow links={ROW1} />
+        <div className="siteFooterRow">
+          {ROW1.map((l, i) => (
+            <span key={l.label} className="siteFooterLinkWrap">
+              {i > 0 && <span className="siteFooterDot">·</span>}
+              <Link href={l.href} className="siteFooterLink">
+                {l.label}
+              </Link>
+            </span>
+          ))}
+          {DAILY_ENABLED ? (
+            <span className="siteFooterLinkWrap">
+              <span className="siteFooterDot">·</span>
+              <button type="button" className="siteFooterLink siteFooterDaily" onClick={openDailyLogin}>
+                Daily
+              </button>
+            </span>
+          ) : null}
+        </div>
         <LinkRow links={ROW2} />
         <p className="siteFooterDisclaimer">
           Regaged is an online social game site and is not affiliated with Suzanne Collins, Scholastic,
@@ -47,6 +70,7 @@ export default function SiteFooter() {
           property of their respective owners.
         </p>
       </div>
+      {DAILY_ENABLED ? <DailyLoginCard /> : null}
     </footer>
   );
 }
