@@ -1,15 +1,21 @@
 import { prisma } from "@/lib/prisma";
 import { getSystemUserId } from "@/lib/systemUser";
 
-import { getFrookiesPovSaveMs, isBotGameType } from "@/lib/fastingTiming";
+import {
+  BOT_ROUND_MS,
+  getFastingVoteMs,
+  getFrookiesPovSaveMs,
+  isBotGameType,
+} from "@/lib/fastingTiming";
 
 function activityScore(p: { chatCount: number; plusCount: number; minusCount: number }) {
   return p.chatCount + 2 * p.plusCount - p.minusCount;
 }
 
 /**
- * Resolve Frookies nominations: HOH nominates 2. POV holder and povSavedUserId are immune.
- * Uses Game.povSavedUserId (POV save submitted before noms); copies to RoundResult and clears.
+ * Resolve Frookies nominations: HOH nominates 2. POV holder and povSavedUserId are immune
+ * except at final 3 (or whenever POV immunity would leave fewer than 2 nominees) — then
+ * only HOH is immune and both other houseguests go on the block, skipping POV_SAVE.
  */
 export async function resolveFrookiesNominations(gameId: string) {
   const game = await prisma.game.findUnique({
@@ -33,9 +39,19 @@ export async function resolveFrookiesNominations(gameId: string) {
     include: { user: { select: { username: true } } },
   });
 
-  const immune = new Set<string>([game.hohUserId, game.povUserId]);
-  if (game.povSavedUserId) immune.add(game.povSavedUserId);
-  const eligible = players.filter((p) => !immune.has(p.userId));
+  // Final 3: HOH + POV immunity leaves only 1 nominee and the round never ends.
+  const finalThree = players.length <= 3;
+  const immune = new Set<string>([game.hohUserId]);
+  if (!finalThree) {
+    immune.add(game.povUserId);
+    if (game.povSavedUserId) immune.add(game.povSavedUserId);
+  }
+  let eligible = players.filter((p) => !immune.has(p.userId));
+  if (eligible.length < 2) {
+    immune.clear();
+    immune.add(game.hohUserId);
+    eligible = players.filter((p) => !immune.has(p.userId));
+  }
   if (eligible.length < 2) return;
 
   const noms = await prisma.nomination.findMany({
@@ -64,12 +80,18 @@ export async function resolveFrookiesNominations(gameId: string) {
     }
   }
 
-  const nameA = eligible.find((p) => p.userId === nomineeA)?.user.username ?? "?";
-  const nameB = eligible.find((p) => p.userId === nomineeB)?.user.username ?? "?";
+  const nameA = eligible.find((p) => p.userId === nomineeA)?.user.username ??
+    players.find((p) => p.userId === nomineeA)?.user.username ??
+    "?";
+  const nameB = eligible.find((p) => p.userId === nomineeB)?.user.username ??
+    players.find((p) => p.userId === nomineeB)?.user.username ??
+    "?";
 
   const systemUserId = await getSystemUserId();
   const tag = `[SYSTEM:NOM_VOTES:R${game.roundNumber}]`;
-  const povSaveMs = getFrookiesPovSaveMs(isBotGameType(game.gameType));
+  const isBot = isBotGameType(game.gameType);
+  const povSaveMs = getFrookiesPovSaveMs(isBot);
+  const voteMs = isBot ? BOT_ROUND_MS : getFastingVoteMs();
 
   await prisma.$transaction(async (tx) => {
     await tx.roundResult.upsert({
@@ -78,7 +100,7 @@ export async function resolveFrookiesNominations(gameId: string) {
         nomineeAUserId: nomineeA!,
         nomineeBUserId: nomineeB!,
         nomineeCUserId: null,
-        povSavedUserId: game.povSavedUserId,
+        povSavedUserId: finalThree ? null : game.povSavedUserId,
       },
       create: {
         gameId,
@@ -86,25 +108,44 @@ export async function resolveFrookiesNominations(gameId: string) {
         nomineeAUserId: nomineeA!,
         nomineeBUserId: nomineeB!,
         nomineeCUserId: null,
-        povSavedUserId: game.povSavedUserId,
+        povSavedUserId: finalThree ? null : game.povSavedUserId,
       },
     });
 
-    await tx.game.update({
-      where: { id: gameId },
-      data: {
-        frookiesPhase: "POV_SAVE",
-        stateEndsAt: new Date(Date.now() + povSaveMs),
-      },
-    });
-
-    await tx.gameMessage.create({
-      data: {
-        gameId,
-        userId: systemUserId,
-        channel: "PUBLIC",
-        body: `${tag}\n[SYSTEM] Nominees: ${nameA} vs ${nameB}. POV may save themselves or one other before vote.`,
-      },
-    });
+    if (finalThree) {
+      await tx.game.update({
+        where: { id: gameId },
+        data: {
+          state: "ROUND_VOTE",
+          frookiesPhase: null,
+          povSavedUserId: null,
+          stateEndsAt: new Date(Date.now() + voteMs),
+        },
+      });
+      await tx.gameMessage.create({
+        data: {
+          gameId,
+          userId: systemUserId,
+          channel: "PUBLIC",
+          body: `${tag}\n[SYSTEM] Final 3 — Nominees: ${nameA} vs ${nameB}. Voting is open.`,
+        },
+      });
+    } else {
+      await tx.game.update({
+        where: { id: gameId },
+        data: {
+          frookiesPhase: "POV_SAVE",
+          stateEndsAt: new Date(Date.now() + povSaveMs),
+        },
+      });
+      await tx.gameMessage.create({
+        data: {
+          gameId,
+          userId: systemUserId,
+          channel: "PUBLIC",
+          body: `${tag}\n[SYSTEM] Nominees: ${nameA} vs ${nameB}. POV may save themselves or one other before vote.`,
+        },
+      });
+    }
   });
 }

@@ -1,15 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type Nominee = { userId: string; username: string };
 
 export default function CastingVoteBox(props: {
   gameId: string;
   nominees: Nominee[];
+  initialPointsMap?: Record<string, number> | null;
   onSaved: () => Promise<void>;
 }) {
-  const { gameId, nominees } = props;
+  const { gameId, nominees, initialPointsMap } = props;
 
   // Must match nominee count so every point value is assigned exactly once
   const pointsOptions =
@@ -19,15 +20,32 @@ export default function CastingVoteBox(props: {
         ? [1, 2]
         : [1, 2, 3];
 
-  const [pointsMap, setPointsMap] = useState<Record<string, number>>(() => {
+  function buildMap(from: Record<string, number> | null | undefined): Record<string, number> {
     const init: Record<string, number> = {};
-    nominees.forEach((n) => (init[n.userId] = Number.NaN));
+    for (const n of nominees) {
+      const v = from?.[n.userId];
+      init[n.userId] = typeof v === "number" && Number.isFinite(v) ? v : Number.NaN;
+    }
     return init;
-  });
+  }
 
+  const [pointsMap, setPointsMap] = useState<Record<string, number>>(() => buildMap(initialPointsMap));
   const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
+  const [msg, setMsg] = useState<string | null>(() =>
+    initialPointsMap && Object.keys(initialPointsMap).length > 0 ? "Saved!" : null
+  );
   const [err, setErr] = useState<string | null>(null);
+
+  // Rehydrate when leaving/returning or after a poll — votes live in DB, not only local state.
+  const savedKey = JSON.stringify(
+    nominees.map((n) => [n.userId, initialPointsMap?.[n.userId] ?? null])
+  );
+  useEffect(() => {
+    setPointsMap(buildMap(initialPointsMap));
+    setMsg(initialPointsMap && Object.keys(initialPointsMap).length > 0 ? "Saved!" : null);
+    setErr(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- savedKey captures nominees + initialPointsMap
+  }, [savedKey]);
 
   const usedPoints = useMemo(() => {
     const s = new Set<number>();
@@ -151,7 +169,7 @@ export default function CastingVoteBox(props: {
           cursor: saving || !complete ? "not-allowed" : "pointer",
         }}
       >
-        {saving ? "Saving..." : "Save votes"}
+        {saving ? "Saving..." : msg === "Saved!" ? "Update votes" : "Save votes"}
       </button>
     </div>
   );

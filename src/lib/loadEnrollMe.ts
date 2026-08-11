@@ -6,6 +6,7 @@ export type EnrollMe = {
   tMoney: number;
   ownsYellowOrHigher: boolean;
   highestColorName: string;
+  warned: boolean;
 };
 
 export async function loadEnrollMe(userId: string | null | undefined): Promise<EnrollMe | null> {
@@ -13,7 +14,7 @@ export async function loadEnrollMe(userId: string | null | undefined): Promise<E
 
   const me = await prisma.user.findUnique({
     where: { id: userId },
-    select: { username: true, tMoney: true },
+    select: { username: true, tMoney: true, warnedAt: true },
   });
   if (!me) return null;
 
@@ -28,5 +29,6 @@ export async function loadEnrollMe(userId: string | null | undefined): Promise<E
     tMoney: me.tMoney,
     ownsYellowOrHigher: await userOwnsYellowOrHigher(userId),
     highestColorName: highest?.color.name ?? "White",
+    warned: !!me.warnedAt,
   };
 }

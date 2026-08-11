@@ -55,11 +55,44 @@ export async function createAuctionsFromDesigns(): Promise<{ created: number }> 
     const startsAt = new Date();
     const endsAt = new Date(now.getTime() + AUCTION_DURATION_MS);
 
+    // Opening bid: seller at 5 R$. If nobody else bids, they win for free on resolve.
     await prisma.auction.create({
-      data: { designId: top.id, startsAt, endsAt, currentBid: 5 },
+      data: {
+        designId: top.id,
+        startsAt,
+        endsAt,
+        currentBid: 5,
+        currentBidUserId: top.userId,
+        bids: {
+          create: { userId: top.userId, amount: 5 },
+        },
+      },
     });
     created++;
     alreadyAuctioned.add(top.id);
+  }
+
+  // Backfill opening seller bids on any live auctions that still have no bidder.
+  const openNoBid = await prisma.auction.findMany({
+    where: {
+      soldAt: null,
+      endsAt: { gt: now },
+      currentBidUserId: null,
+    },
+    include: { design: { select: { userId: true } } },
+    take: 50,
+  });
+  for (const a of openNoBid) {
+    const amount = Math.max(5, a.currentBid);
+    await prisma.$transaction([
+      prisma.auction.update({
+        where: { id: a.id },
+        data: { currentBid: amount, currentBidUserId: a.design.userId },
+      }),
+      prisma.auctionBid.create({
+        data: { auctionId: a.id, userId: a.design.userId, amount },
+      }),
+    ]);
   }
 
   return { created };

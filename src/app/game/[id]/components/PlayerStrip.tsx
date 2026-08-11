@@ -130,11 +130,15 @@ export default function PlayerStrip(props: {
 
           const grayscale = isCompleted ? place !== 1 : p.status === "ELIMINATED";
 
+          const frookiesFinalThree =
+            (gameType === "FROOKIES" || gameType === "FROOKIES_BOT") &&
+            players.filter((x) => x.status === "ACTIVE").length <= 3;
+
           const canNominateThisPlayer =
             isNominate &&
             !myNomLockedIn &&
             p.status === "ACTIVE" &&
-            !isPov &&
+            (!isPov || frookiesFinalThree) &&
             !isHoh &&
             (!onlyHohCanNominate || meUserId === hohUserId);
 

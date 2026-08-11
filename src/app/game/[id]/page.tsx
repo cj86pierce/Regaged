@@ -102,7 +102,7 @@ type GameState = {
     claimedAt: string | null;
     options: { slotIndex: number; kind: "APPLE" | "KEY" | "POISON" }[];
   }>;
-  casting?: { nominees: string[]; myVoted: boolean };
+  casting?: { nominees: string[]; myVoted: boolean; myPointsMap?: Record<string, number> | null };
   jury?: {
     finalists: { userId: string; username: string }[];
     isJuror: boolean;
@@ -744,6 +744,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
                 const p = data.players.find((x) => x.userId === id);
                 return { userId: id, username: p?.username ?? id };
               })}
+              myPointsMap={data.casting?.myPointsMap ?? null}
               onSavedVotes={load}
               messages={data.messages}
               carePackages={data.carePackages ?? []}

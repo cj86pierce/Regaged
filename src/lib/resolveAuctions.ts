@@ -1,5 +1,6 @@
 /**
  * Resolve ended auctions: charge winner, pay seller 50%, set soldAt.
+ * If the seller is the high bidder (opening 5R$ bid, nobody else bid), they keep it free.
  */
 import { prisma } from "@/lib/prisma";
 
@@ -10,8 +11,6 @@ export async function resolveEndedAuctions(): Promise<{ resolved: number }> {
     where: {
       endsAt: { lt: now },
       soldAt: null,
-      currentBidUserId: { not: null },
-      currentBid: { gte: 5 },
     },
     include: {
       design: { select: { userId: true } },
@@ -20,32 +19,41 @@ export async function resolveEndedAuctions(): Promise<{ resolved: number }> {
 
   let resolved = 0;
   for (const a of ended) {
-    const winnerId = a.currentBidUserId!;
     const sellerId = a.design.userId;
-    const amount = a.currentBid;
-    const sellerPayout = Math.floor(amount / 2);
+    const winnerId = a.currentBidUserId ?? sellerId;
+    const sellerWinsFree = winnerId === sellerId;
+    const amount = Math.max(5, a.currentBid);
+    const sellerPayout = sellerWinsFree ? 0 : Math.floor(amount / 2);
 
     try {
       await prisma.$transaction(async (tx) => {
-        await tx.user.update({
-          where: { id: winnerId },
-          data: { tMoney: { decrement: amount } },
-        });
-        await tx.user.update({
-          where: { id: sellerId },
-          data: { tMoney: { increment: sellerPayout } },
-        });
+        if (!sellerWinsFree) {
+          await tx.user.update({
+            where: { id: winnerId },
+            data: { tMoney: { decrement: amount } },
+          });
+          await tx.user.update({
+            where: { id: sellerId },
+            data: { tMoney: { increment: sellerPayout } },
+          });
+        }
+
         await tx.auction.update({
           where: { id: a.id },
-          data: { soldAt: now },
+          data: {
+            soldAt: now,
+            currentBid: amount,
+            currentBidUserId: winnerId,
+          },
         });
       });
+
       try {
         await prisma.designOwner.create({
           data: { userId: winnerId, designId: a.designId },
         });
       } catch {
-        console.warn("DesignOwner create skipped (table may not exist)", { auctionId: a.id });
+        // already owns (seller / prior purchase)
       }
       resolved++;
     } catch (e) {

@@ -17,6 +17,7 @@ export default function CastingSidebar(props: {
   dayNumber: number;
 
   nominees: { userId: string; username: string }[];
+  myPointsMap?: Record<string, number> | null;
   onSavedVotes: () => Promise<void>;
 
   messages: Message[];
@@ -66,6 +67,7 @@ export default function CastingSidebar(props: {
         <CastingVoteBox
           gameId={props.gameId}
           nominees={props.nominees}
+          initialPointsMap={props.myPointsMap}
           onSaved={props.onSavedVotes}
         />
         </div>

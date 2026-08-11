@@ -76,8 +76,15 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   if (uniq.length !== 2) return NextResponse.json({ error: "Pick exactly 2 unique nominees." }, { status: 400 });
 
-  if (game.povUserId && uniq.includes(game.povUserId)) return NextResponse.json({ error: "You cannot nominate the POV holder." }, { status: 400 });
-  if (game.povSavedUserId && uniq.includes(game.povSavedUserId)) return NextResponse.json({ error: "You cannot nominate the POV-saved player." }, { status: 400 });
+  const activeCount = await prisma.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
+  const frookiesFinalThree = isFrookies && activeCount <= 3;
+  if (!frookiesFinalThree && game.povUserId && uniq.includes(game.povUserId)) {
+    return NextResponse.json({ error: "You cannot nominate the POV holder." }, { status: 400 });
+  }
+  if (!frookiesFinalThree && game.povSavedUserId && uniq.includes(game.povSavedUserId)) {
+    return NextResponse.json({ error: "You cannot nominate the POV-saved player." }, { status: 400 });
+  }
+  if (uniq.includes(userId)) return NextResponse.json({ error: "You cannot nominate yourself." }, { status: 400 });
 
   const validTargets = await prisma.gamePlayer.findMany({
     where: { gameId, status: "ACTIVE", userId: { in: uniq } },

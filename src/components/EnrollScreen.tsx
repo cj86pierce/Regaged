@@ -22,7 +22,8 @@ export default function EnrollScreen(props: {
   const needsColor = !!req.colorName;
   const hasColor = !needsColor || props.me?.ownsYellowOrHigher === true;
   const hasFee = (props.me?.tMoney ?? 0) >= req.feeT;
-  const canEnroll = !!props.me && hasColor && hasFee && !busy;
+  const warned = !!props.me?.warned;
+  const canEnroll = !!props.me && hasColor && hasFee && !warned && !busy;
 
   async function enroll() {
     if (!props.me) {
@@ -108,6 +109,16 @@ export default function EnrollScreen(props: {
               Shop → Colors
             </Link>
             .
+          </div>
+        ) : null}
+        {props.me && !hasFee ? (
+          <div style={{ marginTop: 10, fontSize: 12, color: "var(--text-error)", fontWeight: 800 }}>
+            Not enough R$ for the entrance fee.
+          </div>
+        ) : null}
+        {warned ? (
+          <div style={{ marginTop: 10, fontSize: 12, color: "var(--text-error)", fontWeight: 800 }}>
+            Your account is warned — you cannot enroll until an owner clears it.
           </div>
         ) : null}
       </div>

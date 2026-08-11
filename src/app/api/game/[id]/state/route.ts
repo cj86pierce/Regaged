@@ -365,6 +365,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   let castingNominees: string[] = [];
   let castingMyVoted = false;
   let castingMyVoteTargetUserId: string | null = null;
+  let castingMyPointsMap: Record<string, number> | null = null;
 
   if ((game.gameType === "CASTING" || game.gameType === "CASTING_BOT") && game.state === "ROUND_VOTE") {
     const day = await prisma.castingDayResult.findUnique({
@@ -375,12 +376,16 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     castingNominees = day?.nomineeUserIds ?? [];
 
     if (meUserId) {
-      const myVote = await prisma.castingVote.findFirst({
+      const myVotes = await prisma.castingVote.findMany({
         where: { gameId, dayNumber: game.roundNumber, voterUserId: meUserId },
-        select: { targetUserId: true },
+        select: { targetUserId: true, points: true },
       });
-      castingMyVoted = !!myVote;
-      castingMyVoteTargetUserId = myVote?.targetUserId ?? null;
+      if (myVotes.length > 0) {
+        castingMyVoted = true;
+        castingMyVoteTargetUserId = myVotes[0]!.targetUserId;
+        castingMyPointsMap = {};
+        for (const v of myVotes) castingMyPointsMap[v.targetUserId] = v.points;
+      }
     }
   }
 
@@ -452,6 +457,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       nominees: castingNominees,
       myVoted: castingMyVoted,
       myVoteTargetUserId: castingMyVoteTargetUserId,
+      myPointsMap: castingMyPointsMap,
     },
 
     jury,

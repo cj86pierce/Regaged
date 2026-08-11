@@ -120,8 +120,14 @@ export async function botNominate(gameId: string, voterUserId: string): Promise<
   });
   if (already > 0 && !isHohMode) return false;
 
+  const activeCount = await prisma.gamePlayer.count({ where: { gameId, status: "ACTIVE" } });
+  const frookiesFinalThree = game.gameType === "FROOKIES_BOT" && activeCount <= 3;
   const exclude = new Set<string>(
-    [game.povUserId, game.povSavedUserId, isHohMode ? game.hohUserId : null].filter(Boolean) as string[]
+    [
+      frookiesFinalThree ? null : game.povUserId,
+      frookiesFinalThree ? null : game.povSavedUserId,
+      isHohMode ? game.hohUserId : null,
+    ].filter(Boolean) as string[]
   );
   const players = await prisma.gamePlayer.findMany({
     where: { gameId, status: "ACTIVE", ...(exclude.size ? { userId: { notIn: [...exclude] } } : {}) },
