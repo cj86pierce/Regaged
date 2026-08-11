@@ -3,6 +3,46 @@ import type { SlotDesignType } from "@/components/Avatar";
 
 export type SlotDesignsMap = Partial<Record<SlotDesignType, string>>;
 
+const EQUIP_SELECT = {
+  equippedShirtDesignId: true,
+  equippedHairDesignId: true,
+  equippedBodyDesignId: true,
+  equippedEyesDesignId: true,
+  equippedMouthDesignId: true,
+  equippedAccessoryDesignId: true,
+  equippedBackgroundDesignId: true,
+  equippedScarDesignId: true,
+  equippedHairOrnamentDesignId: true,
+  equippedGlassesDesignId: true,
+} as const;
+
+function mapSlots(u: {
+  equippedShirtDesignId: string | null;
+  equippedHairDesignId: string | null;
+  equippedBodyDesignId: string | null;
+  equippedEyesDesignId: string | null;
+  equippedMouthDesignId: string | null;
+  equippedAccessoryDesignId: string | null;
+  equippedBackgroundDesignId: string | null;
+  equippedScarDesignId: string | null;
+  equippedHairOrnamentDesignId: string | null;
+  equippedGlassesDesignId: string | null;
+}): SlotDesignsMap {
+  const eq = (id: string | null) => (id ? `/api/designs/${id}/image` : undefined);
+  const s: SlotDesignsMap = {};
+  if (u.equippedShirtDesignId) s.SHIRT = eq(u.equippedShirtDesignId)!;
+  if (u.equippedHairDesignId) s.HAIR = eq(u.equippedHairDesignId)!;
+  if (u.equippedBodyDesignId) s.BODY = eq(u.equippedBodyDesignId)!;
+  if (u.equippedEyesDesignId) s.EYES = eq(u.equippedEyesDesignId)!;
+  if (u.equippedMouthDesignId) s.MOUTH = eq(u.equippedMouthDesignId)!;
+  if (u.equippedAccessoryDesignId) s.ACCESSORY = eq(u.equippedAccessoryDesignId)!;
+  if (u.equippedBackgroundDesignId) s.BACKGROUND = eq(u.equippedBackgroundDesignId)!;
+  if (u.equippedScarDesignId) s.SCAR = eq(u.equippedScarDesignId)!;
+  if (u.equippedHairOrnamentDesignId) s.HAIR_ORNAMENT = eq(u.equippedHairOrnamentDesignId)!;
+  if (u.equippedGlassesDesignId) s.GLASSES = eq(u.equippedGlassesDesignId)!;
+  return s;
+}
+
 /**
  * Fetches equipped design slot URLs for a user. Returns {} if the DB doesn't
  * have the equipped design columns (e.g. migration not run in production).
@@ -11,25 +51,10 @@ export async function getSlotDesignsForUser(userId: string): Promise<SlotDesigns
   try {
     const u = await prisma.user.findUnique({
       where: { id: userId },
-      select: {
-        equippedShirtDesignId: true,
-        equippedHairDesignId: true,
-        equippedBodyDesignId: true,
-        equippedEyesDesignId: true,
-        equippedMouthDesignId: true,
-        equippedAccessoryDesignId: true,
-      },
+      select: EQUIP_SELECT,
     });
     if (!u) return {};
-    const s: SlotDesignsMap = {};
-    const eq = (id: string | null) => (id ? `/api/designs/${id}/image` : undefined);
-    if (u.equippedShirtDesignId) s.SHIRT = eq(u.equippedShirtDesignId)!;
-    if (u.equippedHairDesignId) s.HAIR = eq(u.equippedHairDesignId)!;
-    if (u.equippedBodyDesignId) s.BODY = eq(u.equippedBodyDesignId)!;
-    if (u.equippedEyesDesignId) s.EYES = eq(u.equippedEyesDesignId)!;
-    if (u.equippedMouthDesignId) s.MOUTH = eq(u.equippedMouthDesignId)!;
-    if (u.equippedAccessoryDesignId) s.ACCESSORY = eq(u.equippedAccessoryDesignId)!;
-    return s;
+    return mapSlots(u);
   } catch {
     return {};
   }
@@ -46,27 +71,11 @@ export async function getSlotDesignsForUserIds(
   try {
     const users = await prisma.user.findMany({
       where: { id: { in: userIds } },
-      select: {
-        id: true,
-        equippedShirtDesignId: true,
-        equippedHairDesignId: true,
-        equippedBodyDesignId: true,
-        equippedEyesDesignId: true,
-        equippedMouthDesignId: true,
-        equippedAccessoryDesignId: true,
-      },
+      select: { id: true, ...EQUIP_SELECT },
     });
-    const eq = (id: string | null) => (id ? `/api/designs/${id}/image` : undefined);
     const out: Record<string, SlotDesignsMap> = {};
     for (const u of users) {
-      const s: SlotDesignsMap = {};
-      if (u.equippedShirtDesignId) s.SHIRT = eq(u.equippedShirtDesignId)!;
-      if (u.equippedHairDesignId) s.HAIR = eq(u.equippedHairDesignId)!;
-      if (u.equippedBodyDesignId) s.BODY = eq(u.equippedBodyDesignId)!;
-      if (u.equippedEyesDesignId) s.EYES = eq(u.equippedEyesDesignId)!;
-      if (u.equippedMouthDesignId) s.MOUTH = eq(u.equippedMouthDesignId)!;
-      if (u.equippedAccessoryDesignId) s.ACCESSORY = eq(u.equippedAccessoryDesignId)!;
-      out[u.id] = s;
+      out[u.id] = mapSlots(u);
     }
     return out;
   } catch {
