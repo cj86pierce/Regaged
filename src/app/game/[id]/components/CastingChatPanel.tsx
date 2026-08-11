@@ -57,7 +57,7 @@ function formatSystemText(body: string): { title: string; lines: string[] } {
     };
   }
 
-  const voted = text.match(/^(.+?)\s+has been voted out\.?\s*(?:\n)?(?:Day\s+(\d+).*)?$/is);
+  const voted = text.match(/^(.+?)\s+has been voted out\.?\s*(?:\r?\n)?(?:Day\s+(\d+).*)?$/i);
   if (voted) {
     const day = voted[2] ? `Day ${voted[2]} is over.` : null;
     return {
