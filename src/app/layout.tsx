@@ -46,7 +46,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </div>
 
           <div className="mainContent">
-            <div style={{ maxWidth: 1120, margin: "0 auto", minWidth: 0 }}>{children}</div>
+            <div style={{ margin: "0 auto", minWidth: 0, width: "100%" }}>{children}</div>
           </div>
 
           <SiteFooter />

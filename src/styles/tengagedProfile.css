@@ -699,6 +699,12 @@ body.tgProfilePage .rightRail {
 }
 
 @media (max-width: 820px) {
+  .tgProfile {
+    width: 100%;
+    max-width: 100%;
+    padding: 12px 12px 20px !important;
+    border-top-left-radius: 12px;
+  }
   .tgLayout {
     grid-template-columns: 1fr;
     gap: 16px;
@@ -707,7 +713,16 @@ body.tgProfilePage .rightRail {
     flex-direction: column;
   }
   .tgAvatar,
-  .tgUserInfo {
+  .tgUserInfo,
+  .tgGradeCol {
     width: 100%;
+    min-width: 0;
+  }
+  .tgGamesList,
+  .tgBetsTable,
+  .tgAuctionsTable,
+  .tgFriendsGrid {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 }

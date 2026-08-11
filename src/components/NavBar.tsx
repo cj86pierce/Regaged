@@ -101,29 +101,29 @@ export default function NavBar() {
         </Link>
 
         <nav className="tgNavLinks" aria-label="Primary">
-          <Link href="/" className="tgNavLink">
+          <Link href="/" className="tgNavLink tgNavDesktopOnly">
             Community
           </Link>
-          <Link href="/games" className="tgNavLink">
+          <Link href="/games" className="tgNavLink tgNavDesktopOnly">
             Games
           </Link>
-          <Link href="/designs" className="tgNavLink">
+          <Link href="/designs" className="tgNavLink tgNavDesktopOnly">
             Designs
           </Link>
           {showStaff ? (
-            <Link href="/owner" className="tgNavLink">
+            <Link href="/owner" className="tgNavLink tgNavDesktopOnly">
               {staffLabel}
             </Link>
           ) : null}
 
           {status === "loading" && !steamMe ? (
-            <span className="tgNavMuted">…</span>
+            <span className="tgNavMuted tgNavDesktopOnly">…</span>
           ) : !loggedIn ? (
             <>
-              <Link href="/register" className="tgNavLink">
+              <Link href="/register" className="tgNavLink tgNavDesktopOnly">
                 Register
               </Link>
-              <Link href="/login" className="tgNavLink">
+              <Link href="/login" className="tgNavLink tgNavDesktopOnly">
                 Login
               </Link>
             </>
@@ -133,7 +133,7 @@ export default function NavBar() {
                 Mail
                 {dmUnread > 0 ? <span className="tgNavBadge">{dmUnread > 99 ? "99+" : dmUnread}</span> : null}
               </Link>
-              <Link href="/profile" className="tgNavLink">
+              <Link href="/profile" className="tgNavLink tgNavDesktopOnly">
                 Profile
               </Link>
             </>

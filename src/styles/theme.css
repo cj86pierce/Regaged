@@ -168,15 +168,25 @@
   background-attachment: fixed;
   color: var(--text-primary);
   line-height: 1.45;
+  overflow-x: clip;
 }
 
 .mainContent {
   padding: 16px 12px 40px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.mainContent > div {
+  max-width: min(1120px, 100%);
+  width: 100%;
 }
 
 .pageShell {
   padding: 12px;
   min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 /* NavBar — Tengaged-style top bar + circular menu */

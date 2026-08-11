@@ -3,10 +3,31 @@
 /* Safe areas + base overflow */
 html {
   -webkit-text-size-adjust: 100%;
+  overflow-x: clip;
 }
 body {
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
+  overflow-x: clip;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+table {
+  max-width: 100%;
+}
+
+.tableScroll,
+.tgTableWrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
 }
 
 @media (max-width: 640px) {
@@ -53,28 +74,39 @@ body {
   }
 }
 
-/* Nav: compact + horizontal scroll on small screens */
-@media (max-width: 640px) {
+/* Nav: brand + mail + circular menu on phones */
+@media (max-width: 720px) {
   .tgNavInner {
     padding: 8px 10px;
-    gap: 8px;
+    gap: 10px;
   }
   .tgNavBrand {
     font-size: 16px;
   }
-  .tgNavLinks {
-    gap: 8px;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    max-width: calc(100vw - 110px);
+  .tgNavDesktopOnly {
+    display: none !important;
   }
-  .tgNavLinks::-webkit-scrollbar {
-    display: none;
+  .tgNavLinks {
+    gap: 10px;
+    max-width: none;
+    overflow: visible;
   }
   .tgNavLink {
-    font-size: 11px;
+    font-size: 12px;
+  }
+  .tgNavDropdown {
+    position: fixed;
+    top: calc(48px + env(safe-area-inset-top));
+    right: 10px;
+    left: auto;
+    width: min(220px, calc(100vw - 20px));
+    max-height: min(70dvh, 520px);
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tgNavMenuBtn {
+    width: 34px;
+    height: 34px;
   }
   .onlineCountBadge {
     top: auto !important;
@@ -88,11 +120,17 @@ body {
 /* Main content */
 @media (max-width: 640px) {
   .mainContent {
-    padding: 10px 10px calc(28px + env(safe-area-inset-bottom)) !important;
+    padding: 8px 8px calc(28px + env(safe-area-inset-bottom)) !important;
     min-width: 0 !important;
   }
   .pageShell {
     padding: 8px !important;
+  }
+  .theme-card,
+  .theme-card-hero,
+  .theme-panel,
+  .theme-sidebar-panel {
+    max-width: 100%;
   }
 }
 
@@ -102,17 +140,27 @@ body {
     grid-template-columns: 1fr !important;
     gap: 12px !important;
   }
+  .homeCtaRow {
+    display: flex !important;
+    flex-direction: column !important;
+  }
   .homeCtaRow a {
     flex: 1 1 auto;
+    width: 100%;
     text-align: center;
+    box-sizing: border-box;
   }
   .homeShopTiles {
-    grid-template-columns: 1fr 1fr 1fr !important;
+    grid-template-columns: 1fr !important;
     gap: 8px !important;
   }
   .homeBanner {
     min-height: 88px !important;
     border-radius: 4px !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+    padding: 14px !important;
   }
 }
 
@@ -140,14 +188,14 @@ body {
     aspect-ratio: 200 / 230;
   }
   .shopRegagedGrid {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
   }
   .shopRegagedThumb {
     aspect-ratio: 200 / 230;
   }
 }
 
-/* Games / enroll */
+/* Games / enroll / HOF / blogs / designs / DMs */
 @media (max-width: 640px) {
   .gamesPage {
     padding: 10px !important;
@@ -167,39 +215,64 @@ body {
     grid-template-columns: 1fr !important;
     gap: 12px !important;
   }
+  .hofGrid,
+  .hofLayout,
+  .blogsLayout,
+  .designsLayout,
+  .dmsLayout {
+    grid-template-columns: 1fr !important;
+  }
+  .designsGrid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
+  }
 }
 
-/* Profile */
+/* Profile (legacy + tengaged) */
 @media (max-width: 640px) {
-  .profilePage {
+  .profilePage,
+  .tgProfile {
     padding: 10px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 12px 0 0 0 !important;
   }
-  .profileLayout {
+  .profileLayout,
+  .tgLayout {
     grid-template-columns: 1fr !important;
+    gap: 14px !important;
   }
   .profileCardInner {
     grid-template-columns: 1fr !important;
     gap: 12px !important;
   }
-  .profileCardInner > div:first-child {
-    justify-self: start;
-  }
+  .profileCardInner > div:first-child,
   .profileCardInner > div:last-child {
     justify-self: start;
   }
   .profileUsername {
-    font-size: clamp(24px, 8vw, 38px) !important;
+    font-size: clamp(22px, 8vw, 34px) !important;
   }
   .profileStatLine {
     grid-template-columns: 70px 1fr auto !important;
     gap: 8px !important;
-    font-size: 18px;
+    font-size: 16px;
   }
-  .profileStatLine > div:first-child {
-    font-size: 16px !important;
+  .tgUserHeader {
+    flex-direction: column !important;
+    align-items: stretch !important;
   }
-  .profileStatLine > div:nth-child(2) {
-    font-size: 20px !important;
+  .tgAvatar,
+  .tgUserInfo,
+  .tgGradeCol {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  .tgGradeCol {
+    padding-right: 0 !important;
+    align-self: flex-start;
+  }
+  .tgSocial {
+    flex-wrap: wrap;
   }
 }
 
@@ -221,7 +294,25 @@ body {
   flex-shrink: 0;
 }
 
-/* Game page */
+/* Game page + Tengaged chat / side rail */
+@media (max-width: 900px) {
+  .gamePageGrid {
+    grid-template-columns: 1fr !important;
+  }
+  .blogsLayout {
+    grid-template-columns: 1fr !important;
+  }
+  .rightRail {
+    display: none !important;
+  }
+  .tgGamePage.game-page-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 10px 10px 18px !important;
+    border-top-left-radius: 12px;
+  }
+}
+
 @media (max-width: 640px) {
   .game-page-content {
     padding: 8px !important;
@@ -230,7 +321,6 @@ body {
     font-size: 18px !important;
   }
   .gamePlayerStrip {
-    /* Keep flush equal columns; avatars resize via ResizeObserver */
     gap: 0 !important;
     min-width: 0 !important;
   }
@@ -240,6 +330,10 @@ body {
   .gameCastingStripPlayers {
     gap: 0 !important;
   }
+  .gameCastingStripStats {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
   .gamePageGrid {
     gap: 10px !important;
     min-height: 0 !important;
@@ -248,6 +342,72 @@ body {
   .gamePageGrid > :last-child {
     order: -1;
   }
+
+  .tgChatTabs {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    min-height: 0;
+    gap: 4px;
+  }
+  .tgChatTabs .tgChatTab {
+    padding: 10px 12px 8px;
+    font-size: 12px;
+  }
+  .tgChatTabs .tgChatPager {
+    width: 100%;
+    margin-left: 0;
+    padding-bottom: 4px;
+    justify-content: flex-start;
+  }
+  .tgChatCompose {
+    flex-direction: column;
+    gap: 6px;
+  }
+  .tgChatCompose input,
+  .tgChatCompose button,
+  .tgPmCompose select,
+  .tgPmCompose input,
+  .tgPmCompose button,
+  .tgActionBtn,
+  .tgVoteSave {
+    min-height: 44px;
+    font-size: 14px;
+  }
+  .tgChatCompose button,
+  .tgPmCompose button,
+  .tgVoteSave,
+  .tgActionBtn {
+    width: 100%;
+  }
+  dl.tgIngameMessages dt {
+    gap: 4px;
+    padding: 6px 8px;
+  }
+  dl.tgIngameMessages dt .tgChatMeta {
+    width: 100%;
+    margin-left: 0;
+    order: 0;
+    justify-content: flex-end;
+  }
+  dl.tgIngameMessages dd.body {
+    padding: 8px;
+    font-size: 13px;
+  }
+  .tgSysDropSlots {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+  .tgSysDropSlot {
+    min-height: 44px;
+  }
+  .tgSideStory {
+    max-height: 220px;
+  }
+  .tgVotePts button {
+    width: 32px;
+    height: 32px;
+    font-size: 13px;
+  }
+
   .theme-chat-feed {
     max-height: min(52vh, 420px) !important;
   }
@@ -260,15 +420,20 @@ body {
   }
 }
 
-@media (max-width: 900px) {
-  .gamePageGrid {
-    grid-template-columns: 1fr !important;
+/* Footer */
+@media (max-width: 640px) {
+  .siteFooter {
+    padding: 20px 12px 28px !important;
+    margin-top: 28px !important;
   }
-  .blogsLayout {
-    grid-template-columns: 1fr !important;
+  .siteFooterRow {
+    gap: 2px 0;
+    font-size: 12px;
+    line-height: 1.7;
   }
-  .rightRail {
-    display: none !important;
+  .siteFooterDisclaimer {
+    font-size: 11px !important;
+    padding: 0 4px;
   }
 }
 
@@ -276,5 +441,36 @@ body {
 @media (max-width: 1150px) {
   .rightRail {
     display: none;
+  }
+}
+
+/* Prefer fixed backgrounds off on mobile (perf / iOS) */
+@media (max-width: 900px) {
+  .theme-body {
+    background-attachment: scroll;
+  }
+}
+
+/* Forms / auth / owner / misc */
+@media (max-width: 640px) {
+  input,
+  select,
+  textarea,
+  button {
+    max-width: 100%;
+  }
+  .theme-btn-primary,
+  .theme-btn-secondary {
+    box-sizing: border-box;
+  }
+  .ownerPage,
+  .ownerLayout,
+  .minigamesGrid {
+    grid-template-columns: 1fr !important;
+  }
+  .tgChatReact button {
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
   }
 }
