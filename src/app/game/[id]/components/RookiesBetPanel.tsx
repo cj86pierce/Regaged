@@ -17,6 +17,7 @@ export default function RookiesBetPanel({ gameId }: { gameId: string }) {
     payoutAmount: number | null;
   } | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const [maxBet, setMaxBet] = useState(2);
 
   useEffect(() => {
