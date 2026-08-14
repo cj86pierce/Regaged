@@ -4,6 +4,12 @@ import { assignFastingPov } from "@/lib/fastingPov";
 import { assignFrookiesHoh } from "@/lib/frookiesHoh";
 import { enterFrookiesJuryPhase } from "@/lib/frookiesJury";
 import { BOT_ROUND_MS, getFastingNomMs, getFinal3Ms } from "@/lib/fastingTiming";
+import {
+  CASTING_FAST_PRIZES,
+  ROOKIES_FAST_PRIZES,
+  ROOKIES_SLOW_PRIZES,
+  placementPayoutList,
+} from "@/lib/gamePrizes";
 
 export async function resolveFastingEviction(gameId: string, opts?: { skipLock?: boolean }) {
   if (!opts?.skipLock) {
@@ -265,32 +271,10 @@ export async function finishFastingGame(gameId: string, gameType?: string) {
     const isFrookies = gameType === "FROOKIES";
     const isRookies = gameType === "ROOKIES";
     const payout = isFrookies
-      ? [
-          { place: 1, karma: 25, t: 60 },
-          { place: 2, karma: 3, t: 20 },
-          { place: 3, karma: 0, t: 10 },
-          { place: 4, karma: 0, t: 10 },
-          { place: 5, karma: 0, t: 10 },
-          { place: 6, karma: 0, t: 10 },
-        ]
+      ? placementPayoutList(ROOKIES_FAST_PRIZES)
       : isRookies
-        ? [
-            { place: 1, karma: 80, t: 50 },
-            { place: 2, karma: 20, t: 30 },
-            { place: 3, karma: 15, t: 20 },
-            { place: 4, karma: 10, t: 10 },
-            { place: 5, karma: 8, t: 5 },
-            { place: 6, karma: 6, t: 0 },
-            { place: 7, karma: 5, t: 0 },
-            { place: 8, karma: 4, t: 0 },
-            { place: 9, karma: 2, t: 0 },
-            { place: 10, karma: 1, t: 0 },
-          ]
-        : [
-            { place: 1, karma: 12, t: 12 },
-            { place: 2, karma: 5, t: 10 },
-            { place: 3, karma: 3, t: 6 },
-          ];
+        ? placementPayoutList(ROOKIES_SLOW_PRIZES)
+        : placementPayoutList(CASTING_FAST_PRIZES);
 
     // Pay by final eliminatedPlace across the whole game, not just the
     // handful of players still active at the moment of finishing - places

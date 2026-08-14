@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { SURVIVOR_MERGE_PRIZE } from "@/lib/gamePrizes";
 import { getSystemUserId } from "@/lib/systemUser";
 import { tickCampDay } from "@/lib/survivor/camp";
 import { finishTribalAndSpawnMerge } from "@/lib/survivor/merge";
@@ -81,7 +82,7 @@ async function finishSurvivor(gameId: string, isBot: boolean) {
     const { applyPlacementPayout, isGameBotFilled } = await import("@/lib/botFillPayout");
     const botFilled = await isGameBotFilled(gameId);
     for (const a of actives) {
-      await applyPlacementPayout(a.userId, 50, 40, { botFilled });
+      await applyPlacementPayout(a.userId, SURVIVOR_MERGE_PRIZE.karma, SURVIVOR_MERGE_PRIZE.tMoney, { botFilled });
     }
   }
 }

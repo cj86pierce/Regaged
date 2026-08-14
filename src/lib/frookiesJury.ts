@@ -9,6 +9,7 @@
  * without a large amount of extra one-off final-4 game logic.
  */
 import { prisma } from "@/lib/prisma";
+import { ROOKIES_FAST_PRIZES, prizeForPlace } from "@/lib/gamePrizes";
 import { getSystemUserId } from "@/lib/systemUser";
 
 const JURY_VOTE_MS = 24 * 60 * 60 * 1000;
@@ -136,10 +137,12 @@ export async function resolveFrookiesJuryVoteIfDue(gameId: string) {
     if (!isBotGame) {
       const { applyPlacementPayout, isGameBotFilled } = await import("@/lib/botFillPayout");
       const botFilled = await isGameBotFilled(gameId);
-      // 1st/2nd per the Frookies payout table; 3rd–6th paid below.
-      await applyPlacementPayout(winner.userId, 25, 60, { botFilled });
-      await applyPlacementPayout(runnerUp.userId, 3, 20, { botFilled });
-      await payFrookiesPlacementsThreeThroughSix(gameId, botFilled);
+      // 1st/2nd per the Frookies (ROOKIES FAST) table; 3rd–5th paid below (6th is 0/0).
+      const first = prizeForPlace(ROOKIES_FAST_PRIZES, 1)!;
+      const second = prizeForPlace(ROOKIES_FAST_PRIZES, 2)!;
+      await applyPlacementPayout(winner.userId, first.karma, first.tMoney, { botFilled });
+      await applyPlacementPayout(runnerUp.userId, second.karma, second.tMoney, { botFilled });
+      await payFrookiesPlacementsThreeThroughFive(gameId, botFilled);
     }
 
     return { ok: true, finished: true as const, winnerUserId: winner.userId };
@@ -148,20 +151,14 @@ export async function resolveFrookiesJuryVoteIfDue(gameId: string) {
   }
 }
 
-async function payFrookiesPlacementsThreeThroughSix(gameId: string, botFilled: boolean) {
-  const payoutByPlace: Record<number, { karma: number; tMoney: number }> = {
-    3: { karma: 0, tMoney: 10 },
-    4: { karma: 0, tMoney: 10 },
-    5: { karma: 0, tMoney: 10 },
-    6: { karma: 0, tMoney: 10 },
-  };
+async function payFrookiesPlacementsThreeThroughFive(gameId: string, botFilled: boolean) {
   const { applyPlacementPayout } = await import("@/lib/botFillPayout");
   const players = await prisma.gamePlayer.findMany({
-    where: { gameId, eliminatedPlace: { in: [3, 4, 5, 6] } },
+    where: { gameId, eliminatedPlace: { in: [3, 4, 5] } },
     select: { userId: true, eliminatedPlace: true },
   });
   for (const p of players) {
-    const pay = payoutByPlace[p.eliminatedPlace!];
+    const pay = prizeForPlace(ROOKIES_FAST_PRIZES, p.eliminatedPlace!);
     if (!pay) continue;
     await applyPlacementPayout(p.userId, pay.karma, pay.tMoney, { botFilled });
   }

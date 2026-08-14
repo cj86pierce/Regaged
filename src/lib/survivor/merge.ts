@@ -1,9 +1,10 @@
 import { prisma } from "@/lib/prisma";
+import { SURVIVOR_MERGE_PRIZE } from "@/lib/gamePrizes";
 import { getSystemUserId } from "@/lib/systemUser";
 import { tryStartSurvivorGame } from "@/lib/survivor/start";
 import { SURVIVOR_MAX, SURVIVOR_MERGE_MAX } from "@/lib/survivor/timing";
 
-const FIRST_PLACE = { karma: 50, tMoney: 40 };
+const FIRST_PLACE = SURVIVOR_MERGE_PRIZE;
 
 async function closeTribalWithMergePlaces(tribalGameId: string) {
   const now = new Date();

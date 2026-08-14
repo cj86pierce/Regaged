@@ -1,23 +1,6 @@
 import { prisma } from "@/lib/prisma";
+import { CASTING_SLOW_PRIZES, prizeForPlace } from "@/lib/gamePrizes";
 import { getSystemUserId } from "@/lib/systemUser";
-
-// CASTING SLOW payouts (Karma = “K”)
-const CASTING_SLOW_PAYOUT: Record<number, { karma: number; tMoney: number }> = {
-  1: { karma: 80000, tMoney: 50 },
-  2: { karma: 40000, tMoney: 25 },
-  3: { karma: 20000, tMoney: 15 },
-  4: { karma: 10000, tMoney: 12 },
-  5: { karma: 8000, tMoney: 10 },
-  6: { karma: 6000, tMoney: 8 },
-  7: { karma: 5000, tMoney: 7 },
-  8: { karma: 4000, tMoney: 6 },
-  9: { karma: 3000, tMoney: 5 },
-  10: { karma: 2000, tMoney: 4 },
-  11: { karma: 1000, tMoney: 3 },
-  12: { karma: 0, tMoney: 2 },
-  13: { karma: 0, tMoney: 2 },
-  // 14–20: 0/0
-};
 
 function checks(plus: number, minus: number) {
   return (plus ?? 0) - (minus ?? 0);
@@ -65,13 +48,13 @@ export async function finalizeCastingGame(gameId: string) {
     return (b.chatCount ?? 0) - (a.chatCount ?? 0);
   });
 
-  await prisma.$transaction(async (tx) => {
+  const finalized = await prisma.$transaction(async (tx) => {
     // Bail if another worker already finished the game.
     const stillOpen = await tx.game.updateMany({
       where: { id: gameId, state: { not: "COMPLETED" }, completedAt: null },
       data: { state: "COMPLETED", completedAt: now, stateEndsAt: null },
     });
-    if (stillOpen.count === 0) return;
+    if (stillOpen.count === 0) return false;
 
     // stamp 1..4 and eliminate them (game completed)
     for (let i = 0; i < ranked.length; i++) {
@@ -104,10 +87,11 @@ export async function finalizeCastingGame(gameId: string) {
           `4th — ${nameOf(ranked[3]?.userId ?? "?")}`,
       },
     });
+    return true;
   });
 
-  // payouts for places 1..13 only - block for CASTING_BOT
-  if (!skipPayout) {
+  // payouts for places 1..13 only — skip bot games and skip if we didn't just finalize
+  if (!skipPayout && finalized) {
     const { applyPlacementPayout, isGameBotFilled } = await import("@/lib/botFillPayout");
     const botFilled = await isGameBotFilled(gameId);
     const placements = await prisma.gamePlayer.findMany({
@@ -116,8 +100,7 @@ export async function finalizeCastingGame(gameId: string) {
     });
 
     for (const p of placements) {
-      const place = p.eliminatedPlace ?? 999;
-      const pay = CASTING_SLOW_PAYOUT[place];
+      const pay = prizeForPlace(CASTING_SLOW_PRIZES, p.eliminatedPlace ?? 999);
       if (!pay) continue;
 
       await applyPlacementPayout(p.userId, pay.karma, pay.tMoney, { botFilled });
