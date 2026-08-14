@@ -33,6 +33,16 @@ export function middleware(req: NextRequest) {
       sameSite: "lax",
     });
   }
+
+  const ref = req.nextUrl.searchParams.get("ref");
+  if (ref && /^[A-Za-z0-9]{3,24}$/.test(ref)) {
+    res.cookies.set("rg_ref", ref.toLowerCase(), {
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30,
+      sameSite: "lax",
+    });
+  }
+
   return res;
 }
 
@@ -42,6 +52,7 @@ export const config = {
     "/api/health",
     "/login",
     "/register",
+    "/",
     "/api/auth/:path*",
   ],
 };

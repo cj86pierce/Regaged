@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUserId } from "@/lib/getCurrentUserId";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
+import { maybeGrantReferralReward } from "@/lib/referrals";
 
 function bad(msg: string, status = 400) {
   return NextResponse.json({ error: msg }, { status });
@@ -66,6 +67,12 @@ export async function POST(req: Request) {
       emailVerifyAttempts: 0,
     },
   });
+
+  try {
+    await maybeGrantReferralReward(userId);
+  } catch (e) {
+    console.error("referral reward after email verify failed", e);
+  }
 
   return NextResponse.json({ ok: true });
 }

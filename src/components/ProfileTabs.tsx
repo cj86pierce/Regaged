@@ -62,6 +62,12 @@ export type ProfileTabsData = {
   /** Logged-in viewer looking at someone else's profile — shows heart/mail */
   showSocialActions?: boolean;
   profileUserId?: string;
+  referral?: {
+    url: string;
+    rewardT: number;
+    earnedT: number;
+    paidCount: number;
+  };
 
   colorHistory?: { name: string; purchasedAt: string }[];
   bets?: {
@@ -289,6 +295,90 @@ function GameChip({ g }: { g: ProfileGameBubble }) {
         {dateLabel}
       </div>
     </Link>
+  );
+}
+
+function ReferralInviteBlock({
+  url,
+  rewardT,
+  earnedT,
+  paidCount,
+}: {
+  url: string;
+  rewardT: number;
+  earnedT: number;
+  paidCount: number;
+}) {
+  const [copied, setCopied] = useState(false);
+  const [displayUrl, setDisplayUrl] = useState(url);
+
+  useEffect(() => {
+    const full =
+      url.startsWith("http")
+        ? url
+        : `${window.location.origin}${url.startsWith("/") ? url : `/${url}`}`;
+    setDisplayUrl(full);
+  }, [url]);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(displayUrl);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  return (
+    <div className="tgSideBlock">
+      <div className="tgSideTitle">
+        Invite
+        <span className="tgSectionMeta" style={{ fontSize: 11, fontWeight: 400 }}>
+          {paidCount} · {earnedT} R$
+        </span>
+      </div>
+      <div style={{ fontSize: 11, lineHeight: 1.35, color: "#5d5d5d", marginBottom: 6 }}>
+        {rewardT} R$ when someone signs up with your link, verifies email, and joins a game.
+      </div>
+      <div style={{ display: "flex", gap: 4 }}>
+        <input
+          readOnly
+          value={displayUrl}
+          onFocus={(e) => e.currentTarget.select()}
+          aria-label="Referral invite link"
+          style={{
+            flex: 1,
+            minWidth: 0,
+            fontSize: 10,
+            padding: "4px 6px",
+            border: "1px solid #ccc",
+            borderRadius: 3,
+            background: "#fff",
+            color: "#424242",
+            fontFamily: "inherit",
+          }}
+        />
+        <button
+          type="button"
+          onClick={copy}
+          style={{
+            flexShrink: 0,
+            padding: "4px 8px",
+            borderRadius: 3,
+            border: "1px solid #ccc",
+            background: copied ? "#e8f5e9" : "#f7f7f7",
+            color: copied ? "#2e7d32" : "#257eb2",
+            fontWeight: 700,
+            fontSize: 10,
+            cursor: "pointer",
+            fontFamily: "inherit",
+          }}
+        >
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -536,6 +626,15 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
         </div>
 
         <div className="tgColRight">
+          {data.isOwnProfile ? (
+            <ReferralInviteBlock
+              url={data.referral?.url ?? `/register?ref=${encodeURIComponent(data.username)}`}
+              rewardT={data.referral?.rewardT ?? 5}
+              earnedT={data.referral?.earnedT ?? 0}
+              paidCount={data.referral?.paidCount ?? 0}
+            />
+          ) : null}
+
           {data.isOwnProfile ? (
             <div className="tgSideBlock">
               <div className="tgSideTitle">Profile</div>

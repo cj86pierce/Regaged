@@ -24,12 +24,20 @@ const FAQS: { q: string; a: ReactNode }[] = [
     ),
   },
   {
-    q: "What’s the difference between live and Bot modes?",
+    q: "Do empty lobbies still fill?",
     a: (
       <>
-        Bot rooms use the <b>same rules</b> as the matching live mode, but with short ~2 minute
-        phases and bots filling empty seats — great for practice. Live rooms are the real paced
-        games with other players.
+        Yes. Live rooms wait for players, then <b>bot-fill empty seats after 15 minutes</b> so the
+        game can start. Instant practice bot rooms are paused for now.
+      </>
+    ),
+  },
+  {
+    q: "How do referrals work?",
+    a: (
+      <>
+        On your profile, copy your invite link. When someone signs up with it, adds and verifies
+        their email, and joins a game, you get <b>5 R$</b>. One payout per person.
       </>
     ),
   },

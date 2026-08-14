@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { checkBlockedContent } from "@/lib/contentFilter";
 import { isReservedUsername, reservedUsernameError } from "@/lib/usernames";
 import { maybeAlertSimilarUsernames } from "@/lib/similarUsernames";
+import { parseReferralCodeFromCookieHeader, resolveReferrerId } from "@/lib/referrals";
 
 function okJson(data: any) {
   return NextResponse.json(data);
@@ -34,6 +35,9 @@ export async function POST(req: Request) {
   if (password.length < 6) return errJson("Password must be at least 6 characters.");
 
   const usernameLower = usernameRaw.toLowerCase();
+  const refFromBody = typeof body?.ref === "string" ? body.ref : "";
+  const refFromCookie = parseReferralCodeFromCookieHeader(req.headers.get("cookie"));
+  const referredByUserId = await resolveReferrerId(refFromBody || refFromCookie);
 
   const existing = await prisma.user.findFirst({
     where: {
@@ -55,6 +59,7 @@ export async function POST(req: Request) {
         username: usernameRaw,
         usernameLower,
         passwordHash,
+        ...(referredByUserId ? { referredByUserId } : {}),
       },
       select: { id: true, username: true, usernameLower: true, createdAt: true },
     });

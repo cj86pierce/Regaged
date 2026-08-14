@@ -155,7 +155,7 @@ export default async function EnrollHub() {
         </div>
       ) : null}
       <div className="theme-text-muted" style={{ fontSize: 13, marginBottom: 16, lineHeight: 1.4 }}>
-        Pick a mode. Free: Fastings & Castings. Own Yellow + fee: Frookies, Rookies & Survivor. Live lobbies bot-fill after 15 minutes if seats are still open. Practice bot rooms fill instantly.
+        Pick a mode. Free: Fastings & Castings. Own Yellow + fee: Frookies, Rookies & Survivor. Live lobbies bot-fill empty seats after 15 minutes.
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
@@ -164,8 +164,6 @@ export default async function EnrollHub() {
           <div className="enrollGrid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 14 }}>
             <GameCard title="Fastings" desc="Fast rounds. POV → nominate → evict. Bot-fills empty seats after 15 min." href="/enroll/fasting" accent="blue" />
             <GameCard title="Castings" desc="12-hour days. Keys, apples, challenges. Bot-fills empty seats after 15 min." href="/enroll/casting" accent="blue" />
-            <GameCard title="Fastings (Bot)" desc="Same Fastings rules, ~2 min phases. Bots fill instantly." href="/enroll/fasting-bot" accent="blue" />
-            <GameCard title="Castings (Bot)" desc="Same Castings rules, ~2 min days. Bots fill instantly." href="/enroll/casting-bot" accent="blue" />
           </div>
         </section>
 
@@ -184,8 +182,6 @@ export default async function EnrollHub() {
               href="/enroll/rookies"
               accent="pink"
             />
-            <GameCard title="Frookies (Bot)" desc="Same Frookies rules, ~2 min phases. Bots fill instantly." href="/enroll/frookies-bot" accent="pink" />
-            <GameCard title="Rookies (Bot)" desc="Same Rookies rules, ~2 min days. Bots fill instantly." href="/enroll/rookies-bot" accent="pink" />
           </div>
         </section>
 
@@ -196,12 +192,6 @@ export default async function EnrollHub() {
               title="Survivor"
               desc="T$10 entry. 20 castaways, 2 tribes. Bot-fills empty seats after 15 min."
               href="/enroll/survivor"
-              accent="green"
-            />
-            <GameCard
-              title="Survivor (Bot)"
-              desc="Same Survivor rules, ~2 min days. Bots fill instantly."
-              href="/enroll/survivor-bot"
               accent="green"
             />
           </div>

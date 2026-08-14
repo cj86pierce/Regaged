@@ -25,7 +25,7 @@ export default function TosPage() {
         <p>
           You are responsible for your account, password, and activity. Do not share accounts, create
           accounts for others without permission, or use bots/automation that interfere with fair
-          play outside of official bot practice modes.
+          play.
         </p>
 
         <h2 style={{ fontSize: 16, fontWeight: 1000 }}>4. Conduct</h2>

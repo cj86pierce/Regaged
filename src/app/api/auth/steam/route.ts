@@ -4,6 +4,7 @@ import { signJwt } from "@/lib/jwt";
 import bcrypt from "bcryptjs";
 import { getClientIpFromHeaders } from "@/lib/clientIp";
 import { enforceLoginGuards } from "@/lib/authLoginGuards";
+import { parseReferralCodeFromCookieHeader, resolveReferrerId } from "@/lib/referrals";
 
 const STEAM_WEB_API_KEY = process.env.STEAM_WEB_API_KEY;
 const STEAM_APP_ID = process.env.STEAM_APP_ID || "480"; // Spacewar for dev; replace with your App ID
@@ -97,6 +98,9 @@ export async function POST(req: Request) {
     const finalLower = username.toLowerCase();
 
     const passwordHash = await bcrypt.hash(`steam:${steamIdStr}:${Date.now()}`, 10);
+    const referredByUserId = await resolveReferrerId(
+      parseReferralCodeFromCookieHeader(req.headers.get("cookie"))
+    );
     user = await prisma.user.create({
       data: {
         username: username,
@@ -104,6 +108,7 @@ export async function POST(req: Request) {
         passwordHash,
         steamId: steamIdStr,
         emailVerifiedAt: new Date(), // Steam users skip email verification
+        ...(referredByUserId ? { referredByUserId } : {}),
       },
       select: {
         id: true,

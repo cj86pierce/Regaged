@@ -136,6 +136,14 @@ model User {
   emailVerifySentAt    DateTime?
   emailVerifyAttempts  Int       @default(0)
 
+  // Referrals: 5 R$ when a referred user verifies email and joins a game
+  referralCode     String?   @unique
+  referredByUserId String?
+  referralPaidAt   DateTime?
+  referralRewardT  Int       @default(0)
+  referredBy       User?     @relation("UserReferrals", fields: [referredByUserId], references: [id], onDelete: SetNull)
+  referrals        User[]    @relation("UserReferrals")
+
   // (Optional) phone fields can stay if you want, but not required
   phoneE164       String?   @unique
   phoneVerifiedAt DateTime?
@@ -229,6 +237,7 @@ model User {
   deviceAccounts DeviceAccount[]
 
   @@index([usernameLower])
+  @@index([referredByUserId])
 }
 
 /** Browser/device cookie → accounts that have logged in on it (multi-account detection). */

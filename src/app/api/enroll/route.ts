@@ -5,6 +5,8 @@ import { isEmailVerified } from "@/lib/emailVerification";
 import { maybeFillAndStartBotLobby, maybeStartLiveLobby } from "@/lib/lobbyTiming";
 import { SURVIVOR_MAX, SURVIVOR_MERGE_MAX } from "@/lib/survivor/timing";
 import { checkBlockedContent } from "@/lib/contentFilter";
+import { isPracticeBotType, PRACTICE_BOT_DISABLED_MESSAGE, PRACTICE_BOT_ENABLED } from "@/lib/botPractice";
+import { maybeGrantReferralReward } from "@/lib/referrals";
 
 const FASTING_MAX = 15;
 const CASTING_MAX = 20;
@@ -65,6 +67,10 @@ export async function POST(req: Request) {
 
   if (!ALL_TYPES.includes(gameType)) {
     return NextResponse.json({ error: "Invalid gameType" }, { status: 400 });
+  }
+
+  if (isPracticeBotType(gameType) && !PRACTICE_BOT_ENABLED) {
+    return NextResponse.json({ error: PRACTICE_BOT_DISABLED_MESSAGE }, { status: 403 });
   }
 
   if (enrollMessage.length > 500) {
@@ -269,6 +275,12 @@ export async function POST(req: Request) {
           body: enrollMessage,
         },
       });
+    }
+
+    try {
+      await maybeGrantReferralReward(userId);
+    } catch (e) {
+      console.error("referral reward after enroll failed", e);
     }
   }
 

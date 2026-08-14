@@ -6,6 +6,7 @@ import { sortProfileGames } from "@/lib/sortProfileGames";
 import { avatarConfigFromUser } from "@/lib/avatarConfigFromUser";
 import { getKarmaRank } from "@/lib/hof";
 import { resolveStaffFlags } from "@/lib/staffAccess";
+import { ensureReferralCode, referralSignupUrl, REFERRAL_REWARD_T } from "@/lib/referrals";
 
 const avatarSelect = {
   id: true,
@@ -327,6 +328,36 @@ export async function loadProfileTabsData(opts: {
   const hofRank = await getKarmaRank(userId);
   const staff = resolveStaffFlags(user);
 
+  let referral: ProfileTabsData["referral"];
+  if (isOwnProfile) {
+    try {
+      const code = await ensureReferralCode(userId, user.usernameLower);
+      const [earned, paidCount] = await Promise.all([
+        prisma.user.aggregate({
+          where: { referredByUserId: userId },
+          _sum: { referralRewardT: true },
+        }),
+        prisma.user.count({
+          where: { referredByUserId: userId, referralRewardT: { gt: 0 } },
+        }),
+      ]);
+      referral = {
+        url: referralSignupUrl(code),
+        rewardT: REFERRAL_REWARD_T,
+        earnedT: earned._sum.referralRewardT ?? 0,
+        paidCount,
+      };
+    } catch (e) {
+      console.error("referral profile block failed", e);
+      referral = {
+        url: referralSignupUrl(user.usernameLower),
+        rewardT: REFERRAL_REWARD_T,
+        earnedT: 0,
+        paidCount: 0,
+      };
+    }
+  }
+
   return {
     isOwnProfile,
     username: user.username,
@@ -366,5 +397,6 @@ export async function loadProfileTabsData(opts: {
     myAuctions,
     designGifts,
     latestActions,
+    referral,
   };
 }
