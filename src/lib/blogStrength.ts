@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 
-/** Returns the user's color level strength (1 if no color purchased) for blog vote points. */
+/** Highest owned color strength. Used for blog/design vote weight and Rookies bet cap (2×). */
 export async function getUserColorStrength(userId: string): Promise<number> {
   const purchased = await prisma.userColor.findMany({
     where: { userId },

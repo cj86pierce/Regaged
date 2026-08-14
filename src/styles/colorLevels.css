@@ -2,27 +2,33 @@
 
 .lvlSwatch {
   width: 50px;
-  height: 30px;           /* ✅ requested size */
+  height: 30px;
   border-radius: 3px;
-  border: 1px solid rgba(0,0,0,0.85);
+  border: 1px solid rgba(0, 0, 0, 0.85);
   background: #000;
   position: relative;
   overflow: hidden;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  isolation: isolate;
 }
 
 .lvlSwatch.static {
   background: var(--lvl, #fff);
 }
 
-.lvlSwatch.animated::before {
+.lvlSwatch.animated::before,
+.lvlSwatch.animated::after {
   content: "";
   position: absolute;
+  pointer-events: none;
+}
+
+/* Default shine (any animated color without a custom look) */
+.lvlSwatch.animated::before {
   top: -35%;
   bottom: -35%;
-  width: 26%;
-  left: -55%;
-
+  width: 28%;
+  left: -40%;
   background: linear-gradient(
     90deg,
     transparent,
@@ -32,36 +38,623 @@
     color-mix(in srgb, var(--lvl) 90%, white),
     transparent
   );
-
   filter: blur(1.2px);
-  opacity: 1;
-
   box-shadow:
     0 0 14px color-mix(in srgb, var(--lvl) 75%, white),
     0 0 26px var(--lvl);
-
-  animation: lvlSweep 0.70s linear infinite; /* ✅ faster */
+  animation: lvlSweep 0.7s linear infinite;
 }
 
-.lvlSwatch.tvstar.animated::before {
+/* ---------- Silver: chrome, two gleams ---------- */
+.lvlSwatch.lvl-silver {
+  background: linear-gradient(180deg, #f4f4f4 0%, #b8bdc3 42%, #ececec 58%, #7a8086 100%);
+}
+.lvlSwatch.lvl-silver.animated::before {
+  top: -40%;
+  bottom: -40%;
+  width: 22%;
+  left: -40%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.95), transparent);
+  filter: blur(0.6px);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+  animation: lvlSweep 1.05s linear infinite;
+}
+.lvlSwatch.lvl-silver.animated::after {
+  top: -40%;
+  bottom: -40%;
+  width: 10%;
+  left: -40%;
+  background: linear-gradient(90deg, transparent, rgba(210, 225, 240, 0.7), transparent);
+  filter: blur(1px);
+  animation: lvlSweep 1.05s linear infinite;
+  animation-delay: -0.45s;
+}
+
+/* ---------- Gold: slower warm luxury ---------- */
+.lvlSwatch.lvl-gold {
+  background: linear-gradient(180deg, #fff6c2 0%, #ffd700 38%, #c9a227 72%, #7a5c10 100%);
+}
+.lvlSwatch.lvl-gold.animated::before {
+  top: -30%;
+  bottom: -30%;
+  width: 32%;
+  left: -40%;
   background: linear-gradient(
     90deg,
     transparent,
-    #ff1744,
-    #ff9100,
-    #ffea00,
-    #00e676,
-    #2979ff,
-    #d500f9,
+    rgba(255, 248, 200, 0.2),
+    rgba(255, 255, 220, 0.95),
+    rgba(255, 209, 80, 0.7),
     transparent
   );
+  filter: blur(1.4px);
+  box-shadow: 0 0 18px rgba(255, 215, 0, 0.7);
+  animation: lvlSweep 1.55s linear infinite;
+}
+.lvlSwatch.lvl-gold.animated::after {
+  inset: 0;
+  background: radial-gradient(circle at 30% 40%, rgba(255, 255, 255, 0.55) 0 2px, transparent 3px),
+    radial-gradient(circle at 70% 65%, rgba(255, 255, 200, 0.5) 0 1.5px, transparent 3px);
+  animation: lvlTwinkle 1.8s ease-in-out infinite;
+}
+
+/* ---------- Sky: sky-blue sweep bar ---------- */
+.lvlSwatch.lvl-sky {
+  background: linear-gradient(180deg, #e3f2fd 0%, #4fc3f7 45%, #0288d1 100%);
+}
+.lvlSwatch.lvl-sky.animated::before {
+  top: -40%;
+  bottom: -40%;
+  width: 28%;
+  left: -40%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(227, 242, 253, 0.35),
+    rgba(255, 255, 255, 0.95),
+    rgba(79, 195, 247, 0.7),
+    transparent
+  );
+  filter: blur(1px);
+  box-shadow: 0 0 16px rgba(79, 195, 247, 0.75);
+  animation: lvlSweep 1.1s linear infinite;
+}
+.lvlSwatch.lvl-sky.animated::after {
+  display: none;
+}
+
+/* ---------- Blood: crimson sweep bar ---------- */
+.lvlSwatch.lvl-blood {
+  background: linear-gradient(180deg, #6a0000 0%, #8b0000 40%, #2a0000 100%);
+}
+.lvlSwatch.lvl-blood.animated::before {
+  top: -40%;
+  bottom: -40%;
+  width: 28%;
+  left: -40%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 80, 80, 0.35),
+    rgba(255, 220, 220, 0.95),
+    rgba(255, 40, 40, 0.65),
+    transparent
+  );
+  filter: blur(1px);
+  box-shadow: 0 0 16px rgba(255, 23, 23, 0.7);
+  animation: lvlSweep 1.15s linear infinite;
+}
+.lvlSwatch.lvl-blood.animated::after {
+  display: none;
+}
+
+/* ---------- TV Star: top-tier rainbow + glow ---------- */
+.lvlSwatch.lvl-tv-star,
+.lvlSwatch.tvstar {
+  background: linear-gradient(
+    90deg,
+    #ff1744,
+    #ff6d00,
+    #ffea00,
+    #00e676,
+    #00e5ff,
+    #2979ff,
+    #d500f9,
+    #ff1744
+  );
+  background-size: 340% 100%;
+  border-color: rgba(255, 255, 255, 0.95);
   box-shadow:
-    0 0 16px rgba(255,255,255,0.65),
-    0 0 28px rgba(255,0,255,0.6),
-    0 0 28px rgba(0,128,255,0.6);
+    0 0 5px rgba(255, 255, 255, 0.85),
+    0 0 10px rgba(255, 23, 68, 0.7),
+    0 0 16px rgba(41, 121, 255, 0.55),
+    inset 0 0 8px rgba(255, 255, 255, 0.35);
+  animation: lvlRainbowShift 1.45s linear infinite, lvlTvGlow 1.8s ease-in-out infinite;
+}
+.lvlSwatch.lvl-tv-star.animated::before,
+.lvlSwatch.tvstar.animated::before {
+  top: -40%;
+  bottom: -40%;
+  width: 28%;
+  left: -40%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.15),
+    rgba(255, 255, 255, 0.95),
+    rgba(255, 255, 255, 0.15),
+    transparent
+  );
+  filter: blur(0.8px);
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.75);
+  animation: lvlSweep 0.95s linear infinite;
+}
+.lvlSwatch.lvl-tv-star.animated::after,
+.lvlSwatch.tvstar.animated::after {
+  inset: 0;
+  background:
+    radial-gradient(circle at 18% 28%, #fff 0 1.6px, transparent 2.4px),
+    radial-gradient(circle at 72% 22%, #fff 0 1.2px, transparent 2.2px),
+    radial-gradient(circle at 58% 72%, #fff 0 1.4px, transparent 2.3px),
+    radial-gradient(circle at 32% 78%, rgba(255, 255, 180, 0.95) 0 1.1px, transparent 2px);
+  animation: lvlTwinkle 0.7s steps(2, end) infinite;
+}
+
+/* ---------- Fire: heat rising ---------- */
+.lvlSwatch.lvl-fire {
+  background: linear-gradient(180deg, #ffea00 0%, #ff6d00 48%, #bf360c 100%);
+}
+.lvlSwatch.lvl-fire.animated::before {
+  left: 0;
+  right: 0;
+  width: auto;
+  top: 0;
+  height: 75%;
+  background: linear-gradient(180deg, rgba(255, 255, 180, 0.55), rgba(255, 80, 0, 0.1) 55%, transparent);
+  filter: blur(3px);
+  box-shadow: none;
+  animation: lvlRise 1.15s linear infinite;
+}
+.lvlSwatch.lvl-fire.animated::after {
+  left: 15%;
+  width: 70%;
+  top: 0;
+  height: 70%;
+  background: linear-gradient(180deg, rgba(255, 220, 80, 0.5), transparent);
+  filter: blur(4px);
+  animation: lvlRise 0.85s linear infinite;
+  animation-delay: -0.3s;
+}
+
+/* ---------- Ice: crystal sparkle ---------- */
+.lvlSwatch.lvl-ice {
+  background: linear-gradient(180deg, #f0fdff 0%, #80deea 42%, #26c6da 100%);
+}
+.lvlSwatch.lvl-ice.animated::before {
+  inset: 0;
+  width: auto;
+  left: 0;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.7) 0 8%, transparent 18% 100%),
+    linear-gradient(300deg, rgba(180, 240, 255, 0.5) 0 12%, transparent 22%);
+  filter: none;
+  box-shadow: none;
+  animation: lvlShimmer 2.6s ease-in-out infinite;
+}
+.lvlSwatch.lvl-ice.animated::after {
+  inset: 0;
+  background:
+    radial-gradient(circle at 22% 30%, #fff 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 68% 58%, #fff 0 1.2px, transparent 2.2px),
+    radial-gradient(circle at 48% 78%, #e0f7fa 0 1px, transparent 2px);
+  animation: lvlTwinkle 1.4s ease-in-out infinite;
+}
+
+/* ---------- Toxic: radioactive pulse ---------- */
+.lvlSwatch.lvl-toxic {
+  background: linear-gradient(180deg, #d4ff00 0%, #76ff03 50%, #1b5e20 100%);
+}
+.lvlSwatch.lvl-toxic.animated::before {
+  inset: -30%;
+  width: auto;
+  left: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(200, 255, 0, 0.75), transparent 58%);
+  filter: blur(4px);
+  box-shadow: 0 0 18px #76ff03;
+  animation: lvlPulse 1.1s ease-in-out infinite;
+}
+.lvlSwatch.lvl-toxic.animated::after {
+  inset: 0;
+  box-shadow: inset 0 0 10px rgba(0, 255, 0, 0.45);
+  animation: lvlPulse 1.1s ease-in-out infinite reverse;
+}
+
+/* ---------- Galaxy: starfield drift ---------- */
+.lvlSwatch.lvl-galaxy {
+  background: linear-gradient(180deg, #12002a 0%, #4a148c 52%, #0a0018 100%);
+}
+.lvlSwatch.lvl-galaxy.animated::before {
+  inset: -40% -80%;
+  width: auto;
+  left: -40%;
+  background:
+    radial-gradient(1.5px 1.5px at 20% 30%, #fff, transparent),
+    radial-gradient(1px 1px at 40% 70%, #ce93d8, transparent),
+    radial-gradient(1.5px 1.5px at 65% 25%, #fff, transparent),
+    radial-gradient(1px 1px at 80% 60%, #90caf9, transparent),
+    radial-gradient(1px 1px at 10% 80%, #fff, transparent),
+    radial-gradient(2px 2px at 55% 50%, #f8bbd0, transparent);
+  filter: none;
+  box-shadow: none;
+  animation: lvlDrift 7s linear infinite;
+}
+.lvlSwatch.lvl-galaxy.animated::after {
+  inset: 0;
+  background: radial-gradient(ellipse at 40% 40%, rgba(126, 87, 194, 0.45), transparent 65%);
+  animation: lvlPulse 3.4s ease-in-out infinite;
+}
+
+/* ---------- Ocean: teal wave drift ---------- */
+.lvlSwatch.lvl-ocean {
+  background: linear-gradient(180deg, #4dd0e1 0%, #00838f 48%, #004d40 100%);
+}
+.lvlSwatch.lvl-ocean.animated::before {
+  top: 18%;
+  height: 48%;
+  width: 85%;
+  left: -90%;
+  border-radius: 45%;
+  background: radial-gradient(ellipse, rgba(178, 235, 242, 0.7), rgba(0, 151, 167, 0.05) 72%);
+  filter: blur(2.2px);
+  box-shadow: none;
+  animation: lvlCloud 2.8s linear infinite;
+}
+.lvlSwatch.lvl-ocean.animated::after {
+  top: 52%;
+  height: 40%;
+  width: 70%;
+  left: -90%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(0, 96, 100, 0.55), transparent 75%);
+  filter: blur(2.8px);
+  animation: lvlCloud 3.6s linear infinite reverse;
+}
+
+/* ---------- Neon: hot pink glow ---------- */
+.lvlSwatch.lvl-neon {
+  background: linear-gradient(180deg, #ff80ab 0%, #f50057 48%, #880e4f 100%);
+  box-shadow: 0 0 10px rgba(245, 0, 87, 0.65), inset 0 0 8px rgba(255, 128, 171, 0.35);
+}
+.lvlSwatch.lvl-neon.animated::before {
+  inset: -25%;
+  width: auto;
+  left: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(255, 64, 129, 0.8), transparent 58%);
+  filter: blur(5px);
+  box-shadow: 0 0 16px #f50057;
+  animation: lvlPulse 0.85s ease-in-out infinite;
+}
+.lvlSwatch.lvl-neon.animated::after {
+  top: -40%;
+  bottom: -40%;
+  width: 18%;
+  left: -40%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.85), transparent);
+  filter: blur(0.8px);
+  animation: lvlSweep 0.7s linear infinite;
+}
+
+/* ---------- Aurora: green-violet curtain ---------- */
+.lvlSwatch.lvl-aurora {
+  background: linear-gradient(180deg, #1a237e 0%, #004d40 50%, #311b92 100%);
+}
+.lvlSwatch.lvl-aurora.animated::before {
+  top: -20%;
+  bottom: -20%;
+  width: 55%;
+  left: -20%;
+  background: linear-gradient(90deg, transparent, rgba(105, 240, 174, 0.55), transparent);
+  filter: blur(6px);
+  box-shadow: none;
+  animation: lvlCurtain 3.4s ease-in-out infinite;
+}
+.lvlSwatch.lvl-aurora.animated::after {
+  top: -20%;
+  bottom: -20%;
+  width: 45%;
+  left: 20%;
+  background: linear-gradient(90deg, transparent, rgba(179, 136, 255, 0.5), transparent);
+  filter: blur(7px);
+  animation: lvlCurtain 4.2s ease-in-out infinite reverse;
+}
+
+/* ---------- Plasma: electric flicker ---------- */
+.lvlSwatch.lvl-plasma {
+  background: linear-gradient(135deg, #4a0072 0%, #e040fb 40%, #18ffff 70%, #311b92 100%);
+}
+.lvlSwatch.lvl-plasma.animated::before {
+  inset: -15%;
+  width: auto;
+  left: 0;
+  background: radial-gradient(circle at 40% 40%, rgba(224, 64, 251, 0.7), transparent 55%);
+  filter: blur(3px);
+  box-shadow: none;
+  animation: lvlFlicker 0.45s steps(2, end) infinite;
+}
+.lvlSwatch.lvl-plasma.animated::after {
+  top: -40%;
+  bottom: -40%;
+  width: 12%;
+  left: -40%;
+  background: linear-gradient(90deg, transparent, rgba(24, 255, 255, 0.95), transparent);
+  filter: blur(0.5px);
+  animation: lvlSweep 0.55s linear infinite;
+}
+
+/* ---------- Prism: rainbow facets (below TV Star) ---------- */
+.lvlSwatch.lvl-prism {
+  background: linear-gradient(
+    125deg,
+    #ce93d8 0%,
+    #90caf9 28%,
+    #fff59d 52%,
+    #a5d6a7 74%,
+    #f48fb1 100%
+  );
+  background-size: 220% 220%;
+  animation: lvlRainbowShift 4.8s linear infinite;
+}
+.lvlSwatch.lvl-prism.animated::before {
+  top: -40%;
+  bottom: -40%;
+  width: 30%;
+  left: -40%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.25),
+    rgba(255, 255, 255, 0.8),
+    rgba(255, 255, 255, 0.25),
+    transparent
+  );
+  filter: blur(0.7px);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.45);
+  animation: lvlSweep 1.35s linear infinite;
+}
+.lvlSwatch.lvl-prism.animated::after {
+  inset: 0;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.45) 0 10%, transparent 18%),
+    linear-gradient(300deg, rgba(255, 255, 255, 0.25) 0 8%, transparent 16%);
+  animation: lvlShimmer 3.2s ease-in-out infinite;
+}
+
+/* ---------- Ultra Gold: heavier gold flare ---------- */
+.lvlSwatch.lvl-ultra-gold {
+  background: linear-gradient(180deg, #fff8e1 0%, #ffc107 38%, #ff8f00 72%, #e65100 100%);
+  box-shadow: 0 0 10px rgba(255, 193, 7, 0.7), inset 0 0 8px rgba(255, 255, 200, 0.35);
+}
+.lvlSwatch.lvl-ultra-gold.animated::before {
+  top: -35%;
+  bottom: -35%;
+  width: 38%;
+  left: -40%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 220, 0.3),
+    rgba(255, 255, 255, 0.95),
+    rgba(255, 213, 79, 0.8),
+    transparent
+  );
+  filter: blur(1.2px);
+  box-shadow: 0 0 22px rgba(255, 193, 7, 0.85);
+  animation: lvlSweep 1.2s linear infinite;
+}
+.lvlSwatch.lvl-ultra-gold.animated::after {
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(255, 255, 255, 0.85) 0 3px, transparent 8px),
+    radial-gradient(circle at 30% 60%, rgba(255, 236, 179, 0.7) 0 2px, transparent 5px);
+  animation: lvlTwinkle 1.5s ease-in-out infinite;
+}
+
+/* ---------- Titanium: cold white chrome ---------- */
+.lvlSwatch.lvl-titanium {
+  background: linear-gradient(180deg, #ffffff 0%, #cfd8dc 40%, #90a4ae 70%, #eceff1 100%);
+  border-color: rgba(255, 255, 255, 0.9);
+}
+.lvlSwatch.lvl-titanium.animated::before {
+  top: -40%;
+  bottom: -40%;
+  width: 24%;
+  left: -40%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 1), rgba(207, 216, 220, 0.7), transparent);
+  filter: blur(0.4px);
+  box-shadow: 0 0 14px rgba(255, 255, 255, 0.9);
+  animation: lvlSweep 0.9s linear infinite;
+}
+.lvlSwatch.lvl-titanium.animated::after {
+  top: -40%;
+  bottom: -40%;
+  width: 10%;
+  left: -40%;
+  background: linear-gradient(90deg, transparent, rgba(176, 190, 197, 0.8), transparent);
+  animation: lvlSweep 0.9s linear infinite;
+  animation-delay: -0.35s;
+}
+
+/* ---------- Chroma: pink-violet moving bar ---------- */
+.lvlSwatch.lvl-chroma {
+  background: linear-gradient(135deg, #4a148c 0%, #e040fb 42%, #7b1fa2 70%, #311b92 100%);
+}
+.lvlSwatch.lvl-chroma.animated::before {
+  top: -45%;
+  bottom: -45%;
+  width: 34%;
+  left: -40%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 128, 171, 0.25),
+    rgba(255, 255, 255, 0.95),
+    rgba(224, 64, 251, 0.75),
+    transparent
+  );
+  filter: blur(0.8px);
+  box-shadow: 0 0 18px rgba(224, 64, 251, 0.85);
+  animation: lvlSweep 0.85s linear infinite;
+}
+.lvlSwatch.lvl-chroma.animated::after {
+  top: -45%;
+  bottom: -45%;
+  width: 12%;
+  left: -40%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
+  filter: blur(1px);
+  animation: lvlSweep 0.85s linear infinite;
+  animation-delay: -0.28s;
+}
+
+/* ---------- Holofoil: iridescent oil-slick ---------- */
+.lvlSwatch.lvl-holofoil {
+  background: linear-gradient(
+    125deg,
+    #80d8ff 0%,
+    #ea80fc 28%,
+    #ffffff 50%,
+    #82b1ff 72%,
+    #f8bbd0 100%
+  );
+  background-size: 240% 240%;
+  animation: lvlRainbowShift 3.6s linear infinite;
+}
+.lvlSwatch.lvl-holofoil.animated::before {
+  top: -40%;
+  bottom: -40%;
+  width: 32%;
+  left: -40%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.35),
+    rgba(255, 255, 255, 0.9),
+    rgba(128, 216, 255, 0.4),
+    transparent
+  );
+  filter: blur(0.6px);
+  animation: lvlSweep 1.2s linear infinite;
+}
+.lvlSwatch.lvl-holofoil.animated::after {
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0 12%, transparent 20%);
+  animation: lvlShimmer 2.8s ease-in-out infinite;
+}
+
+/* ---------- Crystal: pink-white glow ---------- */
+.lvlSwatch.lvl-crystal {
+  background: radial-gradient(circle at 50% 45%, #ffffff 0%, #ff80ab 42%, #f50057 100%);
+  border-color: rgba(255, 255, 255, 0.95);
+  box-shadow:
+    0 0 8px rgba(255, 255, 255, 0.95),
+    0 0 16px rgba(255, 128, 171, 0.75),
+    inset 0 0 8px rgba(255, 255, 255, 0.45);
+}
+.lvlSwatch.lvl-crystal.animated::before {
+  top: -40%;
+  bottom: -40%;
+  width: 26%;
+  left: -40%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.25),
+    rgba(255, 255, 255, 1),
+    rgba(255, 255, 255, 0.25),
+    transparent
+  );
+  filter: blur(0.5px);
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.9);
+  animation: lvlSweep 0.8s linear infinite;
+}
+.lvlSwatch.lvl-crystal.animated::after {
+  inset: 0;
+  background:
+    radial-gradient(circle at 22% 28%, #fff 0 2px, transparent 3px),
+    radial-gradient(circle at 72% 62%, #fff 0 1.5px, transparent 2.8px),
+    radial-gradient(circle at 50% 78%, rgba(255, 255, 255, 0.9) 0 1.2px, transparent 2.4px);
+  animation: lvlTwinkle 0.85s steps(2, end) infinite;
 }
 
 @keyframes lvlSweep {
+  from { left: -40%; }
+  to { left: 110%; }
+}
+
+@keyframes lvlTwinkle {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 1; }
+}
+
+@keyframes lvlCloud {
+  from { left: -80%; }
+  to { left: 110%; }
+}
+
+@keyframes lvlPulse {
+  0%, 100% { opacity: 0.45; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+
+@keyframes lvlDrip {
+  0% { transform: translateY(0); opacity: 0.5; }
+  70% { transform: translateY(90%); opacity: 0.85; }
+  100% { transform: translateY(140%); opacity: 0; }
+}
+
+@keyframes lvlRainbowShift {
+  from { background-position: 0% 50%; }
+  to { background-position: 100% 50%; }
+}
+
+@keyframes lvlRise {
+  from { transform: translateY(110%); opacity: 0.2; }
+  to { transform: translateY(-130%); opacity: 0.9; }
+}
+
+@keyframes lvlShimmer {
+  0%, 100% { opacity: 0.4; transform: translateX(-50%); }
+  50% { opacity: 1; transform: translateX(50%); }
+}
+
+@keyframes lvlDrift {
   from { transform: translateX(0); }
-  to   { transform: translateX(520%); }
+  to { transform: translateX(35%); }
+}
+
+@keyframes lvlCurtain {
+  0%, 100% { transform: translateX(-30%); opacity: 0.45; }
+  50% { transform: translateX(55%); opacity: 0.95; }
+}
+
+@keyframes lvlFlicker {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+
+@keyframes lvlTvGlow {
+  0%, 100% {
+    box-shadow:
+      0 0 5px rgba(255, 255, 255, 0.7),
+      0 0 10px rgba(255, 23, 68, 0.55),
+      0 0 14px rgba(41, 121, 255, 0.4),
+      inset 0 0 6px rgba(255, 255, 255, 0.25);
+  }
+  50% {
+    box-shadow:
+      0 0 8px rgba(255, 255, 255, 1),
+      0 0 16px rgba(213, 0, 249, 0.75),
+      0 0 22px rgba(255, 234, 0, 0.5),
+      inset 0 0 10px rgba(255, 255, 255, 0.45);
+  }
 }

@@ -75,6 +75,7 @@ export async function loadProfileTabsData(opts: {
       emailVerifiedAt: true,
       createdAt: true,
       lastSeenAt: true,
+      equippedColor: { select: { name: true, karmaNeeded: true, isAnimated: true } },
     },
   });
   if (!user) throw new Error("User not found");
@@ -170,6 +171,7 @@ export async function loadProfileTabsData(opts: {
     purchased.length > 0
       ? purchased.map((p) => p.color).sort((a, b) => b.karmaNeeded - a.karmaNeeded)[0]
       : whiteColor;
+  const shownColor = user.equippedColor ?? highestColor;
 
   const allGames: ProfileGameBubble[] = sortProfileGames(
     rawGames.map((r) => ({
@@ -338,8 +340,8 @@ export async function loadProfileTabsData(opts: {
     emailVerified: isOwnProfile ? !!user.emailVerifiedAt : undefined,
     tMoney: user.tMoney,
     bio: user.bio ?? "",
-    colorName: highestColor?.name ?? "White",
-    colorAnimated: highestColor?.isAnimated ?? false,
+    colorName: shownColor?.name ?? "White",
+    colorAnimated: shownColor?.isAnimated ?? false,
     lastSeenAt: user.lastSeenAt.toISOString(),
     avatar: avatarConfigFromUser(user),
     slotDesigns,

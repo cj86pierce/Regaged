@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getCurrentUserId } from "@/lib/getCurrentUserId";
 import { prisma } from "@/lib/prisma";
+import { getUserColorStrength } from "@/lib/blogStrength";
+import { maxBetTFromStrength } from "@/lib/colorCatalog";
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   const userId = await getCurrentUserId(req);
@@ -45,10 +47,15 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     game.state !== "COMPLETED" &&
     !isPlayer;
 
+  const strength = userId ? await getUserColorStrength(userId) : 1;
+  const maxBet = maxBetTFromStrength(strength);
+
   return NextResponse.json({
     bettingOpen,
     isPlayer,
     myBet,
+    maxBet,
+    strength,
     contestants: players.map((p) => ({ userId: p.userId, username: p.user.username })),
     payoutTable: [
       { place: "1st", note: "stake + 100%" },
@@ -71,8 +78,11 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const amount = Math.trunc(Number(body?.amount));
 
   if (!targetUserId) return NextResponse.json({ error: "Pick a contestant" }, { status: 400 });
-  if (!Number.isFinite(amount) || amount < 1 || amount > 30) {
-    return NextResponse.json({ error: "Bet must be 1–30 T$" }, { status: 400 });
+
+  const strength = await getUserColorStrength(userId);
+  const maxBet = maxBetTFromStrength(strength);
+  if (!Number.isFinite(amount) || amount < 1 || amount > maxBet) {
+    return NextResponse.json({ error: `Bet must be 1–${maxBet} T$ (your color power)` }, { status: 400 });
   }
 
   const game = await prisma.game.findUnique({

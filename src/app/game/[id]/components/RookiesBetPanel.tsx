@@ -17,7 +17,7 @@ export default function RookiesBetPanel({ gameId }: { gameId: string }) {
     payoutAmount: number | null;
   } | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [maxBet, setMaxBet] = useState(2);
 
   useEffect(() => {
     let cancelled = false;
@@ -28,6 +28,10 @@ export default function RookiesBetPanel({ gameId }: { gameId: string }) {
         setOpen(!!d.bettingOpen || !!d.myBet);
         setContestants(d.contestants ?? []);
         setMyBet(d.myBet ?? null);
+        if (typeof d.maxBet === "number" && d.maxBet > 0) {
+          setMaxBet(d.maxBet);
+          setAmount((a) => Math.min(a, d.maxBet));
+        }
         if (d.myBet?.targetUserId) setTargetUserId(d.myBet.targetUserId);
       })
       .catch(() => {});
@@ -57,7 +61,7 @@ export default function RookiesBetPanel({ gameId }: { gameId: string }) {
     <div className="tgAction">
       <div className="tgActionHead">Rookies betting</div>
       <div className="tgActionHint">
-        Day 1 only · 1–30 T$ · Non-players. 1st +100%, 2nd +30%, 3rd +20%, 4th +10%, 5th stake back.
+        Day 1 only · 1–{maxBet} T$ (your color power) · Non-players. 1st +100%, 2nd +30%, 3rd +20%, 4th +10%, 5th stake back.
       </div>
       {myBet ? (
         <div className="tgActionOk">
@@ -84,7 +88,7 @@ export default function RookiesBetPanel({ gameId }: { gameId: string }) {
             <input
               type="number"
               min={1}
-              max={30}
+              max={maxBet}
               value={amount}
               onChange={(e) => setAmount(Number(e.target.value))}
               className="tgActionInput"

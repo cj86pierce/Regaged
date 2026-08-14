@@ -6,7 +6,7 @@ import Avatar, { AvatarConfig, type SlotDesignType } from "@/components/Avatar";
 import StatusBadges from "@/components/StatusBadges";
 import { formatLastSeen } from "@/lib/lastSeenLabel";
 import { renderBioContent } from "@/lib/renderBio";
-import { colorLevelSwatch, isTvStarColor } from "@/lib/colorLevelCss";
+import { colorLevelSwatch, colorLevelSwatchClass, isTvStarColor } from "@/lib/colorLevelCss";
 import ProfileSocialActions from "@/components/ProfileSocialActions";
 import "@/styles/tengagedProfile.css";
 
@@ -398,9 +398,10 @@ export default function ProfileTabs({ data }: { data: ProfileTabsData }) {
 
             <div className="tgGradeCol">
               <span
-                className={`lvlSwatch tgGradeBelt${isTvStarColor(data.colorName) ? " tvstar" : ""}${
-                  data.colorAnimated || isTvStarColor(data.colorName) ? " animated" : " static"
-                }`}
+                className={`lvlSwatch tgGradeBelt ${colorLevelSwatchClass(
+                  data.colorName,
+                  data.colorAnimated || isTvStarColor(data.colorName)
+                )}`}
                 style={{ ["--lvl" as string]: colorLevelSwatch(data.colorName) }}
                 title={data.colorName}
                 aria-label={`Color level: ${data.colorName}`}
