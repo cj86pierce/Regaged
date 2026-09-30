@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { DISCORD_INVITE_URL } from "@/lib/discord";
 
 export default function ContactPage() {
   const [name, setName] = useState("");
@@ -93,6 +94,14 @@ export default function ContactPage() {
           <Link href="/privacy">Privacy</Link>, and the <Link href="/faq">F.A.Q.</Link>
         </p>
       </form>
+
+      <p className="contactDiscordLink">
+        Want to meet other players?{" "}
+        <a href={DISCORD_INVITE_URL} target="_blank" rel="noopener noreferrer">
+          Join the Regaged Discord
+        </a>
+        . For private account or abuse reports, use the form above.
+      </p>
     </main>
   );
 }

@@ -190,6 +190,61 @@
 }
 
 /* NavBar — Tengaged-style top bar + circular menu */
+.discordAnnouncement {
+  background: #283944;
+  color: #fff;
+  font-family: Verdana, Geneva, Arial, Helvetica, sans-serif;
+}
+
+.discordAnnouncementInner {
+  max-width: 980px;
+  min-height: 42px;
+  margin: 0 auto;
+  padding: 6px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  box-sizing: border-box;
+}
+
+.discordAnnouncement p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.discordAnnouncement a {
+  color: #ffe08a;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.discordAnnouncement button {
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.discordAnnouncement button:hover,
+.discordAnnouncement button:focus-visible {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.contactDiscordLink {
+  margin: 20px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .tgNav {
   position: sticky;
   top: 0;

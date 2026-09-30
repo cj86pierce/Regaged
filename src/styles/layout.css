@@ -8,4 +8,9 @@
   overflow: auto;
 }
 
+.theme-body:has(.discordAnnouncement) .rightRail {
+  top: 114px;
+  max-height: calc(100dvh - 130px);
+}
+
 /* Visibility handled in responsive.css */

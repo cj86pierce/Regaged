@@ -5,6 +5,7 @@ import NavBar from "@/components/NavBar";
 import RightRailClient from "@/components/RightRailClient";
 import OnlineCount from "@/components/OnlineCount";
 import SiteFooter from "@/components/SiteFooter";
+import DiscordAnnouncement from "@/components/DiscordAnnouncement";
 import DeviceIdInit from "@/components/DeviceIdInit";
 import { ThemeInitScript } from "@/app/theme-init";
 import { getCurrentUserIdFromHeaders } from "@/lib/getCurrentUserId";
@@ -36,6 +37,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <Providers>
           <DeviceIdInit />
           <OnlineCount />
+          <DiscordAnnouncement />
           <NavBar />
 
           {/* Floating rail - Suspense so page content loads first */}

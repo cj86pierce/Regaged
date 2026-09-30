@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import DailyLoginCard, { openDailyLogin } from "@/components/DailyLoginCard";
+import { DISCORD_INVITE_URL } from "@/lib/discord";
 
 const ROW1: { href: string; label: string }[] = [
   { href: "/contact", label: "Contact" },
+  { href: DISCORD_INVITE_URL, label: "Discord" },
   { href: "/tos", label: "TOS" },
   { href: "/privacy", label: "Privacy" },
   { href: "/faq", label: "F.A.Q." },
@@ -48,9 +50,15 @@ export default function SiteFooter() {
           {ROW1.map((l, i) => (
             <span key={l.label} className="siteFooterLinkWrap">
               {i > 0 && <span className="siteFooterDot">·</span>}
-              <Link href={l.href} className="siteFooterLink">
-                {l.label}
-              </Link>
+              {l.href.startsWith("https://") ? (
+                <a href={l.href} className="siteFooterLink" target="_blank" rel="noopener noreferrer">
+                  {l.label}
+                </a>
+              ) : (
+                <Link href={l.href} className="siteFooterLink">
+                  {l.label}
+                </Link>
+              )}
             </span>
           ))}
           {DAILY_ENABLED ? (
