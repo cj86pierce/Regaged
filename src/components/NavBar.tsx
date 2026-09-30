@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import RegagedLogo from "./RegagedLogo";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
@@ -97,7 +98,7 @@ export default function NavBar() {
     <header className="tgNav">
       <div className="tgNavInner">
         <Link href="/" className="tgNavBrand">
-          Regaged
+          <RegagedLogo />
         </Link>
 
         <nav className="tgNavLinks" aria-label="Primary">

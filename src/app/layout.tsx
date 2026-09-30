@@ -18,6 +18,7 @@ import "@/styles/responsive.css";
 export const metadata: Metadata = {
   title: "Regaged",
   description: "Reality social game",
+  icons: { icon: "/icon.png" },
 };
 
 export const viewport = {
