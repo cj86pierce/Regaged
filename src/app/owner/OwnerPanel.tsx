@@ -349,7 +349,7 @@ export default function OwnerPanel({ preview }: { preview?: { players: PlayerRow
     <div className="ownerPanel" data-tab={tab}>
       <nav className="ownerTabs" aria-label="Admin sections">
         {([
-          ["players", "Players"], ["ips", "Shared IPs"], ["support", "Support"], ["alerts", "Name alerts"], ["designs", "Designs"],
+          ["players", "Players"], ["ips", "Linked accounts"], ["support", "Support"], ["alerts", "Name alerts"], ["designs", "Designs"],
         ] as [PanelTab, string][]).map(([id, label]) => <button key={id} type="button" aria-current={tab === id ? "page" : undefined} onClick={() => setTab(id)}>{label}{id === "support" && supportUnread > 0 ? ` (${supportUnread})` : ""}</button>)}
       </nav>
       {tab === "ips" && <SharedIps previewGroups={preview?.groups} onManage={(name) => void call("lookup", {}, name)} />}

@@ -4,10 +4,12 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 export type IpGroup = {
+  id?: string;
+  source?: "ip" | "device";
   ip: string;
   accounts: {
     id: string; username: string; createdAt: string; lastSeenAt: string;
-    firstIpLoginAt: string; lastIpLoginAt: string; loginCount: number;
+    firstLinkedAt: string; lastLinkedAt: string; loginCount: number | null;
     gamesPlayed: number; karma: number; banned: boolean; warned: boolean;
   }[];
 };
@@ -19,6 +21,7 @@ export default function SharedIps({ previewGroups, onManage }: {
   const [query, setQuery] = useState("");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("active");
+  const [source, setSource] = useState("all");
   const [page, setPage] = useState(1);
   const [hasNext, setHasNext] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -28,7 +31,7 @@ export default function SharedIps({ previewGroups, onManage }: {
     setBusy(true);
     setError("");
     try {
-      const res = await fetch(`/api/owner/shared-ips?page=${page}&search=${encodeURIComponent(search)}`, { cache: "no-store" });
+      const res = await fetch(`/api/owner/shared-ips?page=${page}&search=${encodeURIComponent(search)}&source=${source}`, { cache: "no-store" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not load shared IPs.");
       setGroups(data.groups ?? []);
@@ -38,12 +41,15 @@ export default function SharedIps({ previewGroups, onManage }: {
       setGroups([]);
       setHasNext(false);
     } finally { setBusy(false); }
-  }, [page, search, previewGroups]);
+  }, [page, search, source, previewGroups]);
   useEffect(() => { void load(); }, [load]);
-  const visible = previewGroups ? groups.filter((group) => group.ip.includes(search) || group.accounts.some((account) => account.username.toLowerCase().includes(search.toLowerCase()))) : groups;
+  const visible = previewGroups ? groups.filter((group) => (source === "all" || (group.source ?? "ip") === source) && (group.ip.includes(search) || group.accounts.some((account) => account.username.toLowerCase().includes(search.toLowerCase())))) : groups;
   return <section className="ownerSection">
-    <div className="ownerSectionHeading"><h2>Shared IPs</h2><button disabled={busy} onClick={() => void load()}>Refresh</button></div>
-    <p className="ownerNote">Accounts with successful logins from the same IP. A shared connection does not prove accounts belong to the same person. History starts when IP tracking is enabled.</p>
+    <div className="ownerSectionHeading"><h2>Linked accounts</h2><button disabled={busy} onClick={() => void load()}>Refresh</button></div>
+    <p className="ownerNote">Existing shared-device links and newly recorded shared IPs. A shared device or connection does not prove accounts belong to the same person. IP history starts from October 3, 2026.</p>
+    <div className="ownerTabs" aria-label="Account link types">
+      {[["all", "All links"], ["ip", "Shared IPs"], ["device", "Shared devices"]].map(([value, label]) => <button key={value} type="button" aria-pressed={source === value} onClick={() => { setPage(1); setSource(value); }}>{label}</button>)}
+    </div>
     <form className="ownerToolbar" onSubmit={(event) => { event.preventDefault(); setPage(1); setSearch(query.trim()); }}>
       <input aria-label="Search username or IP" placeholder="Username or IP address" value={query} onChange={(event) => setQuery(event.target.value)} />
       <button disabled={busy}>Search</button>
@@ -53,13 +59,13 @@ export default function SharedIps({ previewGroups, onManage }: {
     </form>
     {error && <p role="alert">{error}</p>}
     {busy && <p role="status">Loading shared IPs...</p>}
-    {!busy && !error && !visible.length && <p>No shared IPs found.</p>}
-    {visible.map((group) => <article className="ownerIpGroup" key={group.ip}>
-      <header><strong>{group.ip}</strong><span>{group.accounts.length} accounts</span></header>
+    {!busy && !error && !visible.length && <p>{source === "ip" ? "No shared IPs recorded yet. Existing device links are available under All links or Shared devices." : "No linked accounts found."}</p>}
+    {visible.map((group) => <article className="ownerIpGroup" key={group.id ?? group.ip}>
+      <header><strong>{group.source === "device" ? "Shared browser / device" : `Shared IP: ${group.ip}`}</strong><span>{group.accounts.length} accounts</span></header>
       <div className="ownerTableScroll"><table className="ownerIpTable">
-        <thead><tr><th>Account</th><th>Joined</th><th>Last active</th><th>IP logins</th><th>Games</th><th>First / last IP login</th><th><span className="ownerSrOnly">Actions</span></th></tr></thead>
+        <thead><tr><th>Account</th><th>Joined</th><th>Last active</th><th>IP logins</th><th>Games</th><th>First / last linked</th><th><span className="ownerSrOnly">Actions</span></th></tr></thead>
         <tbody>{[...group.accounts].sort((a, b) => {
-          if (sort === "logins") return b.loginCount - a.loginCount;
+          if (sort === "logins") return (b.loginCount ?? 0) - (a.loginCount ?? 0);
           if (sort === "games") return b.gamesPlayed - a.gamesPlayed;
           if (sort === "newest") return Date.parse(b.createdAt) - Date.parse(a.createdAt);
           if (sort === "oldest") return Date.parse(a.createdAt) - Date.parse(b.createdAt);
@@ -68,9 +74,9 @@ export default function SharedIps({ previewGroups, onManage }: {
           <td data-label="Account"><Link href={`/u/${encodeURIComponent(account.username.toLowerCase())}`}>{account.username}</Link><small>{account.banned ? "Banned" : account.warned ? "Warned" : "Active account"} · {account.karma} karma</small></td>
           <td data-label="Joined">{new Date(account.createdAt).toLocaleDateString()}</td>
           <td data-label="Last active">{new Date(account.lastSeenAt).toLocaleString()}</td>
-          <td data-label="IP logins">{account.loginCount}</td>
+          <td data-label="IP logins">{account.loginCount ?? "Not recorded"}</td>
           <td data-label="Games">{account.gamesPlayed}</td>
-          <td data-label="IP history">{new Date(account.firstIpLoginAt).toLocaleDateString()}<small>{new Date(account.lastIpLoginAt).toLocaleString()}</small></td>
+          <td data-label="Link history">{new Date(account.firstLinkedAt).toLocaleDateString()}<small>{new Date(account.lastLinkedAt).toLocaleString()}</small></td>
           <td><button onClick={() => onManage(account.username)}>Manage</button></td>
         </tr>)}</tbody>
       </table></div>

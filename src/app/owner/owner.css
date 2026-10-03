@@ -2,7 +2,7 @@
 .ownerPanel [hidden] { display: none !important; }
 .ownerTabs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
 .ownerTabs button { background: transparent; border: 0; border-radius: 4px; padding: 10px 14px; color: var(--text-primary); font: inherit; cursor: pointer; min-height: 44px; }
-.ownerTabs button[aria-current] { background: var(--brand); color: white; font-weight: 700; }
+.ownerTabs button[aria-current], .ownerTabs button[aria-pressed="true"] { background: var(--brand); color: white; font-weight: 700; }
 .ownerPanel > section { border: 0 !important; border-radius: 0 !important; padding: 0 0 20px !important; border-bottom: 1px solid var(--border) !important; background: transparent !important; }
 .ownerPanel input, .ownerPanel select, .ownerPanel textarea { box-sizing: border-box; max-width: 100%; min-height: 40px; padding: 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-input); color: var(--text-primary); }
 .ownerPanel button { min-height: 40px; }
