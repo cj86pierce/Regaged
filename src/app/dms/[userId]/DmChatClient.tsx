@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 
 type Msg = {
   id: string;
@@ -14,9 +14,11 @@ type Msg = {
 
 export default function DmChatClient({
   otherUserId,
+  previewMessages,
 }: {
   otherUserId: string;
   otherUsername: string;
+  previewMessages?: Msg[];
 }) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [text, setText] = useState("");
@@ -24,7 +26,12 @@ export default function DmChatClient({
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  async function load() {
+  const load = useCallback(async () => {
+    if (previewMessages) {
+      setMessages(previewMessages);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch(`/api/dms/${otherUserId}`, { cache: "no-store" });
@@ -35,11 +42,11 @@ export default function DmChatClient({
     } finally {
       setLoading(false);
     }
-  }
+  }, [otherUserId, previewMessages]);
 
   useEffect(() => {
     load();
-  }, [otherUserId]);
+  }, [load]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -48,6 +55,15 @@ export default function DmChatClient({
   async function send() {
     const t = text.trim();
     if (!t || sending) return;
+    if (previewMessages) {
+      setMessages((prev) => [...prev, {
+        id: crypto.randomUUID(), createdAt: new Date().toISOString(),
+        senderUserId: "preview-carson", senderUsername: "Carson",
+        recipientUserId: otherUserId, recipientUsername: "Alex", body: t,
+      }]);
+      setText("");
+      return;
+    }
     setSending(true);
     setText("");
     try {
@@ -58,7 +74,7 @@ export default function DmChatClient({
       });
       const json = await res.json();
       if (res.ok && json.message) {
-        setMessages((prev) => [json.message, ...prev]);
+        setMessages((prev) => [...prev, json.message]);
       } else {
         alert(json?.error ?? "Failed to send");
         setText(t);
@@ -80,7 +96,7 @@ export default function DmChatClient({
           maxHeight: 400,
           overflowY: "auto",
           display: "flex",
-          flexDirection: "column-reverse",
+          flexDirection: "column",
           gap: 8,
           padding: 12,
           borderRadius: 10,
@@ -88,9 +104,8 @@ export default function DmChatClient({
           background: "var(--bg-input)",
         }}
       >
-        <div ref={bottomRef} />
         {messages.length === 0 && <div style={{ opacity: 0.7, textAlign: "center" }}>No messages yet. Say hi!</div>}
-        {[...messages].reverse().map((m) => (
+        {messages.map((m) => (
           <div
             key={m.id}
             style={{
@@ -108,6 +123,7 @@ export default function DmChatClient({
             <div style={{ fontSize: 10, opacity: 0.8, marginTop: 4 }}>{new Date(m.createdAt).toLocaleString()}</div>
           </div>
         ))}
+        <div ref={bottomRef} />
       </div>
 
       <form

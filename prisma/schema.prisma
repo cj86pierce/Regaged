@@ -235,6 +235,7 @@ model User {
   friendsAsFriend Friendship[] @relation("FriendOf")
 
   deviceAccounts DeviceAccount[]
+  loginIps UserLoginIp[]
 
   @@index([usernameLower])
   @@index([referredByUserId])
@@ -253,6 +254,20 @@ model DeviceAccount {
   @@unique([deviceId, userId])
   @@index([deviceId])
   @@index([userId])
+}
+
+model UserLoginIp {
+  id String @id @default(cuid())
+  userId String
+  ip String
+  firstSeenAt DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+  loginCount Int @default(1)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, ip])
+  @@index([ip, lastSeenAt])
 }
 
 model Friendship {

@@ -3,6 +3,7 @@ import { ipsMatch, normalizeIp } from "@/lib/clientIp";
 import { trackDeviceLogin } from "@/lib/deviceMultiAccount";
 import { resolveStaffFlags } from "@/lib/staffAccess";
 import { isAdminUsername, isOwnerUsername } from "@/lib/usernames";
+import { isIP } from "node:net";
 
 type GuardUser = {
   id: string;
@@ -90,6 +91,22 @@ export async function enforceLoginGuards(
   if (!full) return { ok: false, reason: "Account not found." };
 
   const flags = resolveStaffFlags(full);
+  if (clientIp) {
+    let ip = normalizeIp(clientIp);
+    if (isIP(ip)) {
+      // Canonicalize IPv6 so equivalent addresses share one group.
+      if (isIP(ip) === 6) ip = new URL(`http://[${ip}]/`).hostname.slice(1, -1);
+      try {
+        await prisma.userLoginIp.upsert({
+          where: { userId_ip: { userId: full.id, ip } },
+          create: { userId: full.id, ip },
+          update: { lastSeenAt: new Date(), loginCount: { increment: 1 } },
+        });
+      } catch (e) {
+        console.error("Login IP tracking failed", e);
+      }
+    }
+  }
   return {
     ok: true,
     userId: full.id,

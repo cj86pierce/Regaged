@@ -89,7 +89,8 @@ export default function PlayerStrip(props: {
     const update = () => {
       const w = el.clientWidth;
       if (w <= 0) return;
-      const next = Math.max(40, Math.min(88, Math.floor(w / columns)));
+      const columnWidth = parseFloat(getComputedStyle(el).gridTemplateColumns.split(" ")[0]);
+      const next = Math.max(40, Math.min(88, Math.floor(columnWidth || w / columns)));
       setAvatarW(next);
     };
     update();
@@ -295,7 +296,7 @@ export default function PlayerStrip(props: {
                 {lastSeenLabel}
               </div>
 
-              <div style={{ marginTop: 3, height: 18, display: "grid", placeItems: "center", padding: "0 2px" }}>
+              <div className="gamePlayerStripAction" style={{ marginTop: 3, height: 18, display: "grid", placeItems: "center", padding: "0 2px" }}>
                 {slot}
               </div>
             </div>

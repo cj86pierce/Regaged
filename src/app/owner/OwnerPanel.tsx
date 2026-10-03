@@ -1,6 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import SharedIps, { type IpGroup } from "./SharedIps";
+import "./owner.css";
 
 type OwnerUser = {
   id: string;
@@ -55,7 +58,10 @@ function recencyLabel(iso: string): string {
   return `${days}d ago`;
 }
 
-export default function OwnerPanel() {
+type PanelTab = "players" | "ips" | "support" | "alerts" | "designs";
+export default function OwnerPanel({ preview }: { preview?: { players: PlayerRow[]; groups: IpGroup[] } }) {
+  const [tab, setTab] = useState<PanelTab>("players");
+  const editorRef = useRef<HTMLDivElement>(null);
   const [username, setUsername] = useState("");
   const [user, setUser] = useState<OwnerUser | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -95,7 +101,12 @@ export default function OwnerPanel() {
   const [giftBusy, setGiftBusy] = useState(false);
   const [giftMsg, setGiftMsg] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (user && tab === "players") editorRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [user, tab]);
+
   const loadOnline = useCallback(async () => {
+    if (preview) { setOnline(preview.players); setOnlineCount(preview.players.length); return; }
     if (typeof document !== "undefined" && document.hidden) return;
     setOnlineBusy(true);
     try {
@@ -116,9 +127,10 @@ export default function OwnerPanel() {
       setOnlineErr("Failed to load online");
     }
     setOnlineBusy(false);
-  }, []);
+  }, [preview]);
 
   const loadPlayers = useCallback(async (p: number) => {
+    if (preview) { setPlayers(preview.players); setTotal(preview.players.length); return; }
     if (typeof document !== "undefined" && document.hidden) return;
     setListBusy(true);
     try {
@@ -141,9 +153,10 @@ export default function OwnerPanel() {
       setListErr("Failed to load players");
     }
     setListBusy(false);
-  }, []);
+  }, [preview]);
 
   const loadSupport = useCallback(async () => {
+    if (preview) return;
     if (typeof document !== "undefined" && document.hidden) return;
     setSupportBusy(true);
     try {
@@ -164,9 +177,10 @@ export default function OwnerPanel() {
       setSupportErr("Failed to load support");
     }
     setSupportBusy(false);
-  }, []);
+  }, [preview]);
 
   const loadNameAlerts = useCallback(async () => {
+    if (preview) return;
     setNameAlertBusy(true);
     setNameAlertErr(null);
     try {
@@ -184,31 +198,20 @@ export default function OwnerPanel() {
     } finally {
       setNameAlertBusy(false);
     }
-  }, []);
+  }, [preview]);
 
   useEffect(() => {
-    void loadOnline();
-    void loadSupport();
-    void loadNameAlerts();
-  }, [loadOnline, loadSupport, loadNameAlerts]);
-
-  useEffect(() => {
-    void loadPlayers(page);
-  }, [loadPlayers, page]);
-
-  useEffect(() => {
-    const id = window.setInterval(() => {
-      void loadOnline();
-      void loadPlayers(page);
-      void loadSupport();
-      void loadNameAlerts();
-    }, 15000);
+    const refresh = () => {
+      if (document.hidden) return;
+      if (tab === "players") { void loadOnline(); void loadPlayers(page); }
+      if (tab === "support") void loadSupport();
+      if (tab === "alerts") void loadNameAlerts();
+    };
+    refresh();
+    const id = window.setInterval(refresh, 15000);
     const onVis = () => {
       if (!document.hidden) {
-        void loadOnline();
-        void loadPlayers(page);
-        void loadSupport();
-        void loadNameAlerts();
+        refresh();
       }
     };
     document.addEventListener("visibilitychange", onVis);
@@ -216,36 +219,51 @@ export default function OwnerPanel() {
       window.clearInterval(id);
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, [loadOnline, loadPlayers, loadSupport, loadNameAlerts, page]);
+  }, [loadOnline, loadPlayers, loadSupport, loadNameAlerts, page, tab]);
 
   async function call(action: string, extra: Record<string, unknown> = {}, nameOverride?: string) {
+    if (action === "lookup") setTab("players");
+    if (preview) {
+      if (action !== "lookup") { setMsg("Changes are disabled in the local demo."); return; }
+      const found = preview.players.find((player) => player.username.toLowerCase() === (nameOverride ?? username).trim().toLowerCase());
+      if (!found) { setMsg("No demo player found."); return; }
+      setUser({ ...found, banReason: null, warnedAt: null, lockedLoginIp: null });
+      setUsername(found.username); setKarma(String(found.karma)); setTMoney(String(found.tMoney)); setNewUsername(found.username); setMsg(null);
+      return;
+    }
     setBusy(true);
     setMsg(null);
     const name = (nameOverride ?? (username.trim() || user?.username || "")).trim();
-    const res = await fetch("/api/owner/user", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ username: name, action, ...extra }),
-    });
-    const json = await res.json().catch(() => ({}));
-    setBusy(false);
-    if (!res.ok) {
-      setMsg(json?.error ?? "Failed");
-      return;
+    try {
+      const res = await fetch("/api/owner/user", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ username: name, action, ...extra }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setMsg(json?.error ?? "Failed");
+        return;
+      }
+      if (json.user) {
+        setUser(json.user);
+        setKarma(String(json.user.karma));
+        setTMoney(String(json.user.tMoney));
+        setNewUsername(json.user.username);
+        setUsername(json.user.username);
+      }
+      setMsg(action === "lookup" ? "Loaded." : "Done.");
+      void loadOnline();
+      void loadPlayers(page);
+    } catch {
+      setMsg("Could not reach the server. Please try again.");
+    } finally {
+      setBusy(false);
     }
-    if (json.user) {
-      setUser(json.user);
-      setKarma(String(json.user.karma));
-      setTMoney(String(json.user.tMoney));
-      setNewUsername(json.user.username);
-      setUsername(json.user.username);
-    }
-    setMsg(action === "lookup" ? "Loaded." : "Done.");
-    void loadOnline();
-    void loadPlayers(page);
   }
 
   async function supportAction(id: string, action: "read" | "unread" | "delete") {
+    if (preview) return;
     const res = await fetch("/api/owner/support", {
       method: "POST",
       credentials: "include",
@@ -256,6 +274,7 @@ export default function OwnerPanel() {
   }
 
   async function dismissNameAlert(id: string) {
+    if (preview) return;
     const res = await fetch("/api/owner/name-alerts", {
       method: "POST",
       credentials: "include",
@@ -266,6 +285,7 @@ export default function OwnerPanel() {
   }
 
   async function scanNameAlerts() {
+    if (preview) return;
     setNameAlertBusy(true);
     setNameAlertErr(null);
     try {
@@ -290,6 +310,7 @@ export default function OwnerPanel() {
   }
 
   async function grantDesign() {
+    if (preview) { setGiftMsg("Changes are disabled in the local demo."); return; }
     if (!giftFile || !giftUsername.trim() || !giftTitle.trim()) {
       setGiftMsg("Username, title, and PNG are required.");
       return;
@@ -325,8 +346,15 @@ export default function OwnerPanel() {
   }
 
   return (
-    <div style={{ display: "grid", gap: 16 }}>
+    <div className="ownerPanel" data-tab={tab}>
+      <nav className="ownerTabs" aria-label="Admin sections">
+        {([
+          ["players", "Players"], ["ips", "Shared IPs"], ["support", "Support"], ["alerts", "Name alerts"], ["designs", "Designs"],
+        ] as [PanelTab, string][]).map(([id, label]) => <button key={id} type="button" aria-current={tab === id ? "page" : undefined} onClick={() => setTab(id)}>{label}{id === "support" && supportUnread > 0 ? ` (${supportUnread})` : ""}</button>)}
+      </nav>
+      {tab === "ips" && <SharedIps previewGroups={preview?.groups} onManage={(name) => void call("lookup", {}, name)} />}
       <section
+        hidden={tab !== "alerts"}
         style={{
           border: "1px solid var(--border)",
           borderRadius: 6,
@@ -358,7 +386,7 @@ export default function OwnerPanel() {
           </div>
         </div>
         <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 8 }}>
-          Alert only — does not warn. Compare web tokens (user ids) side by side; click a name to look them up.
+          Similar usernames flagged for review.
         </div>
         {nameAlertErr ? <div style={{ color: "var(--text-error)", fontSize: 13 }}>{nameAlertErr}</div> : null}
         {!nameAlertErr && !nameAlerts.length ? (
@@ -388,10 +416,9 @@ export default function OwnerPanel() {
                 }}
               >
                 {[a.a, a.b].map((side) => (
-                  <button
+                  <Link
                     key={side.id}
-                    type="button"
-                    onClick={() => void call("lookup", {}, side.username)}
+                    href={`/u/${encodeURIComponent(side.username.toLowerCase())}`}
                     style={{
                       textAlign: "left",
                       border: "1px solid var(--border)",
@@ -406,7 +433,7 @@ export default function OwnerPanel() {
                       {side.username}
                     </div>
                     <div style={{ wordBreak: "break-all", opacity: 0.85 }}>{side.id}</div>
-                  </button>
+                  </Link>
                 ))}
               </div>
               <div style={{ marginTop: 8 }}>
@@ -420,6 +447,7 @@ export default function OwnerPanel() {
       </section>
 
       <section
+        hidden={tab !== "support"}
         style={{
           border: "1px solid var(--border)",
           borderRadius: 6,
@@ -484,7 +512,7 @@ export default function OwnerPanel() {
                   {m.username ? (
                     <span style={{ fontWeight: 700, color: "var(--text-muted)" }}>
                       {" "}
-                      · @{m.username}
+                      · <Link href={`/u/${encodeURIComponent(m.username.toLowerCase())}`}>@{m.username}</Link>
                     </span>
                   ) : null}
                 </div>
@@ -519,6 +547,7 @@ export default function OwnerPanel() {
       </section>
 
       <section
+        hidden={tab !== "designs"}
         style={{
           border: "1px solid var(--border)",
           borderRadius: 6,
@@ -604,6 +633,7 @@ export default function OwnerPanel() {
       </section>
 
       <section
+        hidden={tab !== "players"}
         style={{
           border: "1px solid var(--border)",
           borderRadius: 6,
@@ -634,7 +664,7 @@ export default function OwnerPanel() {
           </button>
         </div>
         <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 8 }}>
-          Same 5-minute window as the site “online” badge · click to look up
+          Active in the last 5 minutes.
         </div>
         {onlineErr ? <div style={{ color: "var(--text-error)", fontSize: 13 }}>{onlineErr}</div> : null}
         {!onlineErr && !online.length ? (
@@ -642,13 +672,8 @@ export default function OwnerPanel() {
         ) : null}
         <div style={{ display: "grid", gap: 4 }}>
           {online.map((o) => (
-            <button
+            <div className="ownerPlayerRow"
               key={o.id}
-              type="button"
-              onClick={() => {
-                setUsername(o.username);
-                void call("lookup", {}, o.username);
-              }}
               style={{
                 display: "flex",
                 justifyContent: "space-between",
@@ -663,7 +688,7 @@ export default function OwnerPanel() {
               }}
             >
               <span style={{ fontWeight: 800 }}>
-                {o.username}
+                <Link href={`/u/${encodeURIComponent(o.username.toLowerCase())}`}>{o.username}</Link>
                 {o.isOwner ? " · Owner" : ""}
                 {o.warned ? " · Warned" : ""}
                 {o.banned ? " · Banned" : ""}
@@ -671,12 +696,14 @@ export default function OwnerPanel() {
               <span style={{ fontSize: 12, color: "var(--text-muted)", flexShrink: 0 }}>
                 {recencyLabel(o.lastSeenAt)} · {o.karma}k · T${o.tMoney}
               </span>
-            </button>
+              <button type="button" onClick={() => void call("lookup", {}, o.username)}>Manage</button>
+            </div>
           ))}
         </div>
       </section>
 
       <section
+        hidden={tab !== "players"}
         style={{
           border: "1px solid var(--border)",
           borderRadius: 6,
@@ -702,7 +729,7 @@ export default function OwnerPanel() {
           </button>
         </div>
         <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 8 }}>
-          10 per page · most recently active first · click to look up
+          Most recently active first.
         </div>
         {listErr ? <div style={{ color: "var(--text-error)", fontSize: 13 }}>{listErr}</div> : null}
         {!listErr && !players.length ? (
@@ -710,13 +737,8 @@ export default function OwnerPanel() {
         ) : null}
         <div style={{ display: "grid", gap: 4 }}>
           {players.map((o) => (
-            <button
+            <div className="ownerPlayerRow"
               key={o.id}
-              type="button"
-              onClick={() => {
-                setUsername(o.username);
-                void call("lookup", {}, o.username);
-              }}
               style={{
                 display: "flex",
                 justifyContent: "space-between",
@@ -731,7 +753,7 @@ export default function OwnerPanel() {
               }}
             >
               <span style={{ fontWeight: 800 }}>
-                {o.username}
+                <Link href={`/u/${encodeURIComponent(o.username.toLowerCase())}`}>{o.username}</Link>
                 {o.isOwner ? " · Owner" : ""}
                 {o.warned ? " · Warned" : ""}
                 {o.banned ? " · Banned" : ""}
@@ -739,7 +761,8 @@ export default function OwnerPanel() {
               <span style={{ fontSize: 12, color: "var(--text-muted)", flexShrink: 0 }}>
                 {recencyLabel(o.lastSeenAt)} · {o.karma}k · T${o.tMoney}
               </span>
-            </button>
+              <button type="button" onClick={() => void call("lookup", {}, o.username)}>Manage</button>
+            </div>
           ))}
         </div>
 
@@ -773,11 +796,12 @@ export default function OwnerPanel() {
         </div>
       </section>
 
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+      <div hidden={tab !== "players"} className="ownerLookup" style={{ gap: 8, flexWrap: "wrap", alignItems: "center" }}>
         <input
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           placeholder="Username"
+          aria-label="Player username"
           style={{ padding: "8px 10px", minWidth: 180 }}
           onKeyDown={(e) => {
             if (e.key === "Enter") void call("lookup");
@@ -788,10 +812,11 @@ export default function OwnerPanel() {
         </button>
       </div>
 
-      {msg ? <div style={{ color: "var(--text-muted)" }}>{msg}</div> : null}
+      {msg && tab === "players" ? <div role="status" style={{ color: "var(--text-muted)" }}>{msg}</div> : null}
 
-      {user ? (
+      {user && tab === "players" ? (
         <div
+          ref={editorRef}
           style={{
             border: "1px solid var(--border)",
             borderRadius: 6,
@@ -802,7 +827,7 @@ export default function OwnerPanel() {
           }}
         >
           <div>
-            <div style={{ fontWeight: 900, fontSize: 20 }}>{user.username}</div>
+            <Link href={`/u/${encodeURIComponent(user.username.toLowerCase())}`} style={{ fontWeight: 900, fontSize: 20 }}>{user.username}</Link>
             <div style={{ fontSize: 13, color: "var(--text-muted)" }}>
               {user.isOwner ? "Owner · " : user.isAdmin ? "Admin · " : ""}
               {user.warned ? "Warned · " : ""}

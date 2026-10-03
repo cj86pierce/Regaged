@@ -53,7 +53,8 @@ export default function CastingPlayerStrip(props: {
     const update = () => {
       const w = el.clientWidth;
       if (w <= 0) return;
-      setAvatarW(Math.max(40, Math.min(88, Math.floor(w / columns))));
+      const columnWidth = parseFloat(getComputedStyle(el).gridTemplateColumns.split(" ")[0]);
+      setAvatarW(Math.max(40, Math.min(88, Math.floor(columnWidth || w / columns))));
     };
     update();
     const ro = new ResizeObserver(update);
@@ -181,7 +182,7 @@ export default function CastingPlayerStrip(props: {
           <div style={{ fontWeight: 1000, marginBottom: 8 }}>Your Stats</div>
 
           {me ? (
-            <div style={{ display: "grid", gap: 10, fontSize: 13 }}>
+            <div className="castingPersonalStats" style={{ display: "grid", gap: 10, fontSize: 13 }}>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span>✅ Checks</span>
                 <b>{me.checks}</b>

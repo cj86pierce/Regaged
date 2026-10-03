@@ -92,6 +92,7 @@ body.tgGamePage .rightRail {
 
 .tgChatCompose input {
   flex: 1;
+  min-width: 0;
   border: 1px solid #c5d3e0;
   background: #fff;
   padding: 6px 8px;
@@ -824,3 +825,23 @@ dl.tgIngameMessages dd.body.system .theme-chat-msg-sys > div:first-child {
   color: #333;
 }
 
+
+@media(max-width:640px) {
+  .gameCastingStripLayout { display:block !important; }
+  .gameCastingStripPlayers { overflow-x:auto; grid-template-columns:repeat(10, 76px) !important; padding-bottom:8px; overscroll-behavior-x:contain; }
+  .gameCastingStripItem { width:76px; overflow:hidden; }
+  .gameCastingStripItem > a { min-height:44px; display:flex !important; align-items:center; justify-content:center; }
+  .gameCastingStripStats { margin-top:10px; min-height:0 !important; }
+  .castingPersonalStats { grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px !important; }
+  .castingPersonalStats > div { flex-direction:column; gap:5px; font-size:12px; }
+  .gamePlayerStrip { overflow-x:auto; overflow-y:hidden; grid-template-rows:max-content; padding-bottom:12px; grid-auto-flow:column; grid-auto-columns:76px; grid-template-columns:none !important; overscroll-behavior-x:contain; }
+  .gamePlayerStrip button { min-height:44px; }
+  .gamePlayerStripAction { height:44px !important; }
+  .gamePlayerStripItem > a.theme-username { min-height:44px; display:flex !important; align-items:center; justify-content:center; }
+  .tgSide .tgActionBtn, .tgVotePts button { min-height:44px; }
+  dl.tgIngameMessages dt .tgChatReact button { width:36px; height:36px; line-height:32px; }
+  .tgPmComposeRow { flex-wrap:wrap; }
+  .tgPmCompose input, .tgPmCompose select { min-width:0; max-width:100%; box-sizing:border-box; }
+  .tgChatCompose input, .tgPmCompose input { font-size:16px; }
+  .tgSide .tgSideStory { min-height:0; max-height:140px; }
+}

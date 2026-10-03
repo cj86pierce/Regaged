@@ -34,6 +34,7 @@ export async function GET(req: Request, { params }: { params: { userId: string }
       recipient: { select: { username: true } },
     },
   });
+  const chronologicalMsgs = [...msgs].reverse();
 
   const now = new Date();
   await prisma.directMessage.updateMany({
@@ -44,7 +45,7 @@ export async function GET(req: Request, { params }: { params: { userId: string }
   return NextResponse.json({
     ok: true,
     withUser: { id: other.id, username: other.username },
-    messages: msgs.map((m) => ({
+    messages: chronologicalMsgs.map((m) => ({
       id: m.id,
       createdAt: m.createdAt.toISOString(),
       senderUserId: m.senderUserId,
